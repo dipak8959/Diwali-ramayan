@@ -69,6 +69,7 @@
   <button id="bJson">Layout…</button>
   <button id="bRec">⏺ Record video</button>
   <button id="bFull">⛶ Fullscreen</button>
+  <button id="bView" title="Switch between the band above the doors and separate door windows">View: Frieze</button>
   <button id="bReset">Reset</button>
 </div>
 <script>
@@ -96,21 +97,32 @@
 
   // Surfaces are four-corner shapes in the projector picture, as fractions of its width and height.
   // The default layout is a first guess from the room video: left door, the wall between, right door.
-  const DEFAULT_SURFACES = () => [
-    { name: 'Left door',  pts: [[.081, .214], [.308, .219], [.308, .99], [.081, .99]] },
-    { name: 'Wall',       pts: [[.337, .02], [.685, .02], [.685, .98], [.337, .98]] },
-    { name: 'Right door', pts: [[.702, .223], [.885, .227], [.885, .99], [.702, .99]] },
-  ];
-  const cfg = { surfaces: DEFAULT_SURFACES(), win: 1400, ground: .92, vstretch: 2, inset: 2, captions: false };
+  // 'frieze': one long band in the gap between the ceiling and the tops of the doors, all five scenes side by side.
+  // 'doors':  separate windows on the left door, the wall and the right door, with the story panning across them.
+  const SURFACES = {
+    frieze: () => [{ name: 'Above doors', pts: [[.012, .01], [.988, .01], [.988, .145], [.012, .145]] }],
+    doors: () => [
+      { name: 'Left door',  pts: [[.081, .214], [.308, .219], [.308, .99], [.081, .99]] },
+      { name: 'Wall',       pts: [[.337, .02], [.685, .02], [.685, .98], [.337, .98]] },
+      { name: 'Right door', pts: [[.702, .223], [.885, .227], [.885, .99], [.702, .99]] },
+    ],
+  };
+  const PRESET = {
+    frieze: { win: 6320, ground: .122, vstretch: 2, inset: 1 },
+    doors:  { win: 1400, ground: .92,  vstretch: 2, inset: 2 },
+  };
+  const cfg = { view: 'frieze', surfaces: SURFACES.frieze(), ...PRESET.frieze, captions: false };
+  const applyPreset = (v) => { cfg.view = v; cfg.surfaces = SURFACES[v](); Object.assign(cfg, PRESET[v]); };
   const validLayout = (o) => o && Array.isArray(o.surfaces) && o.surfaces.length > 0 && o.surfaces.every(s =>
     s && Array.isArray(s.pts) && s.pts.length === 4 && s.pts.every(p => Array.isArray(p) && isFinite(p[0]) && isFinite(p[1])));
   const applyLayout = (o) => {
     if (!validLayout(o)) return false;
     cfg.surfaces = o.surfaces.map((s, i) => ({ name: String(s.name || 'Surface ' + (i + 1)).slice(0, 30), pts: s.pts.map(p => [+p[0], +p[1]]) }));
+    cfg.view = o.view in SURFACES ? o.view : 'doors';
     for (const k of ['win', 'ground', 'vstretch', 'inset']) if (isFinite(o[k])) cfg[k] = +o[k];
     return true;
   };
-  const layoutJSON = () => JSON.stringify({ surfaces: cfg.surfaces, win: Math.round(cfg.win), ground: Math.round(cfg.ground * 1000) / 1000, vstretch: Math.round(cfg.vstretch * 100) / 100, inset: cfg.inset });
+  const layoutJSON = () => JSON.stringify({ view: cfg.view, surfaces: cfg.surfaces, win: Math.round(cfg.win), ground: Math.round(cfg.ground * 1000) / 1000, vstretch: Math.round(cfg.vstretch * 100) / 100, inset: cfg.inset });
   try { applyLayout(JSON.parse(localStorage.getItem('wall-map-v1') || 'null')); } catch (_) {}
   const saveCfg = () => { try { localStorage.setItem('wall-map-v1', layoutJSON()); } catch (_) {} };
   try { const h = location.hash.match(/layout=([^&]+)/); if (h) applyLayout(JSON.parse(atob(decodeURIComponent(h[1])))); } catch (_) {}
@@ -129,7 +141,7 @@
   const mixc = (a, b, t) => `rgb(${Math.round(lerp(a[0], b[0], t))},${Math.round(lerp(a[1], b[1], t))},${Math.round(lerp(a[2], b[2], t))})`;
 
   function drawBackground(x0, x1) {
-    const step = 12;
+    const step = Math.max(12, Math.round((x1 - x0) / 180));
     for (let x = x0 - (x0 % step) - step; x < x1 + step; x += step) {
       const u = clamp((x + step / 2) / PW - 0.5, 0, NP - 1);
       const j = Math.min(NP - 2, Math.floor(u));
@@ -140,9 +152,9 @@
       g.addColorStop(GY / PH, mixc(PAL[j][2], PAL[j + 1][2], f));
       g.addColorStop(1, '#000');
       ctx.fillStyle = mixc(PAL[j][0], PAL[j + 1][0], f);
-      ctx.fillRect(x, -1500, step + 1, 1500);   // sky continues above the scene
+      ctx.fillRect(x, -1500, step + 3, 1500);   // sky continues above the scene
       ctx.fillStyle = g;
-      ctx.fillRect(x, 0, step + 1, PH);
+      ctx.fillRect(x, 0, step + 3, PH);
     }
   }
 
@@ -182,7 +194,7 @@
 
   // A person as a shadow-puppet silhouette. Origin is at the feet, facing right (flip to face left).
   function figure(x, y, s, o) {
-    o = o || {};
+    o = o || {}; s *= cfg.view === 'frieze' ? .8 : 1;
     const dir = o.flip ? -1 : 1;
     const w = o.walk || 0, mv = !!o.moving;
     const sw = mv ? Math.sin(w) : 0;
@@ -377,7 +389,10 @@
   }
 
   // ---------- particles (world coordinates) ----------
+  const SZ = () => cfg.view === 'frieze' ? 2.3 : 1;
+  const FS = () => cfg.view === 'frieze' ? .8 : 1;   // people are drawn a little smaller in the thin frieze
   function burst(x, y, hue, n) {
+    if (cfg.view === 'frieze') y = Math.max(y, 150);
     n = n || 110; const sp = rand(110, 180);
     for (let i = 0; i < n; i++) {
       const a = (i / n) * 6.283 + rand(-.05, .05), v = sp * rand(.6, 1);
@@ -385,7 +400,7 @@
     }
   }
   function petalRain(x0, x1, n) {
-    for (let i = 0; i < n; i++) parts.push({ k: 'petal', x: rand(x0, x1), y: rand(-60, 10), vy: rand(30, 60), life: 9, age: 0, ph: rand(0, 6.28), col: ['#ffb3c7', '#ff9d1c', '#ffd9a0', '#ff7a9c'][i % 4], rot: rand(0, 6.28) });
+    for (let i = 0; i < n; i++) parts.push({ k: 'petal', x: rand(x0, x1), y: (cfg.view === 'frieze' ? 110 : 0) + rand(-60, 10), vy: rand(30, 60), life: 9, age: 0, ph: rand(0, 6.28), col: ['#ffb3c7', '#ff9d1c', '#ffd9a0', '#ff7a9c'][i % 4], rot: rand(0, 6.28) });
   }
   function ember(x, y, big) {
     parts.push({ k: 'ember', x: x + rand(-4, 4), y, vx: rand(-12, 12), vy: rand(-70, -25), life: rand(.6, 1.4), age: 0, r: big ? rand(2, 4.5) : rand(1, 2.4) });
@@ -409,15 +424,15 @@
         ctx.globalCompositeOperation = 'lighter';
         const tw = k < .3 ? (Math.random() < .5 ? 1 : .2) : 1;
         ctx.strokeStyle = `hsla(${p.hue.toFixed(0)},100%,${(60 + k * 25).toFixed(0)}%,${Math.max(0, k * tw).toFixed(3)})`;
-        ctx.lineWidth = 1.2 + k * 1.6; ctx.beginPath(); ctx.moveTo(p.px, p.py); ctx.lineTo(p.x, p.y); ctx.stroke();
+        ctx.lineWidth = (1.2 + k * 1.6) * SZ(); ctx.beginPath(); ctx.moveTo(p.px, p.py); ctx.lineTo(p.x, p.y); ctx.stroke();
       } else if (p.k === 'ember') {
         ctx.globalCompositeOperation = 'lighter';
         ctx.fillStyle = `rgba(255,${Math.round(120 + k * 110)},60,${(k * .9).toFixed(3)})`;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (.5 + k), 0, 6.283); ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (.5 + k) * SZ(), 0, 6.283); ctx.fill();
       } else if (p.k === 'petal') {
         ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = .9;
         ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.scale(1, .55 + .45 * Math.sin(p.age * 3 + p.ph));
-        ctx.fillStyle = p.col; ctx.beginPath(); ctx.ellipse(0, 0, 5, 3, 0, 0, 6.283); ctx.fill(); ctx.restore(); ctx.globalAlpha = 1;
+        ctx.fillStyle = p.col; ctx.beginPath(); ctx.ellipse(0, 0, 5 * SZ(), 3 * SZ(), 0, 0, 6.283); ctx.fill(); ctx.restore(); ctx.globalAlpha = 1;
       } else if (p.k === 'ring') {
         ctx.globalCompositeOperation = 'lighter';
         ctx.strokeStyle = `rgba(${p.col},${(k * .8).toFixed(3)})`; ctx.lineWidth = 3 + k * 4;
@@ -445,10 +460,10 @@
     return lerp(c(seg), c(seg + 1), sstep(0, 1, (u - HOLD) / PAN));
   }
 
-  const P3 = { ramX: 230, ramS: 1.35, ravX: 930, ravS: 1.3 };
+  const P3 = { ramX: 230, ramS: 1.35, ravX: 930, get ravS() { return cfg.view === 'frieze' ? .95 : 1.3; } };
   function arrowPos(lt) {
     const p = (lt - 4.0) / 0.9; if (p < 0 || p >= 1) return null;
-    const x0 = P3.ramX + P3.ramS * 8, y0 = GY - P3.ramS * 112, x1 = P3.ravX - 30, y1 = GY - P3.ravS * 100;
+    const x0 = P3.ramX + P3.ramS * FS() * 8, y0 = GY - P3.ramS * FS() * 112, x1 = P3.ravX - 30, y1 = GY - P3.ravS * 100;
     const e = p * p * .4 + p * .6;
     return { x: lerp(x0, x1, e), y: lerp(y0, y1, e) - Math.sin(Math.PI * p) * 16, a: Math.atan2((y1 - y0) / (x1 - x0) - Math.cos(Math.PI * p) * 0.12, 1) };
   }
@@ -616,10 +631,11 @@
       const ta = sstep(8.3, 9.5, lt) * (1 - sstep(11.6, 12.6, lt));
       if (ta > 0) {
         ctx.save(); ctx.globalAlpha = ta; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.font = '700 64px "Noto Sans Devanagari", "Mangal", Georgia, serif';
+        const fz = cfg.view === 'frieze';
+        ctx.font = (fz ? '700 36px' : '700 64px') + ' "Noto Sans Devanagari", "Mangal", Georgia, serif';
         ctx.shadowColor = 'rgba(255,170,60,.95)'; ctx.shadowBlur = 26; ctx.fillStyle = '#ffe9b0';
-        ctx.fillText('शुभ दीपावली', 650, 100);
-        ctx.font = '600 28px Georgia, serif'; ctx.shadowBlur = 12; ctx.fillStyle = GOLD; ctx.fillText('Happy Diwali', 650, 150);
+        ctx.fillText('शुभ दीपावली', fz ? 880 : 650, fz ? 196 : 100);
+        ctx.font = (fz ? '600 20px' : '600 28px') + ' Georgia, serif'; ctx.shadowBlur = 12; ctx.fillStyle = GOLD; ctx.fillText('Happy Diwali', fz ? 880 : 650, fz ? 232 : 150);
         ctx.restore();
       }
       caption(lt, 'Ayodhya · Ram returns, Diwali begins', 'दीपावली');
@@ -632,8 +648,8 @@
   const modeBtn = { edit: document.getElementById('mEdit'), test: document.getElementById('mTest'), play: document.getElementById('mPlay') };
   const hint = document.getElementById('hint'), ui = document.getElementById('ui');
   const HINTS = {
-    edit: 'Edit: drag a corner dot onto the corner of a door or wall. Drag inside a shape to move it. Use + Surface for anything else you want to light.',
-    test: 'Test: bright panels. Line each one up with the real door or wall. The circle in each panel should look round on the wall. If it looks wide, press Tall +. Then press Play.',
+    edit: 'Edit: drag the corner dots so the shape sits exactly in the space you want to light (the gap between the ceiling and the doors). Drag inside a shape to move it. + Surface adds more.',
+    test: 'Test: bright panel. Line it up with the real gap above the doors. The circle should look round on the wall. If it looks wide, press Tall +. Then press Play.',
     play: '',
   };
   function setMode(m) {
@@ -663,13 +679,26 @@
     ctx.clip();
   }
 
+  // The journey: scenes ahead of the story are dim, the scene in progress is bright, scenes behind it stay softly lit.
+  function journeyShade(x0, x1, c) {
+    const f = (x) => clamp((x - x0) / (x1 - x0));
+    const g = ctx.createLinearGradient(x0, 0, x1, 0);
+    g.addColorStop(0, 'rgba(0,0,0,.45)'); g.addColorStop(f(c - 1500), 'rgba(0,0,0,.45)');
+    g.addColorStop(f(c - 500), 'rgba(0,0,0,0)'); g.addColorStop(f(c + 500), 'rgba(0,0,0,0)');
+    g.addColorStop(f(c + 1500), 'rgba(0,0,0,.82)'); g.addColorStop(1, 'rgba(0,0,0,.82)');
+    ctx.fillStyle = g; ctx.fillRect(x0, -1500, x1 - x0, 2400);
+  }
+
   function drawWorld(P) {
-    const k = W / cfg.win, c = camCenter(), x0 = c - cfg.win / 2, x1 = c + cfg.win / 2;
+    const fr = cfg.view === 'frieze';
+    const k = W / cfg.win, c = fr ? 3000 : camCenter(), x0 = c - cfg.win / 2, x1 = c + cfg.win / 2;
     ctx.save(); clipTo(P);
     ctx.save();
     ctx.translate(0, cfg.ground * H); ctx.scale(k, k * cfg.vstretch); ctx.translate(-x0, -GY);   // the ground line of the scene sits at cfg.ground of the picture height
     drawBackground(x0, x1); drawStars(x0, x1, T);
+    if (fr) { ctx.fillStyle = INK; ctx.fillRect(x0, GY, x1 - x0, 900); }
     for (let i = 0; i < NP; i++) if (i * PW + PW > x0 && i * PW < x1) drawPanel(i);
+    if (fr) journeyShade(x0, x1, camCenter());
     drawParts();
     ctx.restore();
     if (flash > 0) { ctx.fillStyle = `rgba(255,236,200,${(flash * .55).toFixed(3)})`; ctx.fillRect(0, 0, W, H); }
@@ -790,12 +819,16 @@
   $('bAdd').onclick = () => { cfg.surfaces.push({ name: 'Surface ' + (cfg.surfaces.length + 1), pts: [[.4, .3], [.6, .3], [.6, .7], [.4, .7]] }); sel = cfg.surfaces.length - 1; saveCfg(); };
   $('bDel').onclick = () => { if (cfg.surfaces.length > 1) { cfg.surfaces.splice(sel, 1); sel = Math.max(0, sel - 1); saveCfg(); } };
   $('bSmall').onclick = () => setWin(1.05); $('bBig').onclick = () => setWin(1 / 1.05);
-  $('bUp').onclick = () => setGround(-14); $('bDown').onclick = () => setGround(14);
+  $('bUp').onclick = () => setGround(-6); $('bDown').onclick = () => setGround(6);
   $('bTall0').onclick = () => setTall(1 / 1.06); $('bTall1').onclick = () => setTall(1.06);
   $('bIn0').onclick = () => setInset(-1); $('bIn1').onclick = () => setInset(1);
   $('bPrev').onclick = () => jump(curScene() - 1); $('bNext').onclick = () => jump(curScene() + 1);
   bPlay.onclick = togglePause;
-  $('bReset').onclick = () => { cfg.surfaces = DEFAULT_SURFACES(); cfg.win = 1400; cfg.ground = .92; cfg.vstretch = 2; cfg.inset = 2; sel = 0; saveCfg(); };
+  const bView = $('bView');
+  const viewLabel = () => { bView.textContent = 'View: ' + (cfg.view === 'frieze' ? 'Frieze' : 'Doors'); };
+  bView.onclick = () => { applyPreset(cfg.view === 'frieze' ? 'doors' : 'frieze'); sel = 0; saveCfg(); viewLabel(); };
+  $('bReset').onclick = () => { applyPreset(cfg.view); sel = 0; saveCfg(); };
+  viewLabel();
   const bFull = $('bFull'); bFull.onclick = toggleFullscreen;
   if (!document.documentElement.requestFullscreen && !document.documentElement.webkitRequestFullscreen) bFull.style.display = 'none';
 

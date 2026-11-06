@@ -30,8 +30,10 @@ Aim the projector high, then fit the strip to the wall: arrow keys move it, `[` 
 The fit is remembered in the browser. `1` to `5` jump to a scene, `Space` pauses, `F` is fullscreen.
 Video for a projector or USB stick: `node tools/render-video.js ramayan/index.html ramayan.mp4 68 30 960 540` (1920x1080, strip at the top).
 
-## Wall mapper (journey across the doors and the wall)
-`wall/index.html` lights only the surfaces you outline (for example left door, wall, right door) and keeps everything else dark.
+## Wall mapper (the frieze above the doors, or the doors and wall)
+`wall/index.html` lights only the shapes you outline and keeps everything else dark.
+The default **View: Frieze** is one long band in the gap between the ceiling and the tops of the doors: all five scenes sit side by side, a light follows the story from left to right, and earlier scenes stay softly lit.
+**View: Doors** switches to separate windows on the left door, the wall and the right door.
 The story is one continuous world, so a character or an arrow leaves one surface, crosses the dark gap and arrives on the next.
 
 1. Open the page on a laptop and send it to the projector (HDMI, or cast the tab). Press **Fullscreen**.
