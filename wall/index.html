@@ -1312,11 +1312,11 @@ window.R3 = (function () {
     H.torso.rotation.x = .04 * s;
     for (let i = 0; i < 2; i++) {
       const p = ph + i * Math.PI, sw = Math.sin(p);
-      H.legs[i].rotation.x = -sw * .62 * s;
-      H.knees[i].rotation.x = (Math.max(0, Math.cos(p)) * .95 + .04) * s;
+      H.legs[i].rotation.x = -sw * .46 * s;
+      H.knees[i].rotation.x = (Math.max(0, Math.cos(p)) * .7 + .04) * s;
       const arm = H.arms[i];
-      arm.rotation.x = sw * .55 * s + (1 - s) * .03; arm.rotation.z = (i ? -1 : 1) * (.06 + (1 - s) * .03);
-      arm.userData.el.rotation.x = -(.25 + Math.max(0, -sw) * .5) * s - (1 - s) * .12;
+      arm.rotation.x = sw * .36 * s + (1 - s) * .03; arm.rotation.z = (i ? -1 : 1) * (.06 + (1 - s) * .03);
+      arm.userData.el.rotation.x = -(.18 + Math.max(0, -sw) * .3) * s - (1 - s) * .12;
     }
     H.head.rotation.y = -.05 + Math.sin(t * .9 + H.root.id) * .06 * (1 - s); H.head.rotation.x = Math.sin(ph * 2) * .03 * s;
     if (H.dress) { H.dress.rotation.z = Math.sin(ph) * .05 * s; H.dress.rotation.x = Math.sin(ph + 1) * .04 * s; }
@@ -1586,18 +1586,26 @@ window.R3 = (function () {
   // ---------- the story, as a function of time ----------
   const LOOP_T = 225;
   const seg = (T, t0, t1, x0, x1) => T <= t0 ? x0 : T >= t1 ? x1 : lerp(x0, x1, ease((T - t0) / (t1 - t0)));
-  const K = (T, keys) => {   // eased path through [time, value] keys
+  // A path through [time, value] keys at an even pace: a short ease in and out (under a second), steady speed in between.
+  const K = (T, keys) => {
     if (T <= keys[0][0]) return keys[0][1];
-    for (let i = 0; i < keys.length - 1; i++) if (T < keys[i + 1][0]) { const a = keys[i], b = keys[i + 1]; return a[1] === b[1] ? a[1] : lerp(a[1], b[1], ease((T - a[0]) / (b[0] - a[0]))); }
+    for (let i = 0; i < keys.length - 1; i++) if (T < keys[i + 1][0]) {
+      const a = keys[i], b = keys[i + 1], D = b[0] - a[0], d = b[1] - a[1], u = T - a[0];
+      if (d === 0) return a[1];
+      const ac = Math.min(.9, D * .25), v = d / (D - ac);   // speed in the middle
+      if (u < ac) return a[1] + v * u * u / (2 * ac);
+      if (u > D - ac) return b[1] - v * (D - u) * (D - u) / (2 * ac);
+      return a[1] + v * (u - ac / 2);
+    }
     return keys[keys.length - 1][1];
   };
-  const RAM_K = [[6, 430], [9, 470], [22, 1380], [26, 1560], [41, 1560], [43, 1640], [53, 2250], [60, 2250], [62, 2330], [69, 3050], [70, 3050], [77, 3560], [79, 3560], [81, 3480], [91, 3330], [93, 3330], [96, 3900], [119, 3900], [121, 4000], [136, 4950], [150, 4950], [152, 5050], [183, 5050], [185.5, 5160]];
+  const RAM_K = [[6, 430], [9, 470], [22, 1380], [26, 1560], [41, 1560], [43, 1640], [53, 2250], [60, 2250], [61, 2300], [70, 3050], [77, 3560], [80.5, 3560], [88, 3330], [90, 3330], [98, 3900], [119, 3900], [121, 4000], [136, 4950], [150, 4950], [152, 5050], [183, 5050], [185.5, 5160]];
   const chX = (T) => T < 91 ? K(T, [[82.5, 3330], [91, 5560]]) : K(T, [[182, 5130], [186, 5130], [205, 560]]);
   const chY = (T) => T < 91 ? (T < 82.5 ? 0 : 36 + 150 * Math.sin(Math.PI * clamp((T - 82.5) / 8.5))) : (T < 186 ? 0 : (T < 205 ? 30 + 130 * Math.sin(Math.PI * clamp((T - 186) / 19)) : 0));
   const ramX = (T) => T < 185.5 ? K(T, RAM_K) : T < 205 ? chX(T) + 30 : K(T, [[205, 590], [212, 720]]);
-  const sitaX = (T) => T < 34 ? 2000 : T < 37.5 ? K(T, [[34, 2000], [37.5, 1660]]) : T < 70 ? Math.max(1660, ramX(T) - 100) : T < 72 ? K(T, [[70, 2950], [72, 3250]]) : T < 82.5 ? 3250 : T < 91 ? chX(T) : T < 176 ? 5700 : T < 185 ? K(T, [[176, 5700], [185, 5130]]) : T < 205 ? chX(T) : ramX(T) - 30;
-  const LAK_K = [[69, 2955], [71, 3180], [77.5, 3180], [80.5, 3480], [91, 3240], [93, 3235], [96, 3805]];
-  const lakX = (T) => T < 69 ? ramX(T) - 95 : T < 96 ? K(T, LAK_K) : T < 152 ? ramX(T) - 95 : T < 168 ? K(T, [[152, 4955], [155.5, 5110], [164, 5110], [168, 4955]]) : T < 185 ? K(T, [[168, 4955], [185, 5100]]) : T < 205 ? chX(T) - 30 : ramX(T) - 60;
+  const sitaX = (T) => T < 32 ? 2000 : T < 38 ? K(T, [[32, 2000], [38, 1660]]) : T < 70 ? Math.max(1660, ramX(T) - 100) : T < 75 ? K(T, [[70, 2950], [75, 3250]]) : T < 82.5 ? 3250 : T < 91 ? chX(T) : T < 94 ? K(T, [[91, 5560], [94, 5700]]) : T < 176 ? 5700 : T < 185 ? K(T, [[176, 5700], [185, 5130]]) : T < 205 ? chX(T) : ramX(T) - 30;
+  const LAK_K = [[69, ramX(69) - 95], [74, 3180], [77, 3180], [81, 3480], [88, 3235], [90, 3235], [98, 3805]];
+  const lakX = (T) => T < 69 ? ramX(T) - 95 : T < 98 ? K(T, LAK_K) : T < 152 ? ramX(T) - 95 : T < 168 ? K(T, [[152, 4955], [155.5, 5110], [164, 5110], [168, 4955]]) : T < 185 ? K(T, [[168, 4955], [185, 5100]]) : T < 205 ? chX(T) - 30 : ramX(T) - 60;
   const deerX = (T) => K(T, [[66, 3150], [77, 3640]]);
   // Hanuman: meets Ram, leaps the sea, finds Sita, burns Lanka, leaps back, brings the healing mountain
   function hanPos(T) {
@@ -1651,7 +1659,7 @@ window.R3 = (function () {
     for (const [a0, a1, d0, d1] of WIN) if (T >= a0 && T < a1 + .6) aw = { aim: sstep(a0, a0 + 1.2, T) * (1 - sstep(a1, a1 + .6, T)), draw: sstep(d0, d1, T) * (T < d1 + .05 ? 1 : 0), big: a0 < 30 };
     const rider = T >= 185.5 && T < 205;
     ram.root.position.set(rx, rider ? chY(T) + 16 : 0, 6);
-    const po = { ph: rx * Math.PI / STEP, s: rider ? 0 : clamp(Math.abs(vR) / 55), t: T };
+    const po = { ph: rx * Math.PI / STEP, s: rider ? 0 : clamp(Math.abs(vR) / 85), t: T };
     if (aw) { po.aim = aw.aim; po.draw = aw.draw; }
     if (T >= 31 && T < 34) po.victory = sstep(31.1, 31.8, T) * (1 - sstep(33, 34, T));
     if (T >= 168.8 && T < 172) po.victory = sstep(168.9, 169.6, T) * (1 - sstep(171, 172, T));
@@ -1660,22 +1668,22 @@ window.R3 = (function () {
     // Lakshman
     const lx = lakX(T), vL = vel(lakX, T), lfall = sstep(155.5, 156.4, T) * (1 - sstep(164.5, 166, T));
     lak.root.position.set(lx, T >= 185.5 && T < 205 ? chY(T) + 16 : 12 * lfall, 2);
-    pose(lak, { ph: lx * Math.PI / STEP + 2.6, s: (T >= 185.5 && T < 205) ? 0 : clamp(Math.abs(vL) / 55), t: T });
+    pose(lak, { ph: lx * Math.PI / STEP + 2.6, s: (T >= 185.5 && T < 205) ? 0 : clamp(Math.abs(vL) / 85), t: T });
     lak.root.rotation.z = -1.45 * lfall;
 
     // Sita
     const sx = sitaX(T), vS = vel(sitaX, T), captive = T >= 91 && T < 176, sRide = (T >= 82.5 && T < 91) || (T >= 185 && T < 205);
     sita.root.visible = T >= 25.5; sita.root.scale.setScalar(.2 + .8 * ease(sstep(25.5, 26.7, T)));
     sita.root.position.set(sx, sRide ? chY(T) + 16 : 0, 22);
-    pose(sita, { ph: sx * Math.PI / STEP + 1.4, s: sRide ? 0 : clamp(Math.abs(vS) / 55), t: T, kneel: captive ? .85 * sstep(91.5, 92.5, T) * (1 - sstep(174.5, 176, T)) : 0 });
-    sita.root.rotation.y = (T < 34 || captive) ? YAW + .55 : YAW;
+    pose(sita, { ph: sx * Math.PI / STEP + 1.4, s: sRide ? 0 : clamp(Math.abs(vS) / 85), t: T, kneel: captive ? .85 * sstep(91.5, 92.5, T) * (1 - sstep(174.5, 176, T)) : 0 });
+    sita.root.rotation.y = (T < 32 || captive) ? YAW + .55 : YAW;
 
     // Hanuman and the vanaras
     const hp = hanPos(T); han.root.visible = hp.vis;
     if (hp.vis) {
       han.root.position.set(hp.x, hp.y, 10); const hv = (hanPos(T + .06).x - hanPos(T - .06).x) / .12;
       han.root.rotation.y = hp.fly ? (hv >= 0 ? 1.4 : -1.4 + Math.PI) : (hp.tail ? (hv >= 0 ? YAW : YAW + 2.4) : YAW);
-      pose(han, { ph: hp.x * Math.PI / STEP, s: hp.fly ? 0 : clamp(Math.abs(hv) / 55), t: T, kneel: hp.kneel, fly: hp.fly, cheer: sstep(176, 177, T) * (1 - sstep(182, 183, T)) });
+      pose(han, { ph: hp.x * Math.PI / STEP, s: hp.fly ? 0 : clamp(Math.abs(hv) / 85), t: T, kneel: hp.kneel, fly: hp.fly, cheer: sstep(176, 177, T) * (1 - sstep(182, 183, T)) });
       han.tailTip.visible = hp.tail > 0;
       if (hp.tail) { han.tailTip.getWorldPosition(wp); for (let i = 0; i < 4; i++) ember(wp.x, wp.y, wp.z, true); }
     }
@@ -1683,7 +1691,7 @@ window.R3 = (function () {
     vanaras.forEach((v, i) => {
       const vis = T >= 119 && T < 185; v.root.visible = vis; if (!vis) return;
       const f = (t) => (t < 152 ? ramX(t) : ramX(152)) - 130 - i * 44, x = f(T), vv = (f(T + .06) - f(T - .06)) / .12;
-      v.root.position.set(x, 0, 14 + (i % 2) * 14); pose(v, { ph: x * Math.PI / STEP + i, s: clamp(Math.abs(vv) / 55), t: T, cheer: sstep(176, 177, T) * (1 - sstep(182, 183, T)) });
+      v.root.position.set(x, 0, 14 + (i % 2) * 14); pose(v, { ph: x * Math.PI / STEP + i, s: clamp(Math.abs(vv) / 85), t: T, cheer: sstep(176, 177, T) * (1 - sstep(182, 183, T)) });
     });
 
     // 3. Shiva's bow: lifted, bent, snapped; then Sita's garland
@@ -1698,7 +1706,7 @@ window.R3 = (function () {
     }
     once('snap', T >= 31.0, () => { flashV = 1; burst(1590, 130, 12, .12, 160, 170); petalRain(1100, 2100, 70, 280); halves.forEach(h => { h.visible = true; h.userData = { t0: T }; h.position.set(1595, 130, 10); }); });
     halves.forEach((h, i) => { if (!h.visible) return; const a = T - h.userData.t0, g = i ? -1 : 1; h.position.set(1595 + g * a * 90, 130 - 170 * a * a, 10); h.rotation.z = g * a * 3; if (a > 2.2 || h.position.y < 6) h.visible = false; });
-    once('garland', T >= 37.6, () => { burst(1700, 150, 12, .1, 80, 90); petalRain(1500, 1900, 40, 260); });
+    once('garland', T >= 38.6, () => { burst(1700, 150, 12, .1, 80, 90); petalRain(1500, 1900, 40, 260); });
     palace2.userData.win.color.setRGB(1, .81, .44).multiplyScalar(1 - .88 * sstep(44, 60, T) * (1 - sstep(190, 200, T)) * (T < 200 ? 1 : 0));
 
     // Ram's bow: slung on the back, in hand to shoot
@@ -2601,9 +2609,9 @@ window.R3 = (function () {
     [10, 22, 'The brothers grow up into brave princes'],
     [22, 26, 'Mithila: King Janak holds a contest to win his daughter Sita'],
     [26, 31, "Ram lifts Shiva's great bow"],
-    [31, 37.5, 'The bow breaks! Sita walks toward Ram'],
-    [37.5, 40, 'Sita garlands Ram: they are married'],
-    [40, 52, 'Back in Ayodhya, a promise forces Ram into exile'],
+    [31, 38, 'The bow breaks! Sita walks toward Ram'],
+    [38, 40.5, 'Sita garlands Ram: they are married'],
+    [40.5, 52, 'Back in Ayodhya, a promise forces Ram into exile'],
     [52, 66, 'Ram, Sita and Lakshman leave the palace for fourteen years in the forest'],
     [66, 77, 'A golden deer appears. Sita wants it, and Ram goes after it'],
     [77, 82.5, 'The deer was a demon in disguise. Ram shoots it, and it cries out in Ram\'s voice'],
