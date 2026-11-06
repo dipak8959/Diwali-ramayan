@@ -8,9 +8,18 @@ Diwali animations to cast to a TV or projector. Each one is a single HTML file w
 | Wall mapper: the same story as one journey across doors and wall | `wall/index.html` | First draft, needs fitting to the real wall |
 | Ramayan frieze: birth, Shiva's bow, forest exile, Ravan, Diwali homecoming | `ramayan/index.html` | First draft, 5 scenes, about 67 s loop |
 
-## Play it
-Turn on GitHub Pages (Settings, Pages, deploy from `main`, `/ (root)`), then open
-`https://dipak8959.github.io/diwali-ramayan/lanterns/` in Safari or Chrome and press **Fullscreen**.
+## Live pages
+The site is served by GitHub Pages from the `main` branch (root):
+
+| Animation | Link |
+|---|---|
+| Wall mapper and the 3D Ramayan story (the main one) | https://dipak8959.github.io/diwali-ramayan/wall/ |
+| Sky lanterns, diyas and fireworks | https://dipak8959.github.io/diwali-ramayan/lanterns/ |
+| Ramayan frieze (older 2D draft) | https://dipak8959.github.io/diwali-ramayan/ramayan/ |
+
+Open a link in Safari or Chrome and press **Fullscreen**. Add `?play` to the wall link (`.../wall/?play`) to start the story straight away.
+
+If a link shows a 404, Pages is not switched on yet: open the repository, then **Settings, Pages**, choose **Deploy from a branch**, branch `main`, folder `/ (root)`, and save. It goes live in a minute or two.
 
 ## Cast to a TV or projector
 - **Chromecast / Google TV:** open in Chrome, then use the menu, **Cast…**, **Cast tab**, and press Fullscreen.
