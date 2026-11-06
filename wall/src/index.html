@@ -82,6 +82,7 @@
 <script src="../vendor/ShaderPass.js"></script>
 <script src="../vendor/MaskPass.js"></script>
 <script src="../vendor/UnrealBloomPass.js"></script>
+<script src="../vendor/fonts.js"></script>
 <script src="r3.js"></script>
 <script>
 (() => {
@@ -871,51 +872,80 @@
     ['Lanka: Ravan falls', ''], ['Ayodhya: Ram returns, Diwali begins', ''],
   ];
   function captionNow() {
-    if (cfg.look === '3d' && window.R3) {
-      const c = R3.caption(T); return c ? { en: c.en, moral: c.moral, a: c.a, am: c.am } : null;
-    }
+    if (cfg.look === '3d' && window.R3) return R3.caption(T);
     const i = Math.min(NP - 1, Math.floor((T + 1.5) / SEG)), lt = i === 0 ? T : T - (i * SEG - 1.5);
-    return { en: SCENE_CAP[i][0], moral: '', a: sstep(.8, 1.8, lt) * (1 - sstep(11, 12.4, lt)), am: 0 };
+    return { en: SCENE_CAP[i][0], moral: '', a: sstep(.8, 1.8, lt) * (1 - sstep(11, 12.4, lt)), am: 0, age: 99 };
   }
   const fitCache = {};
+  const SERIF = '"Cormorant Garamond", Georgia, "Times New Roman", serif', TITLE = 'Cinzel, "Trajan Pro", Georgia, serif';
   function wrapLines(text, maxW) { const words = text.split(' '), lines = []; let cur = ''; for (const wd of words) { const t = cur ? cur + ' ' + wd : wd; if (ctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = wd; } else cur = t; } lines.push(cur); return lines; }
-  // The largest type that fits: what is happening, and underneath it (in another colour) the lesson of the story.
+  // The largest type that fits under the chapter heading: what is happening, and underneath it (in another colour) the lesson of the story.
   function fitText(en, moral, w, h) {
-    const key = en + '|' + moral + '|' + Math.round(w) + '|' + Math.round(h);
+    const key = en + '|' + moral + '|' + Math.round(w) + '|' + Math.round(h) + '|' + !!window.FONTS_READY;
     if (fitCache[key]) return fitCache[key];
-    const EN = (px) => `700 ${px}px Georgia, "Times New Roman", serif`, MO = (px) => `italic 600 ${px}px Georgia, "Times New Roman", serif`;
-    const mtext = moral ? 'Lesson: ' + moral : '';
-    for (let fs = Math.min(h * .3, w * .13); fs >= 7; fs -= .5) {
-      ctx.font = EN(fs); const lines = wrapLines(en, w * .93), ms = fs * .88; ctx.font = MO(ms); const mlines = mtext ? wrapLines(mtext, w * .93) : [];
-      const need = lines.length * fs * 1.2 + (mlines.length ? fs * .35 + mlines.length * ms * 1.2 : 0);
-      if (need <= h * .96) return (fitCache[key] = { fs, ms, lines, mlines, EN: EN(fs), MO: MO(ms) });
+    const EN = (px) => `700 ${px}px ${SERIF}`, MO = (px) => `italic 700 ${px}px ${SERIF}`;
+    const mtext = moral ? moral : '';
+    for (let fs = Math.min(h * .3, w * .12); fs >= 7; fs -= .5) {
+      ctx.font = EN(fs); const lines = wrapLines(en, w * .9), ms = fs * .9; ctx.font = MO(ms); const mlines = mtext ? wrapLines('✦  ' + mtext + '  ✦', w * .9) : [];
+      const need = lines.length * fs * 1.17 + (mlines.length ? fs * .5 + mlines.length * ms * 1.17 : 0);
+      if (need <= h * .97) {
+        ctx.font = EN(fs); const lw = lines.map(l => l.split(' ').map(wd => ctx.measureText(wd).width)), sp = ctx.measureText(' ').width;
+        ctx.font = MO(ms); const mw = mlines.map(l => ctx.measureText(l).width);
+        return (fitCache[key] = { fs, ms, lines, mlines, lw, sp, mw, EN: EN(fs), MO: MO(ms) });
+      }
     }
-    ctx.font = EN(7); return (fitCache[key] = { fs: 7, ms: 6, lines: wrapLines(en, w * .93), mlines: [], EN: EN(7), MO: MO(6) });
+    ctx.font = EN(7); const lines = wrapLines(en, w * .9); return (fitCache[key] = { fs: 7, ms: 6, lines, mlines: [], lw: lines.map(l => l.split(' ').map(wd => ctx.measureText(wd).width)), sp: 2, mw: [], EN: EN(7), MO: MO(6) });
   }
-  function drawCaptionIn(q, en, moral, alpha, am) {
+  // the running chapter heading: BOOK TWO · AYODHYA KANDA · THE EXILE, with a gold rule and a diamond
+  function drawHeading(w, hh, k) {
+    if (!k || k.a <= .004) return;
+    const glow = 1 - sstep(3.5, 6, k.age), big = 1 + .18 * glow * (1 - sstep(0, 1.2, k.age) * 0), fs = hh * .5 * big;
+    ctx.save(); ctx.globalAlpha = k.a; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const t = k.book + '  ·  ' + k.name + (k.sub ? '  ·  ' + k.sub : '');
+    ctx.font = `600 ${fs}px ${TITLE}`; if ('letterSpacing' in ctx) ctx.letterSpacing = (fs * .14).toFixed(1) + 'px';
+    let tw = ctx.measureText(t).width; const fit = Math.min(1, w * .92 / tw); ctx.font = `600 ${fs * fit}px ${TITLE}`; tw = ctx.measureText(t).width;
+    const g = ctx.createLinearGradient(w / 2 - tw / 2, 0, w / 2 + tw / 2, 0); g.addColorStop(0, '#b8862e'); g.addColorStop(.5, '#fff0c0'); g.addColorStop(1, '#b8862e');
+    ctx.fillStyle = g; ctx.shadowColor = `rgba(255,190,90,${(.45 + .5 * glow).toFixed(2)})`; ctx.shadowBlur = fs * (.4 + 1.2 * glow);
+    ctx.fillText(t, w / 2, hh * .42); if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    const ry = hh * .86, half = Math.min(w * .3, tw * .55) * (.35 + .65 * sstep(0, 1.6, k.age));
+    const lg = ctx.createLinearGradient(w / 2 - half, 0, w / 2 + half, 0); lg.addColorStop(0, 'rgba(255,200,110,0)'); lg.addColorStop(.5, 'rgba(255,214,140,.9)'); lg.addColorStop(1, 'rgba(255,200,110,0)');
+    ctx.shadowBlur = fs * .5; ctx.fillStyle = lg; ctx.fillRect(w / 2 - half, ry - .6, half * 2, 1.2);
+    const d = hh * .09; ctx.fillStyle = '#ffe2a0'; ctx.beginPath(); ctx.moveTo(w / 2, ry - d); ctx.lineTo(w / 2 + d, ry); ctx.lineTo(w / 2, ry + d); ctx.lineTo(w / 2 - d, ry); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  const WPS = 4.6;   // words revealed per second (a comfortable reading pace, a little ahead of the reader)
+  function drawCaptionIn(q, c) {
     const xs = q.map(p => p[0]), ys = q.map(p => p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
     const vs = cfg.vstretch, w = x1 - x0, h = (y1 - y0) / vs; if (w < 20 || h < 8) return;
     ctx.save(); clipTo([q]); ctx.translate(x0, y0); ctx.scale(1, vs);
-    const L = fitText(en, moral, w, h), total = L.lines.length * L.fs * 1.2 + (L.mlines.length ? L.fs * .35 + L.mlines.length * L.ms * 1.2 : 0); let y = (h - total) / 2;
-    const g = ctx.createLinearGradient(0, y, 0, y + total); g.addColorStop(0, '#fff3c8'); g.addColorStop(1, '#ffae42');
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.globalAlpha = alpha; ctx.fillStyle = g; ctx.shadowColor = 'rgba(255,160,50,.85)'; ctx.shadowBlur = L.fs * .3;
-    ctx.font = L.EN; for (const l of L.lines) { y += L.fs * .6; ctx.fillText(l, w / 2, y); y += L.fs * .6; }
-    if (L.mlines.length && am > .004) {
-      y += L.fs * .35; const g2 = ctx.createLinearGradient(0, y, 0, y + L.mlines.length * L.ms * 1.2); g2.addColorStop(0, '#d8f8ff'); g2.addColorStop(1, '#52d0ff');
-      ctx.globalAlpha = alpha > 0 ? Math.max(alpha, am) * am : am; ctx.fillStyle = g2; ctx.shadowColor = 'rgba(60,200,255,.85)'; ctx.font = L.MO;
-      for (const l of L.mlines) { y += L.ms * .6; ctx.fillText(l, w / 2, y); y += L.ms * .6; }
+    const hh = c.kanda ? Math.min(h * .17, w * .05) : 0; drawHeading(w, hh, c.kanda);
+    if (c.en && c.a > .004) {
+      const bh = h - hh * 1.15, L = fitText(c.en, c.moral, w, bh), total = L.lines.length * L.fs * 1.17 + (L.mlines.length ? L.fs * .5 + L.mlines.length * L.ms * 1.17 : 0);
+      ctx.translate(0, hh * 1.15); let y = (bh - total) / 2;
+      const g = ctx.createLinearGradient(0, y, 0, y + L.lines.length * L.fs * 1.17); g.addColorStop(0, '#fff6d8'); g.addColorStop(.55, '#ffd27a'); g.addColorStop(1, '#ff9e3a');
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.font = L.EN; ctx.fillStyle = g; ctx.shadowColor = 'rgba(255,150,40,.8)'; ctx.shadowBlur = L.fs * .32;
+      const shown = (c.age === undefined ? 99 : c.age) * WPS; let n = 0;
+      L.lines.forEach((line, li) => {
+        const words = line.split(' '), lw = L.lw[li], tot = lw.reduce((a, b) => a + b, 0) + L.sp * (words.length - 1); let x = (w - tot) / 2; y += L.fs * .585;
+        words.forEach((wd, wi) => { const k = clamp((shown - n) / 2.2); n++; if (k > .003) { ctx.globalAlpha = c.a * k; ctx.fillText(wd, x, y + (1 - k) * L.fs * .18); } x += lw[wi] + L.sp; });
+        y += L.fs * .585;
+      });
+      if (L.mlines.length && c.am > .004) {
+        y += L.fs * .5; const g2 = ctx.createLinearGradient(0, y, 0, y + L.mlines.length * L.ms * 1.17); g2.addColorStop(0, '#e6fbff'); g2.addColorStop(1, '#5cd4ff');
+        ctx.textAlign = 'center'; ctx.globalAlpha = c.am; ctx.fillStyle = g2; ctx.shadowColor = 'rgba(70,200,255,.9)'; ctx.shadowBlur = L.ms * .45; ctx.font = L.MO;
+        for (const l of L.mlines) { y += L.ms * .585; ctx.fillText(l, w / 2, y + (1 - c.am) * L.ms * .25); y += L.ms * .585; }
+      }
     }
     ctx.restore();
   }
   function drawStoryText(PT) {
-    const c = captionNow(); if (!c || c.a <= .004) return;
-    for (const q of PT) drawCaptionIn(q, c.en, c.moral, c.a, c.am);
+    const c = captionNow(); if (!c) return;
+    for (const q of PT) drawCaptionIn(q, c);
   }
 
   function drawTest(P) {
     P.forEach((q, n) => {
-      if (cfg.surfaces[n].role === 'text') { ctx.save(); clipTo([q]); ctx.fillStyle = '#2a2a38'; ctx.fillRect(0, 0, W, H); ctx.restore(); drawCaptionIn(q, 'The story is written here: what is happening, and why', 'the lesson of the story shows here', 1, 1); return; }
+      if (cfg.surfaces[n].role === 'text') { ctx.save(); clipTo([q]); ctx.fillStyle = '#2a2a38'; ctx.fillRect(0, 0, W, H); ctx.restore(); drawCaptionIn(q, { en: 'The story is written here: what is happening, and why', moral: 'the lesson of the story shows here', a: 1, am: 1, age: 99, kanda: { book: 'BOOK ONE', name: 'BALA KANDA', sub: 'THE CHILDHOOD', a: 1, age: 9 } }); return; }
       ctx.save(); clipTo([q]);
       ctx.fillStyle = TEST_COL[n % TEST_COL.length]; ctx.fillRect(0, 0, W, H);
       const xs = q.map(p => p[0]), ys = q.map(p => p[1]);
