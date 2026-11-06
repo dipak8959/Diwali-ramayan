@@ -953,6 +953,7 @@ window.R3 = (function () {
     if (m.i >= 0) { const a = INS[m.i], f = sstep(0, .9, m.u) * (1 - sstep(a.n - .9, a.n, m.u)); out = { en: a.cap, moral: a.moral || '', a: f, age: m.u * SLOW, am: a.moral ? sstep(a.n * .55, a.n * .55 + .8, m.u) * (1 - sstep(a.n - .9, a.n, m.u)) : 0 }; }
     else for (const [a, b, en, moral, ms] of CAP) if (m.S >= a && m.S < b) {
       let k = sstep(a, a + .9, m.S) * (1 - sstep(b - .9, b, m.S)); for (const q of INS) k *= sstep(0, .8, Math.abs(m.S - q.s0));
+      { let lo = a, hi = b; for (const q of INS) { if (q.s0 <= m.S && q.s0 > lo) lo = q.s0; if (q.s0 > m.S && q.s0 < hi) hi = q.s0; } if (hi - lo < 1.5) k = 0; }   // no flicker of text in the short gaps between scenes
       const mm = ms === undefined ? b - 3.6 : ms; out = { en, moral: moral || '', a: k, age: (m.S - a) * SLOW, am: moral ? sstep(mm, mm + .8, m.S) * (1 - sstep(b - .9, b, m.S)) * sstep(0, .8, Math.abs(m.S - 0)) : 0 }; break;
     }
     if (!out) out = { en: '', moral: '', a: 0, am: 0, age: 0 };

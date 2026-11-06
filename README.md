@@ -98,3 +98,16 @@ Ram is crowned by Vasishtha. The Diwali lamps are marked in the captions as a la
 - **Ten new scenes:** Guha ferries the exiles across the Ganga; Dasharatha dies remembering Shravana's curse; Agastya gives Ram the bow of Vishnu and Brahma's arrow; Surasa tests Hanuman over the ocean; the Ashoka grove (Ravan's threat, the blade of grass, Ram's ring and Sita's hair jewel); Hanuman gives the jewel to Ram; Ram and the Ocean god; Agastya teaches Ram the Aditya Hridayam as the Sun rises; Dasharatha appears from heaven and forgives Kaikeyi and Bharata; Bharata puts the sandals back on Ram's feet.
 - **Order fixed:** Vibhishana now joins Ram at the seashore after Hanuman's return (he flies across the sea), and the bridge is built after the Ocean god speaks, as in Valmiki.
 - **Film touches:** god rays for divine moments, a dip to black when the story moves to another place. The full loop is now about 18 minutes.
+
+### Voice narration
+The narrated video adds a spoken narrator to the wall video: each caption is read as it appears, then its lesson, and each book heading ("Book Two. Ayodhya Kanda. The Exile.") is announced.
+The voice is synthetic, made with the open Kokoro text-to-speech model (Apache-2.0): a deep blend of its Hindi male and American male voices, with a little warmth and room echo. It is not, and does not imitate, any real person.
+Sanskrit names are respelled for the voice (Raam, Seeta, Raavan, Hunoomaan…) in `tools/narrate.py`; edit the `SAY` table to change a pronunciation.
+
+To remake it after changing the story or the video:
+```
+pip install kokoro-onnx soundfile        # and download kokoro-v1.0.onnx and voices-v1.0.bin (links in tools/narrate.py)
+node tools/caption-schedule.js schedule.json
+python3 tools/narrate.py schedule.json wall-video.mp4 wall-video-narrated.mp4 --models <model folder> [--voice am_onyx]
+```
+To use a real narrator instead, record one audio file per caption and replace the generated clips, or send the recording and it can be lined up with the captions.
