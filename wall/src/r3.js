@@ -24,6 +24,14 @@ window.R3 = (function () {
   composer.addPass(new THREE.RenderPass(scene, camera));
   const bloom = new THREE.UnrealBloomPass(new THREE.Vector2(256, 64), .55, .45, .78);
   composer.addPass(bloom);
+  const streakShader = {   // an anamorphic streak: bright lights stretch sideways, as in a film lens
+    uniforms: { tDiffuse: { value: null }, uTexel: { value: new THREE.Vector2(1 / 256, 1 / 64) } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: ['uniform sampler2D tDiffuse; uniform vec2 uTexel; varying vec2 vUv;', 'void main(){', '  vec3 c = texture2D(tDiffuse, vUv).rgb, s = vec3(0.);',
+      '  for (int i = -24; i <= 24; i++) { float f = float(i); vec3 t = texture2D(tDiffuse, vUv + vec2(f * uTexel.x * 3., 0.)).rgb; s += max(t - .72, 0.) * exp(-abs(f) * .13); }',
+      '  gl_FragColor = vec4(c + s * vec3(.55, .75, 1.) * .09, 1.);', '}'].join('\n'),
+  };
+  const streakPass = new THREE.ShaderPass(streakShader); composer.addPass(streakPass);
   const gradeShader = {
     uniforms: { tDiffuse: { value: null }, uSpot: { value: new THREE.Vector2(.5, 10) } },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
@@ -66,6 +74,14 @@ window.R3 = (function () {
     ravan:    { skin: 0xc9482f, hair: 0x120508, dress: [0x9a4be0, 0x3a1470], sash: 0xffc94a, crown: true, evil: true },
     hanuman:  { skin: 0xf2a03a, hair: 0x7a4a1a, dress: [0xff4a2a, 0xb01a10], sash: 0xffd23a, crown: true, monkey: true },
     vanara:   { skin: 0xc09050, hair: 0x5a3a18, dress: [0x3a9aff, 0x1040a0], sash: 0xffd23a, monkey: true },
+    sage:     { skin: 0xd9a077, hair: 0xf4f4f4, dress: [0xff8a1a, 0xc05a00], sash: 0xffd23a, beard: true },
+    dasharatha: { skin: 0xd9a077, hair: 0xececec, dress: [0xc03a3a, 0x701818], sash: 0xffd23a, crown: true, beard: true },
+    kaikeyi:  { skin: 0xf0b58c, hair: 0x2c170e, dress: [0x7a5be8, 0x30188a], sash: 0xffd23a, female: true, tiara: true },
+    bharata:  { skin: 0xe9a26b, hair: 0x3a2214, dress: [0xffffff, 0xd8c8a0], sash: 0xff9d1c, crown: true },
+    sugriva:  { skin: 0xd9a14a, hair: 0x7a4a1a, dress: [0x2a8aff, 0x1040a0], sash: 0xffd23a, crown: true, monkey: true },
+    vali:     { skin: 0xc4572a, hair: 0x6a2a10, dress: [0xb01a1a, 0x601010], sash: 0xffd23a, crown: true, monkey: true },
+    tataka:   { skin: 0x4a9a6a, hair: 0x120508, dress: [0x8a2a8a, 0x2a0a2a], sash: 0xffc94a, female: true, evil: true, horns: true },
+    indrajit: { skin: 0x7a5ac0, hair: 0x120508, dress: [0x1a1a6a, 0x0a0a30], sash: 0x35e0ff, crown: true, evil: true },
     kumbha:   { skin: 0x5e9a62, hair: 0x120508, dress: [0x8a3a2a, 0x2a120a], sash: 0xc0392b, crown: true, evil: true },
   };
 
@@ -73,7 +89,7 @@ window.R3 = (function () {
     const g = new THREE.Group(), skin = std(sp.skin, { roughness: .5, emissive: new THREE.Color(sp.skin).multiplyScalar(.05) });
     const head = mesh(G.sph, skin, 0, 0, 0, g); head.scale.set(8.4, 10.4, 9);
     const jaw = mesh(G.sph, skin, 0, -6.4, 1.4, g); jaw.scale.set(6.2, 5.6, 7);
-    let nose;
+    const eyes = []; let nose;
     if (sp.monkey) {   // a pink face with a broad muzzle
       const faceM = std(0xe8957c, { roughness: .55 });
       mesh(G.sph, faceM, 0, -.8, 6, g).scale.set(6.8, 7.6, 4.8);
@@ -81,13 +97,13 @@ window.R3 = (function () {
       for (const s of [-1, 1]) mesh(G.sphLow, DARK, s * 1.3, -2.6, 12, g).scale.setScalar(.7);
     } else { nose = mesh(new THREE.ConeGeometry(1.7, 4.8, 12), skin, 0, -1.4, 9.6, g); nose.rotation.x = Math.PI / 2 - .25; }
     for (const s of [-1, 1]) {
-      const ew = mesh(G.sph, WHITE, s * 3.7, 1.4, 8.1, g); ew.scale.set(1.9, 1.15, .7);
-      const pu = mesh(G.sph, sp.evil ? std(0xff3b1f, { emissive: 0xff2a10, emissiveIntensity: 2 }) : DARK, s * 3.7, 1.4, 8.7, g); pu.scale.set(.85, .85, .5);
+      const ew = mesh(G.sph, WHITE, s * 3.7, 1.4, 8.1, g); ew.scale.set(1.9, 1.15, .7); ew.userData.by = 1.15; eyes.push(ew);
+      const pu = mesh(G.sph, sp.evil ? std(0xff3b1f, { emissive: 0xff2a10, emissiveIntensity: 2 }) : DARK, s * 3.7, 1.4, 8.7, g); pu.scale.set(.85, .85, .5); pu.userData.by = .85; eyes.push(pu);
       const br = mesh(new THREE.BoxGeometry(3.6, .55, .7), DARK, s * 3.9, 3.7, 8.3, g); br.rotation.z = s * (sp.evil ? -.35 : .12);
       const ear = mesh(G.sph, skin, s * 8.5, -.2, -.4, g); ear.scale.set(sp.monkey ? 2.2 : 1.1, sp.monkey ? 3.4 : 2.5, 1.6);
       mesh(G.sph, GOLD, s * 8.9, -3.2, -.4, g).scale.setScalar(sp.female ? 1.5 : 1.1);
     }
-    const lips = mesh(G.sph, std(0xb5403d, { roughness: .4 }), 0, -5.2, 8.4, g); lips.scale.set(2.5, .75, .8);
+    const lips = mesh(G.sph, std(0xb5403d, { roughness: .4 }), 0, -5.2, 8.4, g); lips.scale.set(2.5, .75, .8); g.userData.eyes = eyes; g.userData.lips = lips;
     mesh(new THREE.BoxGeometry(.9, 2.4, .5), RUBY, 0, 5.6, 8.9, g);                      // tilak
     if (sp.evil) { const mo = mesh(new THREE.TorusGeometry(3.2, .55, 6, 14, Math.PI), DARK, 0, -3.8, 8.6, g); mo.rotation.z = Math.PI; mo.scale.set(1.3, .7, 1); }
     const hair = mesh(new THREE.SphereGeometry(1, 20, 14, 0, 6.283, 0, Math.PI * .62), std(sp.hair, { roughness: .8 }), 0, 1.2, -1.4, g); hair.scale.set(9, 11, 10);
@@ -106,6 +122,10 @@ window.R3 = (function () {
       mesh(G.sphLow, RUBY, 0, 6.2, 8.9, g).scale.setScalar(1.2);                         // bindi / maang tikka
       const mt = mesh(new THREE.TorusGeometry(5, .3, 4, 12, Math.PI), GOLD, 0, 8.4, 6.2, g); mt.rotation.x = .5;
     }
+    if (sp.beard) { const bm = std(sp.hair, { roughness: .9 }), bd = mesh(new THREE.ConeGeometry(6.8, 17, 12), bm, 0, -13, 5.2, g); bd.rotation.x = Math.PI; bd.scale.z = .62;
+      for (const s of [-1, 1]) { const mo = mesh(G.sph, bm, s * 2.8, -4.3, 8.6, g); mo.scale.set(3, .9, 1); mo.rotation.z = s * .25; } }
+    if (sp.horns) for (const s of [-1, 1]) { const hn = mesh(new THREE.ConeGeometry(2, 11, 8), std(0xe8e0c0, { roughness: .5 }), s * 5.5, 12, 1, g); hn.rotation.z = -s * .35; }
+    if (sp.tiara) { const tr = mesh(new THREE.TorusGeometry(8.6, .9, 6, 18, Math.PI), GOLD, 0, 3.2, 0, g); tr.rotation.x = .45; tr.rotation.z = Math.PI; tr.position.set(0, 4.4, 1); for (const a of [-.9, 0, .9]) mesh(new THREE.ConeGeometry(1.2, 5, 6), GOLD, Math.sin(a) * 8.4, 10.6 + Math.cos(a) * 1.5, Math.cos(a) * 3, g); mesh(G.sphLow, RUBY, 0, 12, 4.4, g).scale.setScalar(1.3); }
     g.scale.setScalar(scale || 1); return g;
   }
 
@@ -229,6 +249,10 @@ window.R3 = (function () {
       b.rotation.x = lerp(b.rotation.x, -1.45, a); b.rotation.z = lerp(b.rotation.z, -.02, a); b.userData.el.rotation.x = lerp(b.userData.el.rotation.x, -.1 - 2.45 * d, a);
       H.torso.rotation.y = lerp(H.torso.rotation.y, -.25, a);
     }
+    const hd = H.head.userData;
+    if (hd.eyes) { const bl = Math.pow(Math.max(0, Math.sin((t * .9 + H.root.id * 1.7) * 2.1)), 40); hd.eyes.forEach(e => { e.scale.y = e.userData.by * (1 - .92 * bl); }); }
+    if (hd.lips) hd.lips.scale.y = .75 * (1 + (o.talk ? .9 * Math.abs(Math.sin(t * 9 + H.root.id)) : 0));
+    if (o.point) { const k = o.point; H.arms[0].rotation.x = lerp(H.arms[0].rotation.x, -1.45, k); H.arms[0].rotation.z = lerp(H.arms[0].rotation.z, .12, k); H.arms[0].userData.el.rotation.x = lerp(H.arms[0].userData.el.rotation.x, -.05, k); }
     if (o.kneel) { const k = o.kneel; H.body.position.y -= 34 * k; H.legs[0].rotation.x = -1.35 * k; H.knees[0].rotation.x = 2.3 * k; H.legs[1].rotation.x = -.15 * k; H.knees[1].rotation.x = 1.6 * k; H.torso.rotation.x += .35 * k; for (const i of [0, 1]) { H.arms[i].rotation.x = lerp(H.arms[i].rotation.x, -1.1, k); H.arms[i].userData.el.rotation.x = lerp(H.arms[i].userData.el.rotation.x, -1.4, k); } }
     if (o.fly) { const f = o.fly; H.legs[0].rotation.x = lerp(H.legs[0].rotation.x, .7, f); H.legs[1].rotation.x = lerp(H.legs[1].rotation.x, .5, f); H.knees[0].rotation.x = lerp(H.knees[0].rotation.x, .9, f); H.knees[1].rotation.x = lerp(H.knees[1].rotation.x, .5, f); H.arms[0].rotation.x = lerp(H.arms[0].rotation.x, -2.9, f); H.arms[1].rotation.x = lerp(H.arms[1].rotation.x, -2.4, f); H.torso.rotation.x = lerp(H.torso.rotation.x, .5, f); }
     if (o.cheer) { const c = o.cheer, w = Math.sin(t * 7) * .15; for (const i of [0, 1]) { H.arms[i].rotation.x = lerp(H.arms[i].rotation.x, -2.9 + w * (i ? -1 : 1), c); H.arms[i].userData.el.rotation.x = lerp(H.arms[i].userData.el.rotation.x, -.2, c); } }
@@ -402,15 +426,15 @@ window.R3 = (function () {
   const han = makeHuman('hanuman', { headScale: 1.2 }), kum = makeHuman('kumbha');
   scene.add(han.root, kum.root); han.root.visible = kum.root.visible = false;
   const vanaras = Array.from({ length: 6 }, () => { const v = makeHuman('vanara', { headScale: 1.2 }); v.root.scale.setScalar(.58); v.root.visible = false; scene.add(v.root); return v; });
-  function makeJatayu() {
-    const g = new THREE.Group(), m = std(0x9a6a44, { roughness: .7, emissive: 0x2a1408 });
+  function makeJatayu(bodyHex, wingHex) {
+    const g = new THREE.Group(), m = std(bodyHex || 0x9a6a44, { roughness: .7, emissive: new THREE.Color(bodyHex || 0x9a6a44).multiplyScalar(.15) });
     mesh(G.sph, m, 0, 0, 0, g).scale.set(22, 10, 9);
     const neck = mesh(new THREE.CylinderGeometry(3, 4.5, 16, 8), m, 24, 6, 0, g); neck.rotation.z = -1.0;
     mesh(G.sph, m, 32, 13, 0, g).scale.set(6, 5, 5);
     const beak = mesh(new THREE.ConeGeometry(2.4, 10, 8), std(0xffc94a, { emissive: 0x6a4a00 }), 40, 11, 0, g); beak.rotation.z = -Math.PI / 2 - .2;
     mesh(G.sphLow, WHITE, 34, 15, 4, g).scale.setScalar(1.3); mesh(G.sphLow, DARK, 35, 15, 5, g).scale.setScalar(.7);
     mesh(new THREE.BoxGeometry(22, 2, 12), m, -26, 2, 0, g);
-    g.userData.wings = [-1, 1].map(s => { const w = new THREE.Group(); w.position.set(2, 4, s * 6); const f = mesh(G.sph, std(0xb88a5a, { roughness: .7, emissive: 0x2a1408 }), -2, 0, s * 26, w); f.scale.set(11, 1.6, 30); g.add(w); return w; });
+    g.userData.wings = [-1, 1].map(s => { const w = new THREE.Group(); w.position.set(2, 4, s * 6); const f = mesh(G.sph, std(wingHex || 0xb88a5a, { roughness: .7, emissive: new THREE.Color(wingHex || 0xb88a5a).multiplyScalar(.15) }), -2, 0, s * 26, w); f.scale.set(11, 1.6, 30); g.add(w); return w; });
     g.rotation.y = -.45; return g;
   }
   const jat = makeJatayu(); jat.visible = false; scene.add(jat);
@@ -442,6 +466,47 @@ window.R3 = (function () {
     const mh = mesh(G.sph, glowMat(0x20ff90), 0, 0, 0, mount); mh.scale.setScalar(54); mh.material.opacity = .22; mount.visible = false; scene.add(mount); }
   const ash = makeTree(190, 0xff7ab0, 0x5a1030); ash.position.set(5700, 0, -40); scene.add(ash);   // Sita's tree in Lanka
 
+  // ---------- the second wave of the cast: sages, kings, queens, monkeys, demons ----------
+  function addNew(name, scale, opts) { const h = makeHuman(name, opts || {}); h.root.scale.setScalar(scale || 1); h.root.visible = false; scene.add(h.root); return h; }
+  const sage = addNew('sage', 1, { headScale: 1.25 }), tataka = addNew('tataka', 1.5), dash = addNew('dasharatha', 1, { headScale: 1.25 }), kaik = addNew('kaikeyi', 1);
+  const bharat = addNew('bharata', 1), sugr = addNew('sugriva', 1, { headScale: 1.2 }), vali = addNew('vali', 1.25, { headScale: 1.2 }), indra = addNew('indrajit', 1.1);
+  { const staff = new THREE.Group(); mesh(new THREE.CylinderGeometry(1.6, 1.8, 140, 8), std(0x8a5a2a, { roughness: .8 }), 0, -8, 0, staff); mesh(G.sph, GOLD, 0, 62, 0, staff).scale.setScalar(5); staff.position.set(0, -24, 4); sage.arms[0].userData.el.add(staff); }
+  { const club = new THREE.Group(); mesh(new THREE.CylinderGeometry(2, 3, 60, 8), std(0x3a2a20, { roughness: .8 }), 0, -16, 0, club); const hd = mesh(G.sph, std(0x2a2020, { roughness: .6 }), 0, 18, 0, club); hd.scale.setScalar(11);
+    for (let k = 0; k < 8; k++) { const sp = mesh(new THREE.ConeGeometry(2.2, 8, 6), std(0xcfd6e0, { metalness: .8, roughness: .3 }), 0, 18, 0, club); sp.position.set(Math.cos(k * .785) * 11, 18 + Math.sin(k * 1.1) * 7, Math.sin(k * .785) * 11); sp.lookAt(sp.position.clone().multiplyScalar(2)); sp.rotateX(Math.PI / 2); }
+    club.position.set(0, -24, 2); tataka.arms[0].userData.el.add(club); }
+  // Ram's sandals, which Bharata will keep on the throne
+  const sandals = new THREE.Group();
+  for (const z of [-5, 5]) { mesh(G.sph, GOLD, 0, 0, z, sandals).scale.set(11, 1.8, 4.2); mesh(G.sphLow, RUBY, 5, 3, z, sandals).scale.setScalar(1.8); }
+  { const sg = mesh(G.sph, glowMat(0xffd070), 0, 3, 0, sandals); sg.scale.setScalar(16); sg.material.opacity = .35; }
+  sandals.visible = false; scene.add(sandals);
+  // divine weapons given by the sage
+  const orbs = [0, 1, 2].map(i => { const o = mesh(G.sph, glowMat([0xffc94a, 0x35e0ff, 0xff4aa0][i]), 0, 0, 0, scene); o.scale.setScalar(6); o.visible = false; return o; });
+  // Garuda, the divine eagle, and the eagle Jatayu share a builder
+  const garuda = makeJatayu(0xe8b02a, 0xffd860); garuda.scale.setScalar(2.6); garuda.visible = false; scene.add(garuda);
+  // the little squirrel that helped build the bridge
+  const squirrel = new THREE.Group();
+  { const m = std(0xb88a5a, { roughness: .8, emissive: 0x3a2410 });
+    mesh(G.sph, m, 0, 0, 0, squirrel).scale.set(7, 4.5, 3.6); mesh(G.sph, m, 8, 4, 0, squirrel).scale.set(3.4, 3.2, 3); mesh(G.sphLow, DARK, 10.5, 5.2, 1.6, squirrel).scale.setScalar(.7);
+    for (const z of [-1.6, 0, 1.6]) mesh(new THREE.BoxGeometry(11, .5, .6), std(0x3a2410), -.5, 4.3, z * 1.2, squirrel).rotation.z = -.15;
+    const tc = new THREE.CatmullRomCurve3([new THREE.Vector3(-6, 1, 0), new THREE.Vector3(-14, 6, 0), new THREE.Vector3(-14, 15, 0), new THREE.Vector3(-8, 20, 0)]);
+    mesh(new THREE.TubeGeometry(tc, 12, 2.2, 6), m, 0, 0, 0, squirrel); const peb = mesh(G.sphLow, std(0xd8d0c0), 10, 0, 0, squirrel); peb.scale.setScalar(2.2); squirrel.userData.pebble = peb; }
+  squirrel.visible = false; scene.add(squirrel);
+  // serpent arrows and the coils that bind Ram and Lakshman
+  const snakeMat = std(0x30ff90, { emissive: 0x10c060, emissiveIntensity: 1.4, roughness: .4 });
+  const serpents = Array.from({ length: 6 }, () => { const g = new THREE.Group(); const pts = []; for (let k = 0; k <= 12; k++) pts.push(new THREE.Vector3(-k * 5, Math.sin(k * 1.1) * 3.5, 0));
+    mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, 1.8, 6), snakeMat, 0, 0, 0, g); mesh(G.sph, snakeMat, 3, 0, 0, g).scale.set(4.5, 2.6, 2.6); const sg2 = mesh(G.sph, glowMat(0x40ff90), 0, 0, 0, g); sg2.scale.set(20, 8, 8); sg2.material.opacity = .3; g.visible = false; scene.add(g); return g; });
+  const coils = [0, 1].map(() => { const pts = []; for (let k = 0; k <= 60; k++) { const a = k / 60 * Math.PI * 7; pts.push(new THREE.Vector3(Math.cos(a) * 15, 6 + k / 60 * 140, Math.sin(a) * 13)); }
+    const g = new THREE.Group(); mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 120, 2.6, 6), snakeMat, 0, 0, 0, g); g.visible = false; scene.add(g); return g; });
+  // fireflies in the forest, sparkles on the sea
+  const MAXF = 170, ffInst = new THREE.InstancedMesh(G.sphLow, new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), MAXF); ffInst.frustumCulled = false; scene.add(ffInst);
+  const ffs = Array.from({ length: MAXF }, (_, i) => ({ sea: i >= 120, x: i < 120 ? rnd(2650, 4000) : rnd(4170, 5000), y: i < 120 ? rnd(20, 190) : rnd(10, 16), z: i < 120 ? rnd(-70, 40) : rnd(30, 50), ph: rnd(0, 10), sp: rnd(.6, 1.6) }));
+  { const c = new THREE.Color(); ffs.forEach((f, i) => { c.setHex(f.sea ? 0xaee8ff : 0xdcff70); ffInst.setColorAt(i, c); }); }
+  // grass and tiny flowers along the ledge
+  { const gi = new THREE.InstancedMesh(new THREE.ConeGeometry(1.6, 11, 5), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .7, emissive: 0x0a3a30 }), 520); const d = new THREE.Object3D(), c = new THREE.Color();
+    for (let i = 0; i < 520; i++) { d.position.set(rnd(-200, 6200), 5, rnd(30, 43)); d.rotation.set(rnd(-.2, .2), 0, rnd(-.25, .25)); d.scale.set(1, rnd(.6, 1.6), 1); d.updateMatrix(); gi.setMatrixAt(i, d.matrix); c.setHSL(rnd(.38, .5), .7, rnd(.22, .4)); gi.setColorAt(i, c); } scene.add(gi);
+    const fl = new THREE.InstancedMesh(G.sphLow, new THREE.MeshBasicMaterial({ color: 0xffffff }), 110);
+    for (let i = 0; i < 110; i++) { d.position.set(rnd(-200, 6200), rnd(9, 15), rnd(32, 43)); d.rotation.set(0, 0, 0); d.scale.setScalar(rnd(1.4, 2.4)); d.updateMatrix(); fl.setMatrixAt(i, d.matrix); c.setHex([0xff8ac0, 0xffd060, 0xffffff, 0xb08aff][i % 4]); fl.setColorAt(i, c); } scene.add(fl); }
+
   // ---------- particles ----------
   const MAXP = 3200, pGeo = new THREE.SphereGeometry(1, 6, 4);
   const pMat = new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
@@ -459,7 +524,7 @@ window.R3 = (function () {
     }
   }
   function ember(x, y, z, big) { parts.push({ x: x + rnd(-4, 4), y, z, vx: rnd(-14, 14), vy: rnd(35, 90), vz: rnd(-6, 6), life: rnd(.7, 1.6), age: 0, hue: rnd(.04, .1), r: big ? rnd(2.4, 5) : rnd(1.2, 2.6), drag: .9, g: -20 }); }
-  function petalRain(x0, x1, n, top) { for (let i = 0; i < n; i++) pets.push({ x: rnd(x0, x1), y: top + rnd(-30, 30), z: rnd(-20, 40), vy: -rnd(22, 46), ph: rnd(0, 6.3), rot: rnd(0, 6.3), age: 0, life: 12, col: [0xffb3c7, 0xff9d1c, 0xffd9a0, 0xff7a9c][i % 4] }); }
+  function petalRain(x0, x1, n, top, cols) { cols = cols || [0xffb3c7, 0xff9d1c, 0xffd9a0, 0xff7a9c]; for (let i = 0; i < n; i++) pets.push({ x: rnd(x0, x1), y: top + rnd(-30, 30), z: rnd(-20, 40), vy: -rnd(22, 46), ph: rnd(0, 6.3), rot: rnd(0, 6.3), age: 0, life: 12, col: cols[i % cols.length] }); }
   function stepParts(dt) {
     for (let i = parts.length - 1; i >= 0; i--) {
       const p = parts[i]; p.age += dt; if (p.age > p.life) { parts.splice(i, 1); continue; }
@@ -529,17 +594,127 @@ window.R3 = (function () {
   const vel = (f, T) => (f(T + .06) - f(T - .06)) / .12;
   const STEP = 58;   // length of one stride
 
-  const fired = {}; let lastT = -1, flashV = 0;
+
+  // ---------- extra scenes, inserted into the story ----------
+  // Each insert freezes the main story at story time s0 and plays for n seconds, so the long walk is never rushed.
+  const INS = [
+    { s0: 14.5, n: 11, fx: 1020, cap: 'The sage Vishwamitra takes Ram and Lakshman into the forest. Ram defeats the demoness Tataka, and the sage gives him divine weapons' },
+    { s0: 53, n: 11, fx: 2400, cap: 'Queen Kaikeyi asks the king for two boons: Ram must live in the forest, and her son Bharata will be king. Dasharatha collapses in grief, and Ram bows and accepts' },
+    { s0: 60, n: 9, fx: 2200, cap: 'Bharata begs Ram to come back. Ram gives him his sandals to rule in his name' },
+    { s0: 104.6, n: 13, fx: 4050, cap: 'The monkey kings Sugriva and Vali fight. Ram shoots Vali, and Sugriva becomes king' },
+    { s0: 137, n: 16, fx: 5100, cap: "Indrajit, Ravan's son, ties Ram and Lakshman with serpent arrows. The divine eagle Garuda comes and frees them" },
+  ];
+  let accIns = 0; INS.forEach(a => { a.t0 = a.s0 + accIns; accIns += a.n; });
+  const TOTAL = 225 + accIns;
+  function mapT(Tr) {
+    for (let i = 0; i < INS.length; i++) { const a = INS[i]; if (Tr < a.t0) return { S: Tr - (a.t0 - a.s0), i: -1 }; if (Tr < a.t0 + a.n) return { S: a.s0, i, u: Tr - a.t0 }; }
+    return { S: Tr - accIns, i: -1 };
+  }
+  const sToT = (S) => S + INS.reduce((a, b) => a + (b.s0 < S ? b.n : 0), 0);
+  const CAP = [   // story time windows [from, to, text]
+    [0, 6, 'Ayodhya: a lotus blooms and a baby of light appears'], [6, 10, 'Ram and his brother Lakshman are born'],
+    [10, 22, 'Sage Vishwamitra leads the young princes to guard his sacred ritual'],
+    [22, 26, 'Mithila: King Janak holds a contest to win his daughter Sita'], [26, 31, "Ram lifts Shiva's great bow"], [31, 38, 'The bow breaks! Sita walks toward Ram'], [38, 40.5, 'Sita garlands Ram: they are married'],
+    [40.5, 52, 'Back in Ayodhya, a promise forces Ram into exile'], [52, 66, 'Ram, Sita and Lakshman leave the palace for fourteen years in the forest'],
+    [66, 77, 'A golden deer appears. Sita wants it, and Ram goes after it'], [77, 82.5, "The deer was a demon in disguise. Ram shoots it, and it cries out in Ram's voice"],
+    [82.5, 92, 'Ravan carries Sita away in his flying chariot. The vulture Jatayu tries to stop him'], [92, 100, 'Ram and Lakshman find the dying Jatayu, who tells them where Ravan went'],
+    [100, 108, 'Hanuman, the monkey hero, bows to Ram and promises to find Sita'], [108, 116, "Hanuman leaps across the sea to Lanka and finds Sita, and gives her Ram's ring"],
+    [116, 124, 'Hanuman sets Lanka on fire with his tail and leaps back'], [124, 138, 'The monkey army builds a bridge of stones across the sea. A little squirrel helps too'],
+    [138, 150, 'The battle of Lanka: the giant Kumbhakarna falls'], [150, 160, 'Lakshman is struck down. Hanuman flies to bring a healing mountain'],
+    [160, 168.6, 'Ram faces the ten-headed Ravan'], [168.6, 177, 'Ravan falls: good wins over evil'], [177, 186, 'Sita is free. They board the flying chariot Pushpak'],
+    [186, 205, 'The fourteen years are over: the chariot flies them home to Ayodhya'], [205, 225, 'Diwali: Ayodhya lights a lamp for every step of their return'],
+  ];
+  function captionAt(Tr) {
+    const m = mapT(Tr);
+    if (m.i >= 0) { const a = INS[m.i]; return { en: a.cap, a: sstep(0, .9, m.u) * (1 - sstep(a.n - .9, a.n, m.u)) }; }
+    for (const [a, b, en] of CAP) if (m.S >= a && m.S < b) { let k = sstep(a, a + .9, m.S) * (1 - sstep(b - .9, b, m.S)); for (const q of INS) k *= sstep(0, .8, Math.abs(m.S - q.s0)); return { en, a: k }; }
+    return null;
+  }
+  const chapters = [0, 10, 22, 40.5, 52, 66, 82.5, 100, 108, 124, 138, 160, 186, 205].map(sToT).concat(INS.map(a => a.t0)).sort((a, b) => a - b);
+
+  // the aim and the arrow of an inserted scene (the actors themselves are posed later)
+  function insertParams(i, u, rx) {
+    const out = { aw: null, shot: null }, win = (a0, a1, d0, d1) => ({ aim: sstep(a0, a0 + 1.2, u) * (1 - sstep(a1, a1 + .6, u)), draw: sstep(d0, d1, u) * (u < d1 + .05 ? 1 : 0), big: false });
+    if (i === 0) { if (u >= 3.6 && u < 7.4) out.aw = win(3.6, 6.8, 4.6, 5.9); const p = (u - 5.9) / .8; if (p >= 0 && p < 1) out.shot = { p, x0: rx + 62, y0: 128, x1: 1130, y1: 110 }; }
+    if (i === 3) { if (u >= 5.6 && u < 9.2) out.aw = win(5.6, 8.6, 6.2, 7.3); const p = (u - 7.3) / .9; if (p >= 0 && p < 1) out.shot = { p, x0: rx + 62, y0: 128, x1: 4110, y1: 125 }; }
+    return out;
+  }
+  const hide = (...hs) => hs.forEach(h => { h.root.visible = false; });
+  const showAt = (h, x, y, z, ry, sc) => { h.root.visible = true; h.root.position.set(x, y, z); h.root.rotation.set(0, ry, 0); h.root.scale.setScalar(sc); };
+  const pop = (a, b, u, sc) => sc * (.2 + .8 * ease(sstep(a, a + 1.1, u))) * (1 - sstep(b - 1.1, b, u) * .97);   // scale in at a, out at b
+  function insertActors(ins, Tr, rx, base) {
+    hide(tataka, dash, kaik, bharat, sugr, vali, indra);
+    garuda.visible = false; sandals.visible = false; orbs.forEach(o => { o.visible = false; }); serpents.forEach(g => { g.visible = false; }); coils.forEach(g => { g.visible = false; });
+    if (ins.i < 0) return;
+    const u = ins.u, face = -YAW;
+    if (ins.i === 0) {   // Vishwamitra's ritual: Tataka charges and falls
+      const tx = u < 4 ? lerp(1290, 1130, sstep(.4, 4, u)) : 1130, tf = sstep(6.3, 7.6, u), td = sstep(8.2, 9.6, u);
+      if (u > .4 && u < 9.7) { showAt(tataka, tx, 12 * tf, -6, face, 1.5 * (1 - .6 * td) + .001); pose(tataka, { ph: tx * Math.PI / STEP, s: u < 4 ? .75 : 0, t: Tr, cheer: sstep(4, 4.6, u) * (1 - sstep(6, 6.4, u)), talk: u > 4 && u < 6.2 }); tataka.root.rotation.z = -1.5 * tf; if (td > 0 && Math.random() < .8) ember(tx + rnd(-30, 30), rnd(10, 130), 0, true); }
+      once('i0a', u >= .4, () => { flashV = .5; burst(1290, 80, 0, .3, 70, 80); });
+      once('i0b', u >= 6.7, () => { flashV = .7; burst(1130, 100, 0, .02, 120, 130); });
+      once('i0c', u >= 9.3, () => { for (let k = 0; k < 30; k++) ember(1130 + rnd(-20, 20), rnd(20, 100), 0, true); });
+      sage.root.rotation.y = YAW; pose(sage, { ph: 0, s: 0, t: Tr, cheer: sstep(8.6, 9.6, u) * (1 - sstep(10.4, 11, u)), talk: u > 8.6 && u < 10.4 });
+      orbs.forEach((o, i) => { const a = sstep(9, 9.8, u) * (1 - sstep(10.4, 11, u)); o.visible = a > .02; const an = u * 2.6 + i * 2.09; o.position.set(rx + 20 + Math.cos(an) * 34, 130 + Math.sin(an * 1.3) * 18, 10 + Math.sin(an) * 20); o.scale.setScalar(6 * a + .01); });
+    }
+    if (ins.i === 1) {   // Kaikeyi's boons
+      if (u > .2 && u < 10.9) { const kf = sstep(.2, 1.4, u) * (1 - sstep(9.8, 10.9, u));
+        showAt(dash, 2450, 10 * sstep(5.6, 6.8, u), 0, face, kf + .001); pose(dash, { ph: 0, s: 0, t: Tr, kneel: sstep(4.2, 5.4, u), talk: u > 2.2 && u < 4.4 }); dash.root.rotation.z = -1.4 * sstep(5.6, 6.8, u);
+        showAt(kaik, 2515, 0, -10, face, kf + .001); pose(kaik, { ph: 0, s: 0, t: Tr, talk: u > 1.8 && u < 5, point: sstep(2.2, 3, u) * (1 - sstep(4.8, 5.4, u)) }); }
+      once('i1', u >= .2, () => { flashV = .4; burst(2480, 110, 0, .78, 60, 70); });
+      base.ram.kneel = sstep(7, 8.2, u) * (1 - sstep(9.6, 10.6, u));
+    }
+    if (ins.i === 2) {   // Bharata and the sandals
+      const bx = u < 4 ? lerp(1850, 2150, ease(u / 4)) : (u < 6.2 ? 2150 : lerp(2150, 1950, (u - 6.2) / 2.4));
+      if (u > .2 && u < 8.7) { showAt(bharat, bx, 0, 4, u < 6.5 ? YAW : -YAW, pop(.2, 8.7, u, 1)); pose(bharat, { ph: bx * Math.PI / STEP, s: (u < 4 || u > 6.2) ? .85 : 0, t: Tr, kneel: sstep(4, 5, u) * (1 - sstep(6.2, 7, u)), talk: u > 1 && u < 4 }); }
+      const sp = clamp((u - 5.2) / 1.6), hx = bx, hy = 165;
+      sandals.visible = u > 5.2 && u < 8.8; if (sandals.visible) { sandals.position.set(u < 6.8 ? lerp(rx + 12, hx, ease(sp)) : hx, u < 6.8 ? lerp(98, hy, ease(sp)) + Math.sin(Math.PI * sp) * 18 : hy + Math.sin(u * 4) * 1.5, 8); sandals.rotation.y = u * 1.5; sandals.scale.setScalar(1 - sstep(8.2, 8.8, u)); }
+      base.ram.point = sstep(4.4, 5.2, u) * (1 - sstep(6, 6.8, u));
+      once('i2', u >= 5.4, () => { flashV = .3; burst(rx + 14, 100, 0, .12, 50, 60); });
+    }
+    if (ins.i === 3) {   // Sugriva and Vali
+      const sw = Math.sin(u * 2.6), duel = u > .8 && u < 6, sx = duel ? 4040 + 14 * sw : (u < .8 ? 4040 : 4030), vx = duel ? 4125 - 14 * sw : 4125;
+      const vf = sstep(8.2, 9.6, u), vf2 = 1 - sstep(11.6, 12.8, u);
+      if (u > .3 && u < 13) { const f = sstep(.3, 1.4, u) * (1 - sstep(11.8, 12.9, u) * .0);
+        showAt(sugr, sx, 0, 6, YAW, f + .001); pose(sugr, { ph: sx * Math.PI / STEP, s: 0, t: Tr, kneel: sstep(9.8, 10.8, u) * (1 - sstep(10.8, 11.6, u)), cheer: sstep(11.2, 12, u) * .0 });
+        if (u < 8.2) { sugr.arms[0].rotation.x = -1.5 + Math.sin(u * 7) * .6; sugr.arms[1].rotation.x = -1.2 + Math.sin(u * 7 + 2) * .6; sugr.torso.rotation.y = Math.sin(u * 7) * .25; } }
+      if (u > .3 && u < 12.9) { showAt(vali, vx, 10 * vf, -4, face, vf2 * (.2 + .8 * ease(sstep(.3, 1.4, u))) + .001); pose(vali, { ph: 0, s: 0, t: Tr, talk: u > 9.4 && u < 11.6 }); if (u < 8.2) { vali.arms[0].rotation.x = -1.5 + Math.sin(u * 7 + 1) * .6; vali.arms[1].rotation.x = -1.2 + Math.sin(u * 7 + 3) * .6; vali.torso.rotation.y = -Math.sin(u * 7 + 1) * .25; } vali.root.rotation.z = -1.4 * vf; }
+      once('i3a', u >= .3, () => { flashV = .5; burst(4090, 90, 0, .02, 80, 90); });
+      once('i3b', u >= 8.2, () => { flashV = .8; burst(4125, 120, 0, .02, 120, 130); });
+      once('i3c', u >= 11, () => { flashV = .7; burst(4030, 150, 0, .12, 100, 110); });
+    }
+    if (ins.i === 4) {   // Indrajit's serpent arrows and Garuda
+      const cx = u < 12.5 ? lerp(5750, 5330, ease(sstep(.2, 1.8, u))) : lerp(5330, 5900, sstep(12.5, 15.5, u)), cy = 150 + Math.sin(u * 2) * 5;
+      chariot.visible = u > .1 && u < 15.9; chariot.position.set(cx, cy, 0); chariot.scale.setScalar(1); chariot.userData.mat.color.setHex(0x3a1a6a); chariot.userData.mat.emissive.setHex(0x1a0a40); chariot.userData.wheels.forEach(w => { w.rotation.z = Tr * 4; });
+      if (u > .1 && u < 15.9) { showAt(indra, cx - 10, cy + 16, 0, face, 1.1); pose(indra, { ph: 0, s: 0, t: Tr, aim: sstep(1.4, 2.2, u) * (1 - sstep(4.4, 5, u)), draw: sstep(1.6, 3, u) * (u < 4.2 ? 1 : 0), talk: u > 5 && u < 8 }); if (Math.random() < .5) ember(cx + rnd(-30, 30), cy + 4, 0, true); }
+      const tgt = [[rx, 105], [rx - 95, 105]];
+      serpents.forEach((g, i) => { const t0 = 1.8 + i * .38, p = (u - t0) / .9, tg = tgt[i % 2]; g.visible = p >= 0 && p < 1; if (g.visible) { g.position.set(lerp(cx - 30, tg[0], p), lerp(cy + 40, tg[1], p) + Math.sin(p * 9) * 5, 8); g.rotation.z = Math.atan2(tg[1] - cy - 40, tg[0] - cx + 30) + Math.PI; for (let k = 0; k < 2; k++) ember(g.position.x + 14, g.position.y, 8, false); } });
+      const cf = (a) => sstep(a, a + 1.2, u) * (1 - sstep(10, 11, u));
+      coils[0].visible = cf(3.2) > .02; coils[0].position.set(rx, 0, 6); coils[0].scale.set(1, .05 + .95 * cf(3.2), 1); coils[0].rotation.y = u * .4;
+      coils[1].visible = cf(3.6) > .02; coils[1].position.set(rx - 95, 0, 2); coils[1].scale.set(1, .05 + .95 * cf(3.6), 1); coils[1].rotation.y = -u * .4;
+      const rf = sstep(4.2, 5.2, u) * (1 - sstep(11, 12.6, u));
+      base.ram.fall = rf; base.lak.fall = rf;
+      once('i4a', u >= 4.2, () => { flashV = .7; burst(rx, 110, 0, .38, 90, 100); burst(rx - 95, 110, 0, .38, 90, 100); });
+      const gv = u > 8 && u < 15.6; garuda.visible = gv;
+      if (gv) { const gx = u < 10.5 ? lerp(5950, 5050, ease((u - 8) / 2.5)) : (u < 13 ? 5050 : lerp(5050, 4250, ease((u - 13) / 2.6))), gy = u < 10.5 ? lerp(320, 200, ease((u - 8) / 2.5)) : (u < 13 ? 200 + Math.sin(u * 3) * 6 : lerp(200, 360, ease((u - 13) / 2.6)));
+        garuda.position.set(gx, gy, -30); garuda.rotation.y = Math.PI - .45; const fl = Math.sin(u * 11) * .6; garuda.userData.wings.forEach((w, i) => { w.rotation.x = (i ? -1 : 1) * fl; }); if (Math.random() < .7) ember(gx + rnd(-30, 30), gy - 10, -30, true); }
+      once('i4b', u >= 10.4, () => { flashV = 1; burst(5050, 190, 0, .12, 130, 150); });
+      once('i4c', u >= 12.6, () => { flashV = .6; burst(5330, 150, 0, .78, 90, 100); });
+    }
+  }
+
+  const fired = {}; let lastTr = -1, flashV = 0, camC = 380;
   const once = (k, c, fn) => { if (c && !fired[k]) { fired[k] = 1; fn(); } };
   function resetAll() { for (const k in fired) delete fired[k]; parts = []; pets = []; flashV = 0; }
   const wp = new THREE.Vector3();
 
-  function update(T, dt) {
-    if (T < lastT - .0001) resetAll();
-    lastT = T; flashV = Math.max(0, flashV - dt * 1.7);
+  function update(Tr, dt) {
+    const ins = mapT(Tr), T = ins.S, frozen = ins.i >= 0, fz = frozen ? 0 : 1;   // T is story time; during an inserted scene it stands still
+    if (Tr < lastTr - .0001) resetAll();
+    lastTr = Tr; flashV = Math.max(0, flashV - dt * 1.7);
+    camC += ((frozen ? INS[ins.i].fx : follow(T)) - camC) * (1 - Math.exp(-dt * 2.2));
     const wide = Math.max(sstep(104, 110, T) * (1 - sstep(124, 128, T)), sstep(134, 140, T) * (1 - sstep(184, 187, T)), sstep(185, 188, T) * (1 - sstep(204, 206, T)));
-    spotC = follow(T) + 80; spotH = lerp(950, 1300, wide);
-    const rx = ramX(T), vR = vel(ramX, T);
+    spotC = camC + 80; spotH = lerp(950, 1300, wide);
+    const rx = ramX(T), vR = fz * vel(ramX, T);
 
     // 1. birth: a lotus, and a baby of light who becomes Ram (and his brother Lakshman)
     const open = sstep(1, 5, T);
@@ -553,41 +728,43 @@ window.R3 = (function () {
     // Ram: walking, aiming, cheering
     let aw = null;
     for (const [a0, a1, d0, d1] of WIN) if (T >= a0 && T < a1 + .6) aw = { aim: sstep(a0, a0 + 1.2, T) * (1 - sstep(a1, a1 + .6, T)), draw: sstep(d0, d1, T) * (T < d1 + .05 ? 1 : 0), big: a0 < 30 };
+    let insShot = null; const base = { ram: {}, lak: {} };
+    if (frozen) { const r = insertParams(ins.i, ins.u, rx); if (!aw) aw = r.aw; insShot = r.shot; }
     const rider = T >= 185.5 && T < 205;
     ram.root.position.set(rx, rider ? chY(T) + 16 : 0, 6);
-    const po = { ph: rx * Math.PI / STEP, s: rider ? 0 : clamp(Math.abs(vR) / 85), t: T };
+    const po = { ph: rx * Math.PI / STEP, s: rider ? 0 : clamp(Math.abs(vR) / 85), t: Tr };
     if (aw) { po.aim = aw.aim; po.draw = aw.draw; }
     if (T >= 31 && T < 34) po.victory = sstep(31.1, 31.8, T) * (1 - sstep(33, 34, T));
     if (T >= 168.8 && T < 172) po.victory = sstep(168.9, 169.6, T) * (1 - sstep(171, 172, T));
     pose(ram, po);
 
     // Lakshman
-    const lx = lakX(T), vL = vel(lakX, T), lfall = sstep(155.5, 156.4, T) * (1 - sstep(164.5, 166, T));
+    const lx = lakX(T), vL = fz * vel(lakX, T), lfall = sstep(155.5, 156.4, T) * (1 - sstep(164.5, 166, T));
     lak.root.position.set(lx, T >= 185.5 && T < 205 ? chY(T) + 16 : 12 * lfall, 2);
-    pose(lak, { ph: lx * Math.PI / STEP + 2.6, s: (T >= 185.5 && T < 205) ? 0 : clamp(Math.abs(vL) / 85), t: T });
+    pose(lak, { ph: lx * Math.PI / STEP + 2.6, s: (T >= 185.5 && T < 205) ? 0 : clamp(Math.abs(vL) / 85), t: Tr });
     lak.root.rotation.z = -1.45 * lfall;
 
     // Sita
-    const sx = sitaX(T), vS = vel(sitaX, T), captive = T >= 91 && T < 176, sRide = (T >= 82.5 && T < 91) || (T >= 185 && T < 205);
+    const sx = sitaX(T), vS = fz * vel(sitaX, T), captive = T >= 91 && T < 176, sRide = (T >= 82.5 && T < 91) || (T >= 185 && T < 205);
     sita.root.visible = T >= 25.5; sita.root.scale.setScalar(.2 + .8 * ease(sstep(25.5, 26.7, T)));
     sita.root.position.set(sx, sRide ? chY(T) + 16 : 0, 22);
-    pose(sita, { ph: sx * Math.PI / STEP + 1.4, s: sRide ? 0 : clamp(Math.abs(vS) / 85), t: T, kneel: captive ? .85 * sstep(91.5, 92.5, T) * (1 - sstep(174.5, 176, T)) : 0 });
+    pose(sita, { ph: sx * Math.PI / STEP + 1.4, s: sRide ? 0 : clamp(Math.abs(vS) / 85), t: Tr, kneel: captive ? .85 * sstep(91.5, 92.5, T) * (1 - sstep(174.5, 176, T)) : 0 });
     sita.root.rotation.y = (T < 32 || captive) ? YAW + .55 : YAW;
 
     // Hanuman and the vanaras
     const hp = hanPos(T); han.root.visible = hp.vis;
     if (hp.vis) {
-      han.root.position.set(hp.x, hp.y, 10); const hv = (hanPos(T + .06).x - hanPos(T - .06).x) / .12;
+      han.root.position.set(hp.x, hp.y, 10); const hv = fz * (hanPos(T + .06).x - hanPos(T - .06).x) / .12;
       han.root.rotation.y = hp.fly ? (hv >= 0 ? 1.4 : -1.4 + Math.PI) : (hp.tail ? (hv >= 0 ? YAW : YAW + 2.4) : YAW);
-      pose(han, { ph: hp.x * Math.PI / STEP, s: hp.fly ? 0 : clamp(Math.abs(hv) / 85), t: T, kneel: hp.kneel, fly: hp.fly, cheer: sstep(176, 177, T) * (1 - sstep(182, 183, T)) });
+      pose(han, { ph: hp.x * Math.PI / STEP, s: hp.fly ? 0 : clamp(Math.abs(hv) / 85), t: Tr, kneel: hp.kneel, fly: hp.fly, cheer: sstep(176, 177, T) * (1 - sstep(182, 183, T)) });
       han.tailTip.visible = hp.tail > 0;
       if (hp.tail) { han.tailTip.getWorldPosition(wp); for (let i = 0; i < 4; i++) ember(wp.x, wp.y, wp.z, true); }
     }
     mount.visible = hp.vis && hp.mount > .02; if (mount.visible) { mount.position.set(hp.x, hp.y + 150, 10); mount.scale.setScalar(hp.mount); mount.rotation.y = T * .8; }
     vanaras.forEach((v, i) => {
       const vis = T >= 119 && T < 185; v.root.visible = vis; if (!vis) return;
-      const f = (t) => (t < 152 ? ramX(t) : ramX(152)) - 130 - i * 44, x = f(T), vv = (f(T + .06) - f(T - .06)) / .12;
-      v.root.position.set(x, 0, 14 + (i % 2) * 14); pose(v, { ph: x * Math.PI / STEP + i, s: clamp(Math.abs(vv) / 85), t: T, cheer: sstep(176, 177, T) * (1 - sstep(182, 183, T)) });
+      const f = (t) => (t < 152 ? ramX(t) : ramX(152)) - 130 - i * 44, x = f(T), vv = fz * (f(T + .06) - f(T - .06)) / .12;
+      v.root.position.set(x, 0, 14 + (i % 2) * 14); pose(v, { ph: x * Math.PI / STEP + i, s: clamp(Math.abs(vv) / 85), t: Tr, cheer: sstep(176, 177, T) * (1 - sstep(182, 183, T)) });
     });
 
     // 3. Shiva's bow: lifted, bent, snapped; then Sita's garland
@@ -612,7 +789,7 @@ window.R3 = (function () {
       const f = ram.arms[0].userData.hand, b = ram.arms[1].userData.hand, fp = new THREE.Vector3(), bp = new THREE.Vector3(); f.getWorldPosition(fp); b.getWorldPosition(bp);
       bow.position.copy(fp); bow.rotation.set(0, 0, 0); bow.scale.setScalar(1.3); bow.updateMatrixWorld(true);
       const bl = bow.worldToLocal(bp.clone()), sp = bowString.geometry.attributes.position; sp.setXYZ(0, 0, 38, 0); sp.setXYZ(1, bl.x, bl.y, bl.z); sp.setXYZ(2, 0, -38, 0); sp.needsUpdate = true;
-      arrow.visible = aw.draw > .05 && !SHOTS.some(([t0, d]) => T >= t0 && T < t0 + d + .1); if (arrow.visible) { arrow.position.copy(bp).add(new THREE.Vector3(30, 0, 0)); arrow.rotation.set(0, 0, 0); }
+      arrow.visible = aw.draw > .05 && !insShot && !SHOTS.some(([t0, d]) => T >= t0 && T < t0 + d + .1); if (arrow.visible) { arrow.position.copy(bp).add(new THREE.Vector3(30, 0, 0)); arrow.rotation.set(0, 0, 0); }
     } else if (T >= 43) {
       bow.position.set(rx - 22, 112, -14); bow.rotation.set(0, .5, .3); bow.scale.setScalar(1.25);
       const sp = bowString.geometry.attributes.position; sp.setXYZ(0, 0, 38, 0); sp.setXYZ(1, 0, 0, 0); sp.setXYZ(2, 0, -38, 0); sp.needsUpdate = true; arrow.visible = false;
@@ -625,7 +802,8 @@ window.R3 = (function () {
       arrow.position.set(lerp(x0, tx, p), lerp(y0, ty, p) + Math.sin(Math.PI * p) * 8, 10); arrow.rotation.set(0, 0, Math.atan2(ty - y0, tx - x0));
       for (let k = 0; k < 3; k++) ember(arrow.position.x - 18, arrow.position.y, 10, true);
     });
-    if (!SHOTS.some(([t0, d]) => T >= t0 && T < t0 + d) && !(bowOn && aw.draw > .05)) arrow.visible = false;
+    if (insShot) { const q = insShot; arrow.visible = true; arrow.position.set(lerp(q.x0, q.x1, q.p), lerp(q.y0, q.y1, q.p) + Math.sin(Math.PI * q.p) * 8, 10); arrow.rotation.set(0, 0, Math.atan2(q.y1 - q.y0, q.x1 - q.x0)); for (let k = 0; k < 3; k++) ember(arrow.position.x - 18, arrow.position.y, 10, true); }
+    if (!insShot && !SHOTS.some(([t0, d]) => T >= t0 && T < t0 + d) && !(bowOn && aw.draw > .05)) arrow.visible = false;
 
     // 6. the golden deer, and the arrow that ends the illusion
     const dv = T >= 66 && T < 77;
@@ -640,7 +818,7 @@ window.R3 = (function () {
     if (rp) {
       rav.root.scale.set(1.1 * (1 + burn * .1), ravS, 1.1);
       rav.root.position.set(rp.x + (T > 168.6 && T < 175 ? Math.sin(T * 60) * 2.5 * (1 - burn) : 0), rp.y, -10);
-      pose(rav, { ph: 0, s: 0, t: T }); rav.root.rotation.y = YAW - .4; rav.heads.forEach((h, i) => { h.rotation.y = Math.sin(T * 1.1 + i) * .18; });
+      pose(rav, { ph: 0, s: 0, t: Tr }); rav.root.rotation.y = YAW - .4; rav.heads.forEach((h, i) => { h.rotation.y = Math.sin(Tr * 1.1 + i) * .18; });
     }
     once('abduct', T >= 80, () => { flashV = 1; burst(3420, 110, 10, .78, 120, 130); });
     const cv = (T >= 82.5 && T < 92) || (T >= 182 && T < 213);
@@ -671,11 +849,11 @@ window.R3 = (function () {
     once('lankaburn', T >= 116, () => { flashV = .5; });
     if (hp.fly && hp.vis) ember(hp.x - 20, hp.y + 60, 10, false);
     stones.forEach(m => { const a = clamp((T - m.userData.t) / .7), sc = a <= 0 ? .001 : (a < 1 ? 1 + .35 * Math.sin(Math.PI * a) : 1); m.scale.setScalar(sc * (a > 0 ? 1 : .001)); if (a > 0 && a < 1 && Math.random() < .6) ember(m.position.x, 16, 10, false); });
-    const sp = seaGeo.attributes.position; for (let i = 0; i < sp.count; i++) { const x = seaBase[i * 3], y = seaBase[i * 3 + 1]; sp.setY(i, y + Math.sin(x * .045 + T * 2.2) * 2.6 + Math.sin(x * .11 - T * 3) * 1.1); } sp.needsUpdate = true;
+    const sp = seaGeo.attributes.position; for (let i = 0; i < sp.count; i++) { const x = seaBase[i * 3], y = seaBase[i * 3 + 1]; sp.setY(i, y + Math.sin(x * .045 + Tr * 2.2) * 2.6 + Math.sin(x * .11 - Tr * 3) * 1.1); } sp.needsUpdate = true;
 
     // 11. Kumbhakarna, Lakshman struck down, the healing mountain
     kum.root.visible = T >= 138 && T < 155.5;
-    if (kum.root.visible) { const f = sstep(148, 150.5, T); kum.root.position.set(5320, 14 * f, -10); kum.root.rotation.y = YAW - .5; kum.root.rotation.z = -1.5 * f; kum.root.scale.setScalar(1.9 * (1 - .9 * sstep(153, 155.5, T))); pose(kum, { ph: 0, s: 0, t: T }); }
+    if (kum.root.visible) { const f = sstep(148, 150.5, T); kum.root.position.set(5320, 14 * f, -10); kum.root.rotation.y = YAW - .5; kum.root.rotation.z = -1.5 * f; kum.root.scale.setScalar(1.9 * (1 - .9 * sstep(153, 155.5, T))); pose(kum, { ph: 0, s: 0, t: Tr }); }
     once('khit', T >= 147.6, () => { flashV = .8; burst(5255, 150, 0, .02, 130, 160); });
     once('lakhit', T >= 155.5, () => { flashV = .6; burst(5110, 110, 0, .02, 80, 110); });
     once('mount', T >= 158, () => { flashV = .9; burst(4900, 120, 0, .38, 130, 150); burst(5110, 60, 0, .38, 90, 100); });
@@ -688,12 +866,33 @@ window.R3 = (function () {
     once('land', T >= 205, () => { flashV = .7; burst(560, 110, 0, .1, 100, 110); petalRain(100, 1100, 60, 280); });
 
     // 13–14. diyas light as the chariot flies home; lanterns, fireworks and the greeting
-    world.diyas.forEach(d => { const u = d.userData, chp = chX(T), lit = Math.max(u.x < 700 ? sstep(7, 9, T) : 0, T >= 186 ? sstep(chp - 30, chp + 120, u.x) : 0), fl = .85 + .15 * Math.sin(T * 12 + u.ph); u.fl.visible = lit > .02; u.fl.scale.set(1, (.6 + .4 * lit) * fl, 1); u.gl.material.opacity = .55 * lit * fl; });
+    world.diyas.forEach(d => { const u = d.userData, chp = chX(T), lit = Math.max(u.x < 700 ? sstep(7, 9, T) : 0, T >= 186 ? sstep(chp - 30, chp + 120, u.x) : 0), fl = .85 + .15 * Math.sin(Tr * 12 + u.ph); u.fl.visible = lit > .02; u.fl.scale.set(1, (.6 + .4 * lit) * fl, 1); u.gl.material.opacity = .55 * lit * fl; });
     world.lanterns.forEach(l => { const u = l.userData, a = sstep(205, 209, T); l.visible = a > 0 && T < 225; l.position.set(u.x + Math.sin(T * .6 + u.ph) * 14, u.y0 + (T - 205) * u.sp, -10 + Math.sin(u.ph) * 20); l.scale.setScalar(.8 + (u.ph % 1) * .5); });
     for (let k = 0; k < 12; k++) once('fw' + k, T >= 206 + k * 1.4, () => burst(150 + (k * 173) % 1100, 150 + (k * 47) % 110, rnd(-30, 20), [.1, .92, .55, .35, .02, .78][k % 6], 120));
     once('petal2', T >= 207, () => petalRain(100, 1200, 60, 260));
     label.material.opacity = sstep(208, 211, T) * (1 - sstep(221, 223.5, T));
-    lights.flash.intensity = flashV * 2.6; if (flashV > 0) lights.flash.position.set(follow(T), 150, 200);
+    // the sage who guides the princes, and the inserted scenes
+    const sv = T >= 10 && T < 26; sage.root.visible = sv;
+    if (sv) { const sxx = ramX(T) + 130, vs = fz * vel(ramX, T); sage.root.position.set(sxx, 0, 4); sage.root.rotation.y = YAW; sage.root.scale.setScalar(.2 + .8 * ease(sstep(10, 11.2, T)) * (1 - sstep(24.4, 26, T) * .97)); pose(sage, { ph: sxx * Math.PI / STEP, s: clamp(Math.abs(vs) / 85), t: Tr }); }
+    insertActors(ins, Tr, rx, base);
+    if (frozen) {   // re-pose the main cast for the inserted scene (kneeling, pointing, fallen)
+      const rp = { ph: rx * Math.PI / STEP, s: 0, t: Tr }; if (aw) { rp.aim = aw.aim; rp.draw = aw.draw; } if (base.ram.kneel) rp.kneel = base.ram.kneel; if (base.ram.point) rp.point = base.ram.point; if (ins.i === 3 && aw) rp.talk = false;
+      pose(ram, rp); ram.root.rotation.z = -1.45 * (base.ram.fall || 0); ram.root.position.y = 12 * (base.ram.fall || 0);
+      lak.root.rotation.z = -1.45 * (base.lak.fall || 0); lak.root.position.y = 12 * (base.lak.fall || 0);
+    }
+    // a little squirrel carries pebbles to the bridge
+    const sqv = T >= 121 && T < 136; squirrel.visible = sqv;
+    if (sqv) { const q = sstep(132, 134, T), qx = ramX(T) + 60 + Math.sin(T * 1.7) * 38 * (1 - q) - 22 * q, hop = Math.abs(Math.sin(T * 7)) * 6 * (1 - q); squirrel.position.set(qx, 14 + hop, 22); squirrel.rotation.y = Math.cos(T * 1.7) > 0 ? 0 : Math.PI; if (q > .5) squirrel.rotation.y = Math.PI; squirrel.userData.pebble.visible = q < .5; if (q > .9) once('sq', true, () => { flashV = .3; burst(qx, 40, 0, .12, 50, 40); }); }
+    // footsteps raise a little dust
+    for (const [h, x, s2, vis] of [[ram, rx, clamp(Math.abs(vR) / 85), ram.root.visible], [lak, lx, clamp(Math.abs(vL) / 85), lak.root.visible], [sita, sx, clamp(Math.abs(vS) / 85), sita.root.visible]]) {
+      if (!vis || s2 < .25 || frozen) continue; const sg = Math.sin(x * Math.PI / STEP + (h === ram ? 0 : h === lak ? 2.6 : 1.4)) > 0 ? 1 : -1;
+      if (h.lastSg !== undefined && sg !== h.lastSg) for (let k = 0; k < 3; k++) parts.push({ x: x + rnd(-8, 8), y: 2, z: rnd(6, 26), vx: rnd(-14, 14), vy: rnd(6, 20), vz: 0, life: rnd(.5, .9), age: 0, hue: .09, r: rnd(1, 1.8), drag: .25, g: 20 });
+      h.lastSg = sg;
+    }
+    // falling leaves in the forest, fireflies and sea sparkles
+    if (T >= 56 && T < 100 && Math.random() < dt * 3) petalRain(camC - 500, camC + 500, 1, 280, [0x6ac040, 0xd0a030, 0x40a070, 0xe08030]);
+    { const d = new THREE.Object3D(); for (let i = 0; i < MAXF; i++) { const f = ffs[i], a = f.sea ? .35 + .65 * Math.max(0, Math.sin(Tr * f.sp * 4 + f.ph)) : .25 + .75 * Math.max(0, Math.sin(Tr * f.sp + f.ph)); d.position.set(f.x + Math.sin(Tr * .4 + f.ph) * (f.sea ? 0 : 14), f.y + (f.sea ? 0 : Math.sin(Tr * .7 + f.ph) * 8), f.z); d.scale.setScalar((f.sea ? 1.6 : 2.2) * a + .01); d.updateMatrix(); ffInst.setMatrixAt(i, d.matrix); } ffInst.instanceMatrix.needsUpdate = true; if (ffInst.instanceColor) ffInst.instanceColor.needsUpdate = true; }
+    lights.flash.intensity = flashV * 2.6; if (flashV > 0) lights.flash.position.set(camC, 150, 200);
     stepParts(dt);
   }
 
@@ -701,7 +900,7 @@ window.R3 = (function () {
   let vw = 0, vh = 0, spotC = 400, spotH = 950;
   function setView(x0, x1, yTop, yBottom, pxW, pxH, sx, sy) {
     pxW = Math.max(16, Math.round(pxW)); pxH = Math.max(8, Math.round(pxH));
-    if (pxW !== vw || pxH !== vh) { vw = pxW; vh = pxH; renderer.setSize(pxW, pxH, false); composer.setSize(pxW, pxH); }
+    if (pxW !== vw || pxH !== vh) { vw = pxW; vh = pxH; renderer.setSize(pxW, pxH, false); composer.setSize(pxW, pxH); streakPass.uniforms.uTexel.value.set(1 / pxW, 1 / pxH); }
     const cx = (x0 + x1) / 2;
     camera.left = x0 - cx; camera.right = x1 - cx; camera.top = yTop; camera.bottom = yBottom; camera.position.set(cx, 0, 3000); camera.lookAt(cx, 0, 0);
     camera.updateProjectionMatrix();
@@ -712,5 +911,5 @@ window.R3 = (function () {
     camera.projectionMatrix.multiply(shear); camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
   }
   function render() { drawParts(); composer.render(); return canvas; }
-  return { canvas, setView, update, render, LOOP, WORLD, ramX, sitaX, lakX, follow, bloom };
+  return { canvas, setView, update, render, LOOP: TOTAL, WORLD, ramX, sitaX, lakX, follow: () => camC, caption: captionAt, chapters, bloom };
 })();

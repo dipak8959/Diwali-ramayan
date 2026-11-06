@@ -770,8 +770,8 @@
         const fz = cfg.view === 'frieze';
         ctx.font = (fz ? '700 36px' : '700 64px') + ' "Noto Sans Devanagari", "Mangal", Georgia, serif';
         ctx.shadowColor = 'rgba(255,170,60,.95)'; ctx.shadowBlur = 26; ctx.fillStyle = '#ffe9b0';
-        ctx.fillText('शुभ दीपावली', fz ? 880 : 650, fz ? 196 : 100);
-        ctx.font = (fz ? '600 20px' : '600 28px') + ' Georgia, serif'; ctx.shadowBlur = 12; ctx.fillStyle = GOLD; ctx.fillText('Happy Diwali', fz ? 880 : 650, fz ? 232 : 150);
+        ctx.fillText('Happy Diwali', fz ? 880 : 650, fz ? 196 : 100);
+        ctx.font = (fz ? '600 20px' : '600 28px') + ' Georgia, serif'; ctx.shadowBlur = 12; ctx.fillStyle = GOLD; /* one greeting line, English only */
         ctx.restore();
       }
       caption(lt, 'Ayodhya · Ram returns, Diwali begins', 'दीपावली');
@@ -866,40 +866,13 @@
 
   const TEST_COL = ['#ffffff', '#ffe6a8', '#bfe3ff', '#ffc4d6', '#c9f5c0'];
   // ---------- story text: what is happening, shown in the 'Story text' areas ----------
-  const STORY_CAP = [   // for the 3D walk: [from, to, text]
-    [0, 6, 'Ayodhya: a lotus blooms and a baby of light appears'],
-    [6, 10, 'Ram and his brother Lakshman are born'],
-    [10, 22, 'The brothers grow up into brave princes'],
-    [22, 26, 'Mithila: King Janak holds a contest to win his daughter Sita'],
-    [26, 31, "Ram lifts Shiva's great bow"],
-    [31, 38, 'The bow breaks! Sita walks toward Ram'],
-    [38, 40.5, 'Sita garlands Ram: they are married'],
-    [40.5, 52, 'Back in Ayodhya, a promise forces Ram into exile'],
-    [52, 66, 'Ram, Sita and Lakshman leave the palace for fourteen years in the forest'],
-    [66, 77, 'A golden deer appears. Sita wants it, and Ram goes after it'],
-    [77, 82.5, 'The deer was a demon in disguise. Ram shoots it, and it cries out in Ram\'s voice'],
-    [82.5, 92, 'Ravan carries Sita away in his flying chariot. The vulture Jatayu tries to stop him'],
-    [92, 100, 'Ram and Lakshman find the dying Jatayu, who tells them where Ravan went'],
-    [100, 108, 'Hanuman, the monkey hero, bows to Ram and promises to find Sita'],
-    [108, 116, 'Hanuman leaps across the sea to Lanka and finds Sita, and gives her Ram\'s ring'],
-    [116, 124, 'Hanuman sets Lanka on fire with his tail and leaps back'],
-    [124, 138, 'The monkey army builds a bridge of stones across the sea'],
-    [138, 150, 'The battle of Lanka: the giant Kumbhakarna falls'],
-    [150, 160, 'Lakshman is struck down. Hanuman flies to bring a healing mountain'],
-    [160, 168.6, 'Ram faces the ten-headed Ravan'],
-    [168.6, 177, 'Ravan falls: good wins over evil'],
-    [177, 186, 'Sita is free. They board the flying chariot Pushpak'],
-    [186, 205, 'The fourteen years are over: the chariot flies them home to Ayodhya'],
-    [205, 225, 'Diwali: Ayodhya lights a lamp for every step of their return'],
-  ];
   const SCENE_CAP = [   // for the five-scene 2D looks
     ['Ayodhya: the birth of Ram', ''], ["Mithila: Ram lifts the bow of Shiva", ''], ['Vanvaas: fourteen years in the forest', ''],
     ['Lanka: Ravan falls', ''], ['Ayodhya: Ram returns, Diwali begins', ''],
   ];
   function captionNow() {
     if (cfg.look === '3d' && window.R3) {
-      for (const [a, b, en] of STORY_CAP) if (T >= a && T < b) return { en, hi: '', a: sstep(a, a + .9, T) * (1 - sstep(b - .9, b, T)) };
-      return null;
+      const c = R3.caption(T); return c ? { en: c.en, hi: '', a: c.a } : null;
     }
     const i = Math.min(NP - 1, Math.floor((T + 1.5) / SEG)), lt = i === 0 ? T : T - (i * SEG - 1.5);
     return { en: SCENE_CAP[i][0], hi: SCENE_CAP[i][1], a: sstep(.8, 1.8, lt) * (1 - sstep(11, 12.4, lt)) };
@@ -1041,9 +1014,8 @@
     if (mode === 'play' || recording) hideTimer = setTimeout(() => { ui.classList.add('hidden'); hint.classList.add('hidden'); document.body.classList.add('hide-cursor'); }, 4000);
   }
   function seek(sec) { resetWorld(); T = 0; const step = 1 / 30; const n = Math.round(sec / step); for (let i = 0; i < n; i++) update(step); }
-  const STORY_T = [0, 10, 22, 40, 52, 66, 82.5, 100, 108, 124, 138, 160, 186, 205];   // where the chapters begin in the 3D walk
-  const jump = (i) => { if (cfg.look === '3d') { seek(STORY_T[((i % STORY_T.length) + STORY_T.length) % STORY_T.length]); return; } const n = ((i % NP) + NP) % NP; seek(Math.max(0, n * SEG)); };
-  const curScene = () => cfg.look === '3d' ? Math.max(0, STORY_T.filter(t => T + .5 >= t).length - 1) : Math.min(NP - 1, Math.floor((T + 1.5) / SEG));
+  const jump = (i) => { if (cfg.look === '3d' && window.R3) { const C = R3.chapters; seek(C[((i % C.length) + C.length) % C.length]); return; } const n = ((i % NP) + NP) % NP; seek(Math.max(0, n * SEG)); };
+  const curScene = () => cfg.look === '3d' && window.R3 ? Math.max(0, R3.chapters.filter(t => T + .5 >= t).length - 1) : Math.min(NP - 1, Math.floor((T + 1.5) / SEG));
   const $ = (id) => document.getElementById(id);
   const bPlay = $('bPlay');
   const togglePause = () => { paused = !paused; bPlay.textContent = paused ? '▶ Play' : '⏸ Pause'; };
