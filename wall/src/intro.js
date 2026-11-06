@@ -91,16 +91,22 @@ window.VishnuIntro = (function () {
     c.save(); c.globalAlpha = .12; c.fillStyle = '#000'; for (let yy = 4; yy < H; yy += 8) for (let xx = (yy / 8 % 2) * 4; xx < W; xx += 8) { c.beginPath(); c.arc(xx, yy, 1.6 + 1.6 * (yy / H), 0, 6.283); c.fill(); } c.restore();
     c.lineWidth = 8; c.strokeStyle = '#05030a'; c.strokeRect(4, 4, W - 8, H - 8);
   }
-  function panel(i) {
-    if (cache[i] && cache[i].ready === !!window.FONTS_READY) return cache[i];
-    const cv = document.createElement('canvas'); cv.width = PW; cv.height = PH; const c = cv.getContext('2d'); art(i, c);
-    c.fillStyle = 'rgba(0,0,0,.55)'; c.fillRect(8, PH - 64, PW - 16, 56);
-    c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#fff'; c.font = '700 30px Cinzel, Georgia, serif'; if ('letterSpacing' in c) c.letterSpacing = '3px'; c.fillText(AV[i][0], PW / 2, PH - 44);
-    c.font = 'italic 600 17px "Cormorant Garamond", Georgia, serif'; if ('letterSpacing' in c) c.letterSpacing = '0px'; c.fillStyle = AV[i][3]; c.fillText(AV[i][1], PW / 2, PH - 20);
-    cv.ready = !!window.FONTS_READY; return (cache[i] = cv);
+  const named = [];
+  function still(i) {   // the picture alone: the 3D render if available, else the 2D art
+    if (window.R3 && R3.avatarStills) { try { return R3.avatarStills()[i]; } catch (e) { /* fall back to 2D */ } }
+    if (cache[i]) return cache[i]; const cv = document.createElement('canvas'); cv.width = PW; cv.height = PH; art(i, cv.getContext('2d')); return (cache[i] = cv);
+  }
+  function panel(i) {   // the picture with the avatar's name, for the line-up
+    if (named[i] && named[i].ready === !!window.FONTS_READY) return named[i];
+    const im = still(i), cv = document.createElement('canvas'); cv.width = 360; cv.height = 480; const c = cv.getContext('2d'); c.drawImage(im, 0, 0, 360, 480);
+    const g = c.createLinearGradient(0, 360, 0, 480); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.85)'); c.fillStyle = g; c.fillRect(0, 360, 360, 120);
+    c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#fff'; c.font = '700 34px Cinzel, Georgia, serif'; if ('letterSpacing' in c) c.letterSpacing = '4px'; c.fillText(AV[i][0], 180, 430);
+    c.font = 'italic 600 19px "Cormorant Garamond", Georgia, serif'; if ('letterSpacing' in c) c.letterSpacing = '0px'; c.fillStyle = AV[i][3]; c.fillText(AV[i][1], 180, 458);
+    c.strokeStyle = 'rgba(255,220,150,.5)'; c.lineWidth = 3; c.strokeRect(1.5, 1.5, 357, 477);
+    cv.ready = !!window.FONTS_READY; return (named[i] = cv);
   }
   // which avatar a flipping panel shows at time t: slow at first, then faster and faster
-  const flipIndex = (t, k) => { const ph = 1.6 * t + 3.2 * Math.max(0, t - 3) ** 1.8; return Math.floor(ph + k * 3.7) % 10; };
+  const flipIndex = (t, k) => { const ph = 1.6 * t + 3.2 * Math.max(0, t - 3) ** 1.8; return ((Math.floor(ph + k * 3.7) % 10) + 10) % 10; };
   const flipPhase = (t, k) => { const ph = 1.6 * t + 3.2 * Math.max(0, t - 3) ** 1.8 + k * 3.7; return ph - Math.floor(ph); };
   // ---- the long band above the doors ----
   function drawBand(c, w, h, t, s) {
@@ -110,8 +116,10 @@ window.VishnuIntro = (function () {
     if (t < 9) {
       const z = 1.25 - .25 * ss(.6, 8, t) + .4 * ss(8.2, 9, t), a = ss(.4, 1.2, t) * (1 - ss(8.6, 9, t));
       c.globalAlpha = a; c.translate(w / 2, H / 2); c.scale(z, z); c.translate(-w / 2, -H / 2);
-      for (let k = 0; k < n; k++) { const i = flipIndex(t, k), f = flipPhase(t, k), sq = Math.abs(Math.cos(f * Math.PI)) * .7 + .3, cx = pw * (k + .5);
-        c.save(); c.translate(cx, y0 + ph / 2); c.scale(sq, 1); c.drawImage(panel(i), -pW / 2, -ph / 2, pW, ph); c.restore(); }
+      for (let k = 0; k < n; k++) { const i = flipIndex(t, k), f = flipPhase(t, k), turn = Math.max(0, (f - .78) / .22), sq = Math.cos(turn * Math.PI / 2), cx = pw * (k + .5);
+        c.save(); c.translate(cx, y0 + ph / 2); c.globalAlpha = a * .35; c.drawImage(still((i + 9) % 10), -pW / 2 - pW * .06, -ph / 2, pW, ph); c.globalAlpha = a;
+        c.transform(Math.max(.02, sq), -.12 * turn, 0, 1, 0, 0); c.drawImage(still(i), -pW / 2, -ph / 2, pW, ph);
+        if (turn > 0) { c.fillStyle = `rgba(255,236,200,${(.7 * turn).toFixed(3)})`; c.fillRect(pW / 2 - 4, -ph / 2, 4, ph); } c.restore(); }
       c.setTransform(1, 0, 0, 1, 0, 0); c.scale(1, s);
     } else {   // the ten avatars in order, with Rama glowing
       const nn = 10, q = w / nn, P2 = Math.min(H * .9, q / .75 * .96), P2w = P2 * .75, yy = (H - P2) / 2, out = 1 - ss(14.4, 15.4, t);
@@ -128,21 +136,25 @@ window.VishnuIntro = (function () {
     const cx = w / 2, cy = h / 2;
     if (t < 8.8) {   // one big panel flipping through the avatars, faster and faster, pushing in, with two more beside it
       const i = flipIndex(t, 0), f = flipPhase(t, 0), sq = Math.abs(Math.cos(f * Math.PI)) * .6 + .4, ph = h * (.86 + .3 * ss(.6, 8.6, t)), pw = ph * .75, a = ss(.5, 1.3, t);
-      for (const side of [-1, 1]) { const j = flipIndex(t, side * 2 + 5), pw2 = pw * .7; c.save(); c.globalAlpha = a * .45; c.drawImage(panel(j), cx + side * (pw * .5 + pw2 * .6) - pw2 / 2, cy - pw2 / .75 / 2, pw2, pw2 / .75); c.restore(); }
-      c.save(); c.globalAlpha = a; c.translate(cx, cy); c.scale(sq, 1); c.drawImage(panel(i), -pw / 2, -ph / 2, pw, ph); c.restore();
+      for (const side of [-1, 1]) for (let m = 1; m <= 3; m++) { const j = flipIndex(t, side * 2 * m + 5), pw2 = pw * (.78 - m * .1); c.save(); c.globalAlpha = a * (.5 - m * .1); c.drawImage(still(j), cx + side * (pw * .5 + (m - .45) * pw2 * 1.05) - pw2 / 2, cy - pw2 / .75 / 2, pw2, pw2 / .75); c.restore(); }
+      c.save(); c.globalAlpha = a; c.translate(cx, cy); c.scale(sq, 1); c.drawImage(still(i), -pw / 2, -ph / 2, pw, ph); c.restore();
+      const cut = f < .08 && t > 3 ? 1 - f / .08 : 0; if (cut > 0) { c.save(); c.fillStyle = `rgba(255,245,225,${(.35 * cut * a).toFixed(3)})`; c.fillRect(0, 0, w, h); c.restore(); }
     }
-    if (t >= 8.4 && t < 12.8) {   // the red title box: VISHNU, and DASHAVATARA in outline letters
+    if (t >= 8.4 && t < 12.8) {   // the title: a crimson panel framed in gold with VISHNU, a spinning discus, and DASHAVATARA
       const red = ss(8.4, 9, t), logo = ss(8.8, 9.3, t) * (1 - ss(12.2, 12.8, t));
       c.save(); c.fillStyle = `rgba(0,0,0,${red.toFixed(3)})`; c.fillRect(0, 0, w, h);
-      const bw = Math.min(w * .4, h * 1.6), bh = bw * .36, total = bw * 2.25, sc = 1 + .5 * (1 - ss(8.8, 9.6, t));
-      c.translate(cx, cy); c.scale(sc, sc); const left = -total / 2, tx = left + bw / 2;
-      c.globalAlpha = logo; c.fillStyle = '#e8222a'; c.fillRect(left, -bh / 2, bw, bh);
-      c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `900 ${bh * .78}px "Arial Black", Impact, "Helvetica Neue", sans-serif`;
-      c.save(); c.beginPath(); c.rect(left, -bh / 2, bw, bh); c.clip(); c.fillStyle = '#fff'; c.fillText('VISHNU', tx, bh * .04, bw * .9);
-      const fill = ss(9.5, 10.3, t); if (fill < 1) { c.globalCompositeOperation = 'source-atop'; c.globalAlpha = logo * (1 - fill); c.drawImage(panel(flipIndex(t * 3, 1)), left, -bh * 1.5, bw, bh * 3); }   // the avatars flicker inside the letters, then they turn white
+      const bw = Math.min(w * .4, h * 1.6), bh = bw * .34, total = bw * 2.3, sc = 1 + .5 * (1 - ss(8.8, 9.6, t));
+      c.translate(cx, cy); c.scale(sc, sc); const left = -total / 2 + bh * .6, tx = left + bw / 2;
+      c.globalAlpha = logo; const g = c.createLinearGradient(0, -bh / 2, 0, bh / 2); g.addColorStop(0, '#c4121e'); g.addColorStop(1, '#7a0610'); c.fillStyle = g; c.fillRect(left, -bh / 2, bw, bh);
+      c.strokeStyle = '#f0c060'; c.lineWidth = Math.max(1.5, bh * .035); c.strokeRect(left + bh * .06, -bh / 2 + bh * .06, bw - bh * .12, bh * .88);
+      c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `700 ${bh * .6}px Cinzel, Georgia, serif`; if ('letterSpacing' in c) c.letterSpacing = (bh * .04).toFixed(1) + 'px';
+      c.save(); c.beginPath(); c.rect(left, -bh / 2, bw, bh); c.clip(); const tg = c.createLinearGradient(0, -bh * .3, 0, bh * .3); tg.addColorStop(0, '#ffffff'); tg.addColorStop(1, '#ffe2a0'); c.fillStyle = tg; c.fillText('VISHNU', tx, bh * .05, bw * .86);
+      const fill = ss(9.5, 10.3, t); if (fill < 1) { c.globalCompositeOperation = 'source-atop'; c.globalAlpha = logo * (1 - fill); c.drawImage(still(flipIndex(t * 3, 1)), left, -bh * 1.5, bw, bh * 3); }   // the avatars flicker inside the letters, then they settle
       c.restore();
-      c.globalAlpha = logo * ss(10, 10.8, t); c.strokeStyle = '#fff'; c.lineWidth = Math.max(1.2, bh * .03); c.textAlign = 'left'; c.font = `900 ${bh * .44}px "Arial Black", Impact, sans-serif`;
-      c.strokeText('DASHAVATARA', left + bw * 1.1, bh * .04, total - bw * 1.1);
+      const cr = bh * .38, ccx = left - cr * 1.5; c.save(); c.translate(ccx, 0); c.rotate(t * 2.2); c.globalAlpha = logo; c.strokeStyle = '#ffd24a'; c.shadowColor = '#ffb020'; c.shadowBlur = bh * .2; c.lineWidth = Math.max(1.5, cr * .16); c.beginPath(); c.arc(0, 0, cr, 0, 6.283); c.stroke();
+      for (let k = 0; k < 12; k++) { const an = k / 12 * 6.283; c.beginPath(); c.moveTo(Math.cos(an) * cr, Math.sin(an) * cr); c.lineTo(Math.cos(an + .2) * cr * 1.35, Math.sin(an + .2) * cr * 1.35); c.stroke(); } c.restore();   // Vishnu's discus, the Sudarshana
+      c.globalAlpha = logo * ss(10, 10.8, t); c.fillStyle = '#f0c870'; c.textAlign = 'left'; c.font = `600 ${bh * .32}px Cinzel, Georgia, serif`; if ('letterSpacing' in c) c.letterSpacing = (bh * .08).toFixed(1) + 'px';
+      c.fillText('DASHAVATARA', left + bw * 1.08, -bh * .04, total - bw * 1.1); c.font = `italic 600 ${bh * .2}px "Cormorant Garamond", Georgia, serif`; if ('letterSpacing' in c) c.letterSpacing = '0px'; c.fillStyle = '#d8b880'; c.fillText('the ten avatars of Vishnu', left + bw * 1.1, bh * .3);
       c.restore();
     }
     if (t >= 12.4) {   // Vishnu presents ... THE RAMAYANA

@@ -1140,6 +1140,7 @@
 
   setMode(query.has('play') ? 'play' : (query.get('mode') || 'edit'));
   resize();
+  if (window.R3 && R3.avatarStills) try { R3.avatarStills(); } catch (e) { console.warn(e); }   // render the avatar pictures for the opening titles once, up front
   if (query.has('t')) seek(parseFloat(query.get('t')) || 0);
   if (query.has('hold')) paused = true;
   showUI();

@@ -1213,16 +1213,22 @@ window.VishnuIntro = (function () {
     c.save(); c.globalAlpha = .12; c.fillStyle = '#000'; for (let yy = 4; yy < H; yy += 8) for (let xx = (yy / 8 % 2) * 4; xx < W; xx += 8) { c.beginPath(); c.arc(xx, yy, 1.6 + 1.6 * (yy / H), 0, 6.283); c.fill(); } c.restore();
     c.lineWidth = 8; c.strokeStyle = '#05030a'; c.strokeRect(4, 4, W - 8, H - 8);
   }
-  function panel(i) {
-    if (cache[i] && cache[i].ready === !!window.FONTS_READY) return cache[i];
-    const cv = document.createElement('canvas'); cv.width = PW; cv.height = PH; const c = cv.getContext('2d'); art(i, c);
-    c.fillStyle = 'rgba(0,0,0,.55)'; c.fillRect(8, PH - 64, PW - 16, 56);
-    c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#fff'; c.font = '700 30px Cinzel, Georgia, serif'; if ('letterSpacing' in c) c.letterSpacing = '3px'; c.fillText(AV[i][0], PW / 2, PH - 44);
-    c.font = 'italic 600 17px "Cormorant Garamond", Georgia, serif'; if ('letterSpacing' in c) c.letterSpacing = '0px'; c.fillStyle = AV[i][3]; c.fillText(AV[i][1], PW / 2, PH - 20);
-    cv.ready = !!window.FONTS_READY; return (cache[i] = cv);
+  const named = [];
+  function still(i) {   // the picture alone: the 3D render if available, else the 2D art
+    if (window.R3 && R3.avatarStills) { try { return R3.avatarStills()[i]; } catch (e) { /* fall back to 2D */ } }
+    if (cache[i]) return cache[i]; const cv = document.createElement('canvas'); cv.width = PW; cv.height = PH; art(i, cv.getContext('2d')); return (cache[i] = cv);
+  }
+  function panel(i) {   // the picture with the avatar's name, for the line-up
+    if (named[i] && named[i].ready === !!window.FONTS_READY) return named[i];
+    const im = still(i), cv = document.createElement('canvas'); cv.width = 360; cv.height = 480; const c = cv.getContext('2d'); c.drawImage(im, 0, 0, 360, 480);
+    const g = c.createLinearGradient(0, 360, 0, 480); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.85)'); c.fillStyle = g; c.fillRect(0, 360, 360, 120);
+    c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#fff'; c.font = '700 34px Cinzel, Georgia, serif'; if ('letterSpacing' in c) c.letterSpacing = '4px'; c.fillText(AV[i][0], 180, 430);
+    c.font = 'italic 600 19px "Cormorant Garamond", Georgia, serif'; if ('letterSpacing' in c) c.letterSpacing = '0px'; c.fillStyle = AV[i][3]; c.fillText(AV[i][1], 180, 458);
+    c.strokeStyle = 'rgba(255,220,150,.5)'; c.lineWidth = 3; c.strokeRect(1.5, 1.5, 357, 477);
+    cv.ready = !!window.FONTS_READY; return (named[i] = cv);
   }
   // which avatar a flipping panel shows at time t: slow at first, then faster and faster
-  const flipIndex = (t, k) => { const ph = 1.6 * t + 3.2 * Math.max(0, t - 3) ** 1.8; return Math.floor(ph + k * 3.7) % 10; };
+  const flipIndex = (t, k) => { const ph = 1.6 * t + 3.2 * Math.max(0, t - 3) ** 1.8; return ((Math.floor(ph + k * 3.7) % 10) + 10) % 10; };
   const flipPhase = (t, k) => { const ph = 1.6 * t + 3.2 * Math.max(0, t - 3) ** 1.8 + k * 3.7; return ph - Math.floor(ph); };
   // ---- the long band above the doors ----
   function drawBand(c, w, h, t, s) {
@@ -1232,8 +1238,10 @@ window.VishnuIntro = (function () {
     if (t < 9) {
       const z = 1.25 - .25 * ss(.6, 8, t) + .4 * ss(8.2, 9, t), a = ss(.4, 1.2, t) * (1 - ss(8.6, 9, t));
       c.globalAlpha = a; c.translate(w / 2, H / 2); c.scale(z, z); c.translate(-w / 2, -H / 2);
-      for (let k = 0; k < n; k++) { const i = flipIndex(t, k), f = flipPhase(t, k), sq = Math.abs(Math.cos(f * Math.PI)) * .7 + .3, cx = pw * (k + .5);
-        c.save(); c.translate(cx, y0 + ph / 2); c.scale(sq, 1); c.drawImage(panel(i), -pW / 2, -ph / 2, pW, ph); c.restore(); }
+      for (let k = 0; k < n; k++) { const i = flipIndex(t, k), f = flipPhase(t, k), turn = Math.max(0, (f - .78) / .22), sq = Math.cos(turn * Math.PI / 2), cx = pw * (k + .5);
+        c.save(); c.translate(cx, y0 + ph / 2); c.globalAlpha = a * .35; c.drawImage(still((i + 9) % 10), -pW / 2 - pW * .06, -ph / 2, pW, ph); c.globalAlpha = a;
+        c.transform(Math.max(.02, sq), -.12 * turn, 0, 1, 0, 0); c.drawImage(still(i), -pW / 2, -ph / 2, pW, ph);
+        if (turn > 0) { c.fillStyle = `rgba(255,236,200,${(.7 * turn).toFixed(3)})`; c.fillRect(pW / 2 - 4, -ph / 2, 4, ph); } c.restore(); }
       c.setTransform(1, 0, 0, 1, 0, 0); c.scale(1, s);
     } else {   // the ten avatars in order, with Rama glowing
       const nn = 10, q = w / nn, P2 = Math.min(H * .9, q / .75 * .96), P2w = P2 * .75, yy = (H - P2) / 2, out = 1 - ss(14.4, 15.4, t);
@@ -1250,21 +1258,25 @@ window.VishnuIntro = (function () {
     const cx = w / 2, cy = h / 2;
     if (t < 8.8) {   // one big panel flipping through the avatars, faster and faster, pushing in, with two more beside it
       const i = flipIndex(t, 0), f = flipPhase(t, 0), sq = Math.abs(Math.cos(f * Math.PI)) * .6 + .4, ph = h * (.86 + .3 * ss(.6, 8.6, t)), pw = ph * .75, a = ss(.5, 1.3, t);
-      for (const side of [-1, 1]) { const j = flipIndex(t, side * 2 + 5), pw2 = pw * .7; c.save(); c.globalAlpha = a * .45; c.drawImage(panel(j), cx + side * (pw * .5 + pw2 * .6) - pw2 / 2, cy - pw2 / .75 / 2, pw2, pw2 / .75); c.restore(); }
-      c.save(); c.globalAlpha = a; c.translate(cx, cy); c.scale(sq, 1); c.drawImage(panel(i), -pw / 2, -ph / 2, pw, ph); c.restore();
+      for (const side of [-1, 1]) for (let m = 1; m <= 3; m++) { const j = flipIndex(t, side * 2 * m + 5), pw2 = pw * (.78 - m * .1); c.save(); c.globalAlpha = a * (.5 - m * .1); c.drawImage(still(j), cx + side * (pw * .5 + (m - .45) * pw2 * 1.05) - pw2 / 2, cy - pw2 / .75 / 2, pw2, pw2 / .75); c.restore(); }
+      c.save(); c.globalAlpha = a; c.translate(cx, cy); c.scale(sq, 1); c.drawImage(still(i), -pw / 2, -ph / 2, pw, ph); c.restore();
+      const cut = f < .08 && t > 3 ? 1 - f / .08 : 0; if (cut > 0) { c.save(); c.fillStyle = `rgba(255,245,225,${(.35 * cut * a).toFixed(3)})`; c.fillRect(0, 0, w, h); c.restore(); }
     }
-    if (t >= 8.4 && t < 12.8) {   // the red title box: VISHNU, and DASHAVATARA in outline letters
+    if (t >= 8.4 && t < 12.8) {   // the title: a crimson panel framed in gold with VISHNU, a spinning discus, and DASHAVATARA
       const red = ss(8.4, 9, t), logo = ss(8.8, 9.3, t) * (1 - ss(12.2, 12.8, t));
       c.save(); c.fillStyle = `rgba(0,0,0,${red.toFixed(3)})`; c.fillRect(0, 0, w, h);
-      const bw = Math.min(w * .4, h * 1.6), bh = bw * .36, total = bw * 2.25, sc = 1 + .5 * (1 - ss(8.8, 9.6, t));
-      c.translate(cx, cy); c.scale(sc, sc); const left = -total / 2, tx = left + bw / 2;
-      c.globalAlpha = logo; c.fillStyle = '#e8222a'; c.fillRect(left, -bh / 2, bw, bh);
-      c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `900 ${bh * .78}px "Arial Black", Impact, "Helvetica Neue", sans-serif`;
-      c.save(); c.beginPath(); c.rect(left, -bh / 2, bw, bh); c.clip(); c.fillStyle = '#fff'; c.fillText('VISHNU', tx, bh * .04, bw * .9);
-      const fill = ss(9.5, 10.3, t); if (fill < 1) { c.globalCompositeOperation = 'source-atop'; c.globalAlpha = logo * (1 - fill); c.drawImage(panel(flipIndex(t * 3, 1)), left, -bh * 1.5, bw, bh * 3); }   // the avatars flicker inside the letters, then they turn white
+      const bw = Math.min(w * .4, h * 1.6), bh = bw * .34, total = bw * 2.3, sc = 1 + .5 * (1 - ss(8.8, 9.6, t));
+      c.translate(cx, cy); c.scale(sc, sc); const left = -total / 2 + bh * .6, tx = left + bw / 2;
+      c.globalAlpha = logo; const g = c.createLinearGradient(0, -bh / 2, 0, bh / 2); g.addColorStop(0, '#c4121e'); g.addColorStop(1, '#7a0610'); c.fillStyle = g; c.fillRect(left, -bh / 2, bw, bh);
+      c.strokeStyle = '#f0c060'; c.lineWidth = Math.max(1.5, bh * .035); c.strokeRect(left + bh * .06, -bh / 2 + bh * .06, bw - bh * .12, bh * .88);
+      c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `700 ${bh * .6}px Cinzel, Georgia, serif`; if ('letterSpacing' in c) c.letterSpacing = (bh * .04).toFixed(1) + 'px';
+      c.save(); c.beginPath(); c.rect(left, -bh / 2, bw, bh); c.clip(); const tg = c.createLinearGradient(0, -bh * .3, 0, bh * .3); tg.addColorStop(0, '#ffffff'); tg.addColorStop(1, '#ffe2a0'); c.fillStyle = tg; c.fillText('VISHNU', tx, bh * .05, bw * .86);
+      const fill = ss(9.5, 10.3, t); if (fill < 1) { c.globalCompositeOperation = 'source-atop'; c.globalAlpha = logo * (1 - fill); c.drawImage(still(flipIndex(t * 3, 1)), left, -bh * 1.5, bw, bh * 3); }   // the avatars flicker inside the letters, then they settle
       c.restore();
-      c.globalAlpha = logo * ss(10, 10.8, t); c.strokeStyle = '#fff'; c.lineWidth = Math.max(1.2, bh * .03); c.textAlign = 'left'; c.font = `900 ${bh * .44}px "Arial Black", Impact, sans-serif`;
-      c.strokeText('DASHAVATARA', left + bw * 1.1, bh * .04, total - bw * 1.1);
+      const cr = bh * .38, ccx = left - cr * 1.5; c.save(); c.translate(ccx, 0); c.rotate(t * 2.2); c.globalAlpha = logo; c.strokeStyle = '#ffd24a'; c.shadowColor = '#ffb020'; c.shadowBlur = bh * .2; c.lineWidth = Math.max(1.5, cr * .16); c.beginPath(); c.arc(0, 0, cr, 0, 6.283); c.stroke();
+      for (let k = 0; k < 12; k++) { const an = k / 12 * 6.283; c.beginPath(); c.moveTo(Math.cos(an) * cr, Math.sin(an) * cr); c.lineTo(Math.cos(an + .2) * cr * 1.35, Math.sin(an + .2) * cr * 1.35); c.stroke(); } c.restore();   // Vishnu's discus, the Sudarshana
+      c.globalAlpha = logo * ss(10, 10.8, t); c.fillStyle = '#f0c870'; c.textAlign = 'left'; c.font = `600 ${bh * .32}px Cinzel, Georgia, serif`; if ('letterSpacing' in c) c.letterSpacing = (bh * .08).toFixed(1) + 'px';
+      c.fillText('DASHAVATARA', left + bw * 1.08, -bh * .04, total - bw * 1.1); c.font = `italic 600 ${bh * .2}px "Cormorant Garamond", Georgia, serif`; if ('letterSpacing' in c) c.letterSpacing = '0px'; c.fillStyle = '#d8b880'; c.fillText('the ten avatars of Vishnu', left + bw * 1.1, bh * .3);
       c.restore();
     }
     if (t >= 12.4) {   // Vishnu presents ... THE RAMAYANA
@@ -1393,6 +1405,12 @@ window.R3 = (function () {
     guha:     { skin: 0x8a5a36, hair: 0x1a1008, dress: [0xb0462a, 0x5a1a10], sash: 0xffc94a, beard: true },
     samudra:  { skin: 0x3aa0c8, hair: 0x0a2a5a, dress: [0x30e0c0, 0x0a5a8a], sash: 0xf4f4ff, crown: true },
     sushena:  { skin: 0xd8b48a, hair: 0xf0f0f0, dress: [0x2a9a6a, 0x0a5a3a], sash: 0xffd23a, monkey: true, beard: true },
+    varaha:   { skin: 0x4f9be0, hair: 0x1c2470, dress: [0xffe066, 0xff9d1c], sash: 0xe8503a, crown: true },
+    narasimha: { skin: 0xe0a040, hair: 0xb06010, dress: [0xffd040, 0xc06000], sash: 0xe8503a, crown: true },
+    vamana:   { skin: 0xd9a077, hair: 0x2a1a10, dress: [0xfff6e0, 0xf0c070], sash: 0xff9d1c },
+    krishna:  { skin: 0x3f7fd0, hair: 0x101830, dress: [0xffe066, 0xffb01c], sash: 0xff3a6a, crown: true },
+    balarama: { skin: 0xf2d0b0, hair: 0x3a2a1a, dress: [0x3a6aff, 0x10208a], sash: 0xffd23a, crown: true },
+    kalki:    { skin: 0xd9a077, hair: 0x2a1a10, dress: [0xffffff, 0xd0d8f0], sash: 0xffd23a, crown: true },
     kumbha:   { skin: 0x5e9a62, hair: 0x120508, dress: [0x8a3a2a, 0x2a120a], sash: 0xc0392b, crown: true, evil: true },
   };
 
@@ -3010,6 +3028,89 @@ window.R3 = (function () {
     stepParts(dt);
   }
 
+  // ---------- the ten avatars of Vishnu, rendered as lit 3D stills for the opening titles ----------
+  let STILLS = null;
+  function avatarStills() {
+    if (STILLS) return STILLS;
+    const W = 480, Hh = 640, R = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, alpha: false });
+    R.setPixelRatio(1); R.setSize(W, Hh, false);
+    const cam = new THREE.PerspectiveCamera(28, W / Hh, 1, 6000);
+    const bgTex = (c1, c2) => { const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d'), g = x.createRadialGradient(128, 110, 4, 128, 128, 180); g.addColorStop(0, c1); g.addColorStop(1, c2); x.fillStyle = g; x.fillRect(0, 0, 256, 256); return new THREE.CanvasTexture(c); };
+    const four = (H, sp, up) => { for (const s of [1, -1]) { const a = makeArm(sp, s); a.position.set(s * 13, 40, -3); a.rotation.z = s * (up ? 2.3 : .95); a.rotation.x = -.2; H.torso.add(a); } };
+    const discus = () => { const g = new THREE.Group(); const r = mesh(new THREE.TorusGeometry(10, 1.6, 8, 32), std(0xffd24a, { emissive: 0xffa000, emissiveIntensity: 1.6, metalness: .7, roughness: .2 }), 0, 0, 0, g); r.rotation.y = Math.PI / 2; for (let k = 0; k < 12; k++) { const sp = mesh(new THREE.ConeGeometry(1.2, 5, 4), std(0xffe08a, { emissive: 0xffa000, emissiveIntensity: 1.2 }), 0, Math.cos(k / 12 * 6.283) * 12, Math.sin(k / 12 * 6.283) * 12, g); sp.rotation.x = k / 12 * 6.283; } const gl = mesh(G.sph, glowMat(0xffc040), 0, 0, 0, g); gl.scale.setScalar(16); gl.material.opacity = .35; return g; };
+    const holdIn = (H, i, obj, dy) => { obj.position.set(0, dy === undefined ? -26 : dy, 3); H.arms[i].userData.el.add(obj); };
+    const setArm = (H, i, x, z, el) => { H.arms[i].rotation.x = x; H.arms[i].rotation.z = z; H.arms[i].userData.el.rotation.x = el; };
+    const DEF = [
+      // name, colours (background centre, edge, rim light), build function returning [object, look-at height, distance]
+      ['matsya', ['#2a9ad0', '#020a18', 0x7af0ff], (g) => { const H = makeHuman('vishnu', { headScale: 1.2 }); pose(H, { ph: 0, s: 0, t: 1 }); four(H, SPEC.vishnu); H.legs.forEach(l => { l.visible = false; }); H.dress.visible = false; g.add(H.root); H.root.rotation.y = .25;
+        const tail = new THREE.Group(); const tg = lathe([[0, 0], [16, 4], [18, 20], [15, 40], [9, 62], [4, 80], [0, 86]], 20); gradient(tg, 0xffd060, 0x2a8ad0, 1, 0, 86); const tm = mesh(tg, new THREE.MeshStandardMaterial({ vertexColors: true, metalness: .15, roughness: .35, emissive: 0x0a2a40 }), 0, 0, 0, tail); tm.rotation.x = Math.PI; tail.position.set(0, 80, 0); tail.rotation.z = .25; g.add(tail);
+        const fin = mesh(new THREE.ConeGeometry(18, 34, 3), std(0x40b0e0, { metalness: .5, roughness: .3, emissive: 0x0a3050 }), -26, -2, 0, g); fin.rotation.z = 2.1; fin.scale.z = .2; const fin2 = mesh(new THREE.ConeGeometry(18, 34, 3), fin.material, 6, -6, 0, g); fin2.rotation.z = -2.4; fin2.scale.z = .2;
+        for (let k = 0; k < 40; k++) { const d = mesh(G.sphLow, glowMat(0xaef4ff), srnd(-120, 120), srnd(-10, 40), srnd(-40, 40), g); d.scale.setScalar(srnd(1, 3)); } return [92, 520]; }],
+      ['kurma', ['#1ab08a', '#02140e', 0x9affd0], (g) => { const shell = new THREE.Group(); g.add(shell); const sg = new THREE.SphereGeometry(70, 32, 16, 0, 6.283, 0, Math.PI / 2); gradient(sg, 0x2a5a2a, 0xa8c060, 1, 0, 70); const sh = mesh(sg, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .5, metalness: .2 }), 0, 10, 0, shell); sh.scale.set(1, .55, .8);
+        for (let k = 0; k < 14; k++) { const a = k / 14 * 6.283, rr = k < 6 ? 25 : 50; const hx = mesh(new THREE.CylinderGeometry(11, 11, 3, 6), std(0xd8c070, { roughness: .4, metalness: .3 }), Math.cos(a) * rr, 10 + 36 * (1 - rr / 80), Math.sin(a) * rr * .8, shell); hx.lookAt(0, -40, 0); }
+        const head = mesh(G.sph, std(0x6a8a50, { roughness: .5 }), 78, 18, 0, g); head.scale.set(16, 13, 13); for (const z of [-1, 1]) mesh(G.sphLow, std(0xffe080, { emissive: 0xffa000, emissiveIntensity: 1 }), 90, 24, z * 6, g).scale.setScalar(2);
+        const mt = new THREE.ConeGeometry(42, 120, 12, 6), mp = mt.attributes.position; for (let i = 0; i < mp.count; i++) { const n = 1 + .12 * Math.sin(i * 7.7); mp.setX(i, mp.getX(i) * n); mp.setZ(i, mp.getZ(i) * n); } mt.computeVertexNormals(); gradient(mt, 0x4a3a2a, 0xa08a6a, 1, -60, 60); mesh(mt, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .9, flatShading: true }), 0, 105, 0, g);
+        const pts = []; for (let k = 0; k <= 80; k++) { const a = k / 80 * Math.PI * 6; pts.push(new THREE.Vector3(Math.cos(a) * (40 - k * .2), 50 + k * 1.1, Math.sin(a) * (34 - k * .2))); } mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 200, 3.4, 8), std(0x30d090, { emissive: 0x0a6040, emissiveIntensity: .8, roughness: .4 }), 0, 0, 0, g); return [80, 520]; }],
+      ['varaha', ['#4a5ad0', '#04061a', 0xa8b8ff], (g) => { const H = makeHuman('varaha', { headScale: 1.2 }); pose(H, { ph: 0, s: 0, t: 1 }); four(H, SPEC.varaha, true); g.add(H.root); H.root.rotation.y = .85; H.head.visible = false;
+        const bh = new THREE.Group(); bh.position.set(0, 57, 0); H.torso.add(bh); const bm = std(0x8a7a80, { roughness: .55, emissive: 0x1a1218 }); mesh(G.sph, bm, 0, 0, 2, bh).scale.set(11, 12, 14); const sn = mesh(new THREE.CylinderGeometry(4.5, 8, 20, 12), bm, 0, -3, 16, bh); sn.rotation.x = Math.PI / 2; mesh(new THREE.CylinderGeometry(4.7, 4.7, 1, 12), std(0x4a2a30), 0, -3, 26.4, bh).rotation.x = Math.PI / 2;
+        for (const s of [-1, 1]) { const t = mesh(new THREE.ConeGeometry(1.8, 15, 8), std(0xfff4e0, { roughness: .3 }), s * 5, -6, 20, bh); t.rotation.set(-.6, 0, s * -.3); const e = mesh(new THREE.ConeGeometry(4, 9, 6), bm, s * 8, 10, -2, bh); e.rotation.z = s * -.5; mesh(G.sphLow, std(0xff3020, { emissive: 0xff2010, emissiveIntensity: 1.5 }), s * 5, 4, 10, bh).scale.setScalar(1.3); }
+        mesh(new THREE.LatheGeometry([[0, 0], [10, 0], [9, 6], [5, 12], [7, 18], [3, 26], [0, 30]].map(p => new THREE.Vector2(p[0], p[1])), 16), GOLD, 0, 9, 0, bh);
+        const earth = mesh(G.sph, std(0x2a6aff, { roughness: .4, metalness: .1, emissive: 0x0a2060 }), 0, 0, 0, g); earth.scale.setScalar(20); earth.position.set(10, 172, 40); for (let k = 0; k < 5; k++) { const l = mesh(G.sph, std(0x3ac060, { roughness: .6 }), 0, 0, 0, earth); l.scale.set(.4, .25, .3); l.position.set(Math.cos(k * 1.3) * .8, Math.sin(k * 2.1) * .5, Math.sin(k * 1.3) * .6); }
+        return [110, 560]; }],
+      ['narasimha', ['#ff6a1a', '#1a0402', 0xffd070], (g) => { const H = makeHuman('narasimha', { headScale: 1.2 }); pose(H, { ph: 0, s: 0, t: 1, angry: 1 }); four(H, SPEC.narasimha, true); setArm(H, 0, -.4, 1.9, -.9); setArm(H, 1, -.4, -1.9, -.9); g.add(H.root); H.root.rotation.y = .15;
+        const mane = new THREE.Group(); mane.position.set(0, 58, -2); H.torso.add(mane); const mm = std(0xe0901a, { roughness: .7, emissive: 0x3a1800 }); for (let k = 0; k < 40; k++) { const a = k / 40 * 6.283, c = mesh(new THREE.ConeGeometry(3.4, 18, 6), mm, Math.cos(a) * 12, Math.sin(a) * 13, -4 - (k % 3) * 2, mane); c.rotation.z = a - Math.PI / 2; }
+        const face = H.head; face.scale.setScalar(1.05); const sn = mesh(G.sph, std(0xe8b060, { roughness: .5 }), 0, -4, 10, face); sn.scale.set(5.5, 4, 3.5); for (const s of [-1, 1]) { const f = mesh(new THREE.ConeGeometry(1, 5, 6), std(0xffffff), s * 2.6, -8.6, 10.5, face); f.rotation.x = Math.PI; }
+        for (const x of [-120, 120]) { const p = mesh(new THREE.CylinderGeometry(16, 18, 260, 10), std(0x8a6a5a, { roughness: .8 }), x, 130, -60, g); p.rotation.z = x < 0 ? .15 : -.15; }
+        for (let k = 0; k < 40; k++) { const d = mesh(G.sphLow, glowMat(0xffa040), srnd(-140, 140), srnd(0, 250), srnd(-60, 30), g); d.scale.setScalar(srnd(1, 3.5)); } return [105, 560]; }],
+      ['vamana', ['#ffc040', '#2a1402', 0xfff0a0], (g) => { const H = makeHuman('vamana', { headScale: 1.45 }); H.root.scale.setScalar(.75); pose(H, { ph: 0, s: 0, t: 1 }); setArm(H, 0, -1.2, .2, -.6); setArm(H, 1, -.5, -.2, -.8); g.add(H.root); H.root.rotation.y = .3;
+        const um = new THREE.Group(); mesh(new THREE.CylinderGeometry(.8, .8, 90, 6), std(0x6a4a2a), 0, 30, 0, um); const top = mesh(new THREE.SphereGeometry(40, 24, 8, 0, 6.283, 0, 1.1), std(0xfff0d0, { side: THREE.DoubleSide, roughness: .6, emissive: 0x403020 }), 0, 50, 0, um); top.scale.y = .55; mesh(new THREE.TorusGeometry(35.5, 1, 6, 32), GOLD, 0, 66, 0, um).rotation.x = Math.PI / 2; holdIn(H, 0, um, -20);
+        const pot = new THREE.Group(); mesh(G.sph, std(0xb8803a, { metalness: .6, roughness: .3 }), 0, 0, 0, pot).scale.set(6, 6.5, 6); mesh(new THREE.CylinderGeometry(2, 3, 5, 10), std(0xb8803a, { metalness: .6, roughness: .3 }), 0, 7, 0, pot); holdIn(H, 1, pot, -28);
+        const ft = mesh(G.sph, glowMat(0xffe0a0), 60, 230, -200, g); ft.scale.set(70, 30, 10); ft.material.opacity = .25; return [70, 420]; }],
+      ['parashurama', ['#d02a3a', '#140204', 0xffb0a0], (g) => { const H = makeHuman('parashurama', { headScale: 1.2 }); pose(H, { ph: 0, s: 0, t: 1, angry: 1 }); setArm(H, 0, -2.9, .3, -.3); g.add(H.root); H.root.rotation.y = .3;
+        const axe = new THREE.Group(); mesh(new THREE.CylinderGeometry(1.6, 1.6, 70, 8), std(0x5a3a1a, { roughness: .8 }), 0, 0, 0, axe); const bl = mesh(new THREE.CylinderGeometry(16, 16, 2.4, 20, 1, false, 0, Math.PI), std(0xdfe6f0, { metalness: .9, roughness: .2, emissive: 0x334455 }), 9, 26, 0, axe); bl.rotation.set(Math.PI / 2, 0, Math.PI / 2); holdIn(H, 0, axe, -30);
+        for (let k = 0; k < 30; k++) { const d = mesh(G.sphLow, glowMat(0xff6040), srnd(-140, 140), srnd(0, 250), srnd(-60, 30), g); d.scale.setScalar(srnd(1, 3)); } return [100, 540]; }],
+      ['ram', ['#ffa030', '#1a0800', 0xffe8a0], (g) => { const H = makeHuman('ram'); pose(H, { ph: 0, s: 0, t: 1, aim: 1, draw: .9 }); g.add(H.root); H.root.rotation.y = .9;
+        const bo = new THREE.Group(); bo.add(new THREE.Mesh(new THREE.TubeGeometry(bowCurve(46, 15), 24, 1.8, 8), bowMat)); holdIn(H, 0, bo, -24); bo.rotation.y = -Math.PI / 2;
+        const ar = new THREE.Group(); mesh(new THREE.CylinderGeometry(.7, .7, 70, 6), std(0xf4e6c2), 0, 0, 0, ar).rotation.z = Math.PI / 2; mesh(new THREE.ConeGeometry(2.4, 9, 8), GOLD, 38, 0, 0, ar).rotation.z = -Math.PI / 2; const gl = mesh(G.sph, glowMat(0xffb04a), 40, 0, 0, ar); gl.scale.setScalar(9);
+        H.root.updateMatrixWorld(true); const hp = new THREE.Vector3(); H.arms[1].userData.hand.getWorldPosition(hp); ar.position.copy(hp).add(new THREE.Vector3(34, 0, 0)); ar.lookAt(hp.x + 200, hp.y, hp.z); ar.rotateY(-Math.PI / 2); g.add(ar); return [110, 540]; }],
+      ['krishna', ['#7a3ae0', '#08021a', 0xc8a8ff], (g) => { const H = makeHuman('krishna'); pose(H, { ph: 0, s: 0, t: 1 }); setArm(H, 0, -1.3, -.5, -1.6); setArm(H, 1, -1.4, .6, -1.2); g.add(H.root); H.root.rotation.y = .4; H.legs[0].rotation.x = .1; H.legs[1].rotation.z = .25; H.knees[1].rotation.x = .3;
+        const fl = mesh(new THREE.CylinderGeometry(1.1, 1.1, 40, 8), std(0xb07a3a, { roughness: .4 }), 18, 52, 10, H.torso); fl.rotation.z = Math.PI / 2 - .25;
+        const fe = new THREE.Group(); fe.position.set(5, 38, -2); fe.rotation.z = -.35; H.head.add(fe); mesh(G.sph, std(0x1a8a6a, { emissive: 0x0a3a2a, roughness: .4 }), 0, 0, 0, fe).scale.set(5, 13, 2); mesh(G.sph, std(0x1a4aff, { emissive: 0x0a2aff, emissiveIntensity: 1 }), 0, 6, 1.4, fe).scale.set(2.2, 3, 1); mesh(G.sph, std(0xffd040, { emissive: 0xa08000 }), 0, 6, 1.6, fe).scale.set(1, 1.4, .6);
+        const d = discus(); d.position.set(-58, 190, -10); d.scale.setScalar(1.4); g.add(d); return [105, 540]; }],
+      ['balarama', ['#a8c0e0', '#06080e', 0xeef4ff], (g) => { const H = makeHuman('balarama'); pose(H, { ph: 0, s: 0, t: 1 }); setArm(H, 0, -2.6, .5, -1.2); g.add(H.root); H.root.rotation.y = .25;
+        const pl = new THREE.Group(); mesh(new THREE.CylinderGeometry(1.6, 1.6, 110, 8), std(0x7a5a2a, { roughness: .7 }), 0, 0, 0, pl); const blade = mesh(new THREE.BoxGeometry(4, 26, 12), std(0xd0d8e0, { metalness: .9, roughness: .25 }), 8, 52, 0, pl); blade.rotation.z = -.6; pl.rotation.z = .5; holdIn(H, 0, pl, -24); return [105, 540]; }],
+      ['kalki', ['#6a2aa0', '#04020a', 0xe0b0ff], (g) => { const horse = new THREE.Group(); g.add(horse); const hm = std(0xf4f2f8, { roughness: .45, emissive: 0x202030 });
+        const body = mesh(G.sph, hm, 0, 90, 0, horse); body.scale.set(52, 24, 20); const neck = mesh(new THREE.CylinderGeometry(9, 14, 50, 12), hm, 46, 122, 0, horse); neck.rotation.z = -.7; const head = mesh(G.sph, hm, 66, 150, 0, horse); head.scale.set(20, 9, 8); head.rotation.z = -.5;
+        for (const s of [-1, 1]) mesh(new THREE.ConeGeometry(2.4, 9, 6), hm, 58, 162, s * 4, horse);
+        const mane = mesh(new THREE.BoxGeometry(6, 44, 3), std(0xe0d8f0, { roughness: .8 }), 38, 128, 0, horse); mane.rotation.z = -.7;
+        const leg = (x, z, a1, a2) => { const l = new THREE.Group(); l.position.set(x, 80, z); l.rotation.z = a1; horse.add(l); const u = new THREE.CylinderGeometry(5, 4, 34, 8); u.translate(0, -17, 0); l.add(new THREE.Mesh(u, hm)); const k = new THREE.Group(); k.position.y = -34; k.rotation.z = a2; l.add(k); const lo = new THREE.CylinderGeometry(3.4, 2.6, 34, 8); lo.translate(0, -17, 0); k.add(new THREE.Mesh(lo, hm)); mesh(G.sph, std(0x2a2a30), 0, -35, 0, k).scale.set(4, 3, 4); };
+        leg(34, 10, 1.4, -1.4); leg(30, -10, 1.1, -1.5); leg(-36, 10, -.2, .3); leg(-40, -10, .1, .2);
+        const tail = new THREE.CatmullRomCurve3([new THREE.Vector3(-50, 96, 0), new THREE.Vector3(-70, 80, 0), new THREE.Vector3(-80, 50, 4)]); mesh(new THREE.TubeGeometry(tail, 10, 4, 6), hm, 0, 0, 0, horse);
+        horse.rotation.z = .32; horse.position.y = -20;
+        const H = makeHuman('kalki'); pose(H, { ph: 0, s: 0, t: 1, sit: 1 }); setArm(H, 0, -2.9, .2, -.2); H.root.position.set(4, 96, 8); H.root.rotation.y = .9; horse.add(H.root); H.root.scale.setScalar(.85);
+        const sw = new THREE.Group(); mesh(new THREE.BoxGeometry(2.6, 64, 1), std(0xeef4ff, { metalness: .95, roughness: .1, emissive: 0x4060a0, emissiveIntensity: .8 }), 0, -36, 0, sw); mesh(new THREE.BoxGeometry(12, 2.4, 3), GOLD, 0, -3, 0, sw); const sg = mesh(G.sph, glowMat(0xa0d0ff), 0, -40, 0, sw); sg.scale.set(5, 40, 5); sg.material.opacity = .4; holdIn(H, 0, sw, -24); sw.rotation.x = Math.PI;
+        horse.rotation.y = .5; return [120, 600]; }],
+    ];
+    STILLS = DEF.map(([name, [c1, c2, rimC], build]) => {
+      const sc = new THREE.Scene(), g = new THREE.Group(); sc.add(g);
+      const bg = mesh(new THREE.PlaneGeometry(2400, 2400), new THREE.MeshBasicMaterial({ map: bgTex(c1, c2) }), 0, 150, -700, sc);
+      sc.add(new THREE.HemisphereLight(0x6070a0, 0x201008, .32));
+      const key = new THREE.DirectionalLight(0xffd8b0, .85); key.position.set(-300, 400, 500); sc.add(key);
+      for (const sx of [-1, 1]) { const rim = new THREE.DirectionalLight(rimC, 1.1); rim.position.set(sx * 500, 300, -500); sc.add(rim); }
+      const fill = new THREE.PointLight(rimC, .35, 900); fill.position.set(0, 60, 300); sc.add(fill);
+      const [lookY, dist] = build(g);
+      cam.position.set(24, lookY - 55, dist * .78); cam.lookAt(0, lookY, 0); cam.updateProjectionMatrix();
+      R.render(sc, cam);
+      const out = document.createElement('canvas'); out.width = W; out.height = Hh; const x = out.getContext('2d');
+      x.drawImage(R.domElement, 0, 0);
+      x.save(); x.globalCompositeOperation = 'lighter'; x.globalAlpha = .22; x.filter = 'blur(10px)'; x.drawImage(R.domElement, 0, 0); x.restore();   // a soft glow
+      const v = x.createRadialGradient(W / 2, Hh * .45, Hh * .25, W / 2, Hh / 2, Hh * .75); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.65)'); x.fillStyle = v; x.fillRect(0, 0, W, Hh);   // vignette
+      sc.traverse(o => { if (o.geometry && o.geometry !== G.sph && o.geometry !== G.sphLow) o.geometry.dispose(); });
+      return out;
+    });
+    R.dispose(); return STILLS;
+  }
+
   // ---------- view and render ----------
   let vw = 0, vh = 0, spotC = 400, spotH = 950;
   function setView(x0, x1, yTop, yBottom, pxW, pxH, sx, sy) {
@@ -3035,7 +3136,7 @@ window.R3 = (function () {
   }
   function update(Tr, dt) { inIntro = Tr < INTRO; if (inIntro) { introT = Tr; return; } updateStory(Tr - INTRO, dt); }
   function caption(Tr) { return Tr < INTRO ? { en: '', moral: '', a: 0, am: 0, age: 0, intro: Tr, kanda: null } : captionAt(Tr - INTRO); }
-  return { canvas, setView, update, render, LOOP: TOTAL * SLOW + INTRO, INTRO, WORLD, ramX, sitaX, lakX, hanPos, follow: () => camC, caption, chapters: [0].concat(chapters.map(x => x + INTRO)), bloom };
+  return { canvas, setView, update, render, LOOP: TOTAL * SLOW + INTRO, INTRO, WORLD, ramX, sitaX, lakX, hanPos, follow: () => camC, caption, avatarStills, chapters: [0].concat(chapters.map(x => x + INTRO)), bloom };
 })();
 
 </script>
@@ -4094,6 +4195,7 @@ window.R3 = (function () {
 
   setMode(query.has('play') ? 'play' : (query.get('mode') || 'edit'));
   resize();
+  if (window.R3 && R3.avatarStills) try { R3.avatarStills(); } catch (e) { console.warn(e); }   // render the avatar pictures for the opening titles once, up front
   if (query.has('t')) seek(parseFloat(query.get('t')) || 0);
   if (query.has('hold')) paused = true;
   showUI();
