@@ -866,25 +866,39 @@
 
   const TEST_COL = ['#ffffff', '#ffe6a8', '#bfe3ff', '#ffc4d6', '#c9f5c0'];
   // ---------- story text: what is happening, shown in the 'Story text' areas ----------
-  const STORY_CAP = [   // for the 3D walk: [from, to, English, Hindi]
-    [0, 6, 'Ayodhya: a lotus blooms and a baby of light appears', 'अयोध्या: कमल खिला, श्रीराम का जन्म'],
-    [6, 16, 'Prince Ram walks to Mithila', 'राम मिथिला की ओर चले'],
-    [16, 21.5, "Mithila: Ram lifts and breaks Shiva's great bow", 'मिथिला: राम ने शिव धनुष तोड़ा'],
-    [21.5, 26.5, 'Sita garlands Ram: they are married', 'सीता ने राम को जयमाला पहनाई'],
-    [26.5, 38, 'Exile: Ram, Sita and Lakshman walk into the forest', 'वनवास: राम, सीता और लक्ष्मण वन की ओर'],
-    [38, 52, 'A golden deer leads them deeper into the forest', 'स्वर्ण मृग उन्हें वन में आगे ले गया'],
-    [52, 58.6, 'Lanka: Ram draws his bow against ten-headed Ravan', 'लंका: राम ने रावण पर बाण साधा'],
-    [58.6, 67, 'Ravan falls: good wins over evil', 'रावण वध: बुराई पर अच्छाई की जीत'],
-    [67, 76, 'Fourteen years are over: they walk home to Ayodhya', 'चौदह वर्ष पूरे: अयोध्या वापसी'],
-    [76, 90, 'Diwali: Ayodhya lights a lamp for every step of their return', 'दीपावली: दीपों से जगमग अयोध्या'],
+  const STORY_CAP = [   // for the 3D walk: [from, to, text]
+    [0, 6, 'Ayodhya: a lotus blooms and a baby of light appears'],
+    [6, 10, 'Ram and his brother Lakshman are born'],
+    [10, 22, 'The brothers grow up into brave princes'],
+    [22, 26, 'Mithila: King Janak holds a contest to win his daughter Sita'],
+    [26, 31, "Ram lifts Shiva's great bow"],
+    [31, 37.5, 'The bow breaks! Sita walks toward Ram'],
+    [37.5, 40, 'Sita garlands Ram: they are married'],
+    [40, 52, 'Back in Ayodhya, a promise forces Ram into exile'],
+    [52, 66, 'Ram, Sita and Lakshman leave the palace for fourteen years in the forest'],
+    [66, 77, 'A golden deer appears. Sita wants it, and Ram goes after it'],
+    [77, 82.5, 'The deer was a demon in disguise. Ram shoots it, and it cries out in Ram\'s voice'],
+    [82.5, 92, 'Ravan carries Sita away in his flying chariot. The vulture Jatayu tries to stop him'],
+    [92, 100, 'Ram and Lakshman find the dying Jatayu, who tells them where Ravan went'],
+    [100, 108, 'Hanuman, the monkey hero, bows to Ram and promises to find Sita'],
+    [108, 116, 'Hanuman leaps across the sea to Lanka and finds Sita, and gives her Ram\'s ring'],
+    [116, 124, 'Hanuman sets Lanka on fire with his tail and leaps back'],
+    [124, 138, 'The monkey army builds a bridge of stones across the sea'],
+    [138, 150, 'The battle of Lanka: the giant Kumbhakarna falls'],
+    [150, 160, 'Lakshman is struck down. Hanuman flies to bring a healing mountain'],
+    [160, 168.6, 'Ram faces the ten-headed Ravan'],
+    [168.6, 177, 'Ravan falls: good wins over evil'],
+    [177, 186, 'Sita is free. They board the flying chariot Pushpak'],
+    [186, 205, 'The fourteen years are over: the chariot flies them home to Ayodhya'],
+    [205, 225, 'Diwali: Ayodhya lights a lamp for every step of their return'],
   ];
   const SCENE_CAP = [   // for the five-scene 2D looks
-    ['Ayodhya: the birth of Ram', 'श्रीराम जन्म'], ["Mithila: Ram lifts the bow of Shiva", 'सीता स्वयंवर'], ['Vanvaas: fourteen years in the forest', 'वनवास'],
-    ['Lanka: Ravan falls', 'रावण वध'], ['Ayodhya: Ram returns, Diwali begins', 'दीपावली'],
+    ['Ayodhya: the birth of Ram', ''], ["Mithila: Ram lifts the bow of Shiva", ''], ['Vanvaas: fourteen years in the forest', ''],
+    ['Lanka: Ravan falls', ''], ['Ayodhya: Ram returns, Diwali begins', ''],
   ];
   function captionNow() {
     if (cfg.look === '3d' && window.R3) {
-      for (const [a, b, en, hi] of STORY_CAP) if (T >= a && T < b) return { en, hi, a: sstep(a, a + .9, T) * (1 - sstep(b - .9, b, T)) };
+      for (const [a, b, en] of STORY_CAP) if (T >= a && T < b) return { en, hi: '', a: sstep(a, a + .9, T) * (1 - sstep(b - .9, b, T)) };
       return null;
     }
     const i = Math.min(NP - 1, Math.floor((T + 1.5) / SEG)), lt = i === 0 ? T : T - (i * SEG - 1.5);
@@ -900,8 +914,8 @@
       ctx.font = EN(fs); const words = en.split(' '), lines = []; let cur = '';
       for (const wd of words) { const t = cur ? cur + ' ' + wd : wd; if (ctx.measureText(t).width > w * .92 && cur) { lines.push(cur); cur = wd; } else cur = t; }
       lines.push(cur);
-      const hs = fs * .9; ctx.font = HI(hs); const hw = ctx.measureText(hi).width;
-      const need = lines.length * fs * 1.2 + hs * 1.35;
+      const hs = hi ? fs * .9 : 0; ctx.font = HI(hs || 1); const hw = hi ? ctx.measureText(hi).width : 0;
+      const need = lines.length * fs * 1.2 + (hi ? hs * 1.35 : 0);
       if (lines.length <= 3 && hw <= w * .92 && need <= h * .94 && Math.max(...lines.map(l => (ctx.font = EN(fs), ctx.measureText(l).width))) <= w * .92) { best = { fs, hs, lines, EN: EN(fs), HI: HI(hs) }; break; }
     }
     return (fitCache[key] = best || { fs: 8, hs: 8, lines: [en], EN: EN(8), HI: HI(8) });
@@ -910,11 +924,11 @@
     const xs = q.map(p => p[0]), ys = q.map(p => p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
     const vs = cfg.vstretch, w = x1 - x0, h = (y1 - y0) / vs; if (w < 20 || h < 8) return;
     ctx.save(); clipTo([q]); ctx.translate(x0, y0); ctx.scale(1, vs);
-    const L = fitText(en, hi, w, h), total = L.lines.length * L.fs * 1.2 + L.hs * 1.35; let y = (h - total) / 2;
+    const L = fitText(en, hi, w, h), total = L.lines.length * L.fs * 1.2 + (hi ? L.hs * 1.35 : 0); let y = (h - total) / 2;
     const g = ctx.createLinearGradient(0, y, 0, y + total); g.addColorStop(0, '#fff3c8'); g.addColorStop(1, '#ffae42');
     ctx.globalAlpha = alpha; ctx.fillStyle = g; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.shadowColor = 'rgba(255,160,50,.85)'; ctx.shadowBlur = L.fs * .3;
     ctx.font = L.EN; for (const l of L.lines) { y += L.fs * .6; ctx.fillText(l, w / 2, y); y += L.fs * .6; }
-    ctx.font = L.HI; y += L.hs * .68; ctx.fillText(hi, w / 2, y);
+    if (hi) { ctx.font = L.HI; y += L.hs * .68; ctx.fillText(hi, w / 2, y); }
     ctx.restore();
   }
   function drawStoryText(PT) {
@@ -924,7 +938,7 @@
 
   function drawTest(P) {
     P.forEach((q, n) => {
-      if (cfg.surfaces[n].role === 'text') { ctx.save(); clipTo([q]); ctx.fillStyle = '#2a2a38'; ctx.fillRect(0, 0, W, H); ctx.restore(); drawCaptionIn(q, 'The story is written here', 'कहानी यहाँ लिखी जाती है', 1); return; }
+      if (cfg.surfaces[n].role === 'text') { ctx.save(); clipTo([q]); ctx.fillStyle = '#2a2a38'; ctx.fillRect(0, 0, W, H); ctx.restore(); drawCaptionIn(q, 'The story is written here', '', 1); return; }
       ctx.save(); clipTo([q]);
       ctx.fillStyle = TEST_COL[n % TEST_COL.length]; ctx.fillRect(0, 0, W, H);
       const xs = q.map(p => p[0]), ys = q.map(p => p[1]);
@@ -1027,8 +1041,8 @@
     if (mode === 'play' || recording) hideTimer = setTimeout(() => { ui.classList.add('hidden'); hint.classList.add('hidden'); document.body.classList.add('hide-cursor'); }, 4000);
   }
   function seek(sec) { resetWorld(); T = 0; const step = 1 / 30; const n = Math.round(sec / step); for (let i = 0; i < n; i++) update(step); }
-  const STORY_T = [0, 14, 28, 52, 68];   // where the five chapters begin in the 3D walk
-  const jump = (i) => { const n = ((i % NP) + NP) % NP; seek(cfg.look === '3d' ? STORY_T[n] : Math.max(0, n * SEG)); };
+  const STORY_T = [0, 10, 22, 40, 52, 66, 82.5, 100, 108, 124, 138, 160, 186, 205];   // where the chapters begin in the 3D walk
+  const jump = (i) => { if (cfg.look === '3d') { seek(STORY_T[((i % STORY_T.length) + STORY_T.length) % STORY_T.length]); return; } const n = ((i % NP) + NP) % NP; seek(Math.max(0, n * SEG)); };
   const curScene = () => cfg.look === '3d' ? Math.max(0, STORY_T.filter(t => T + .5 >= t).length - 1) : Math.min(NP - 1, Math.floor((T + 1.5) / SEG));
   const $ = (id) => document.getElementById(id);
   const bPlay = $('bPlay');

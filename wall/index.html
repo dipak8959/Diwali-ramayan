@@ -1115,7 +1115,7 @@ window.R3 = (function () {
   const sstep = (a, b, v) => { const t = clamp((v - a) / (b - a)); return t * t * (3 - 2 * t); };
   const ease = (t) => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   const rnd = (a, b) => a + Math.random() * (b - a);
-  const LOOP = 90, WORLD = 6000, YAW = 1.12;
+  const LOOP = 225, WORLD = 6000, YAW = 1.12;
 
   // ---------- renderer, camera, post-processing ----------
   const canvas = document.createElement('canvas');
@@ -1168,18 +1168,27 @@ window.R3 = (function () {
     lakshman: { skin: 0xe9a26b, hair: 0x3a2214, dress: [0xfff3d6, 0xe8c48a], sash: 0x35c46a, crown: true, quiver: true },
     sita:     { skin: 0xf0b58c, hair: 0x2c170e, dress: [0x3fe08a, 0x0d8a55], sash: 0xffd23a, female: true },
     ravan:    { skin: 0xc9482f, hair: 0x120508, dress: [0x9a4be0, 0x3a1470], sash: 0xffc94a, crown: true, evil: true },
+    hanuman:  { skin: 0xf2a03a, hair: 0x7a4a1a, dress: [0xff4a2a, 0xb01a10], sash: 0xffd23a, crown: true, monkey: true },
+    vanara:   { skin: 0xc09050, hair: 0x5a3a18, dress: [0x3a9aff, 0x1040a0], sash: 0xffd23a, monkey: true },
+    kumbha:   { skin: 0x5e9a62, hair: 0x120508, dress: [0x8a3a2a, 0x2a120a], sash: 0xc0392b, crown: true, evil: true },
   };
 
   function makeHead(sp, scale) {
     const g = new THREE.Group(), skin = std(sp.skin, { roughness: .5, emissive: new THREE.Color(sp.skin).multiplyScalar(.05) });
     const head = mesh(G.sph, skin, 0, 0, 0, g); head.scale.set(8.4, 10.4, 9);
     const jaw = mesh(G.sph, skin, 0, -6.4, 1.4, g); jaw.scale.set(6.2, 5.6, 7);
-    const nose = mesh(new THREE.ConeGeometry(1.7, 4.8, 12), skin, 0, -1.4, 9.6, g); nose.rotation.x = Math.PI / 2 - .25;
+    let nose;
+    if (sp.monkey) {   // a pink face with a broad muzzle
+      const faceM = std(0xe8957c, { roughness: .55 });
+      mesh(G.sph, faceM, 0, -.8, 6, g).scale.set(6.8, 7.6, 4.8);
+      nose = mesh(G.sph, faceM, 0, -3.6, 8.9, g); nose.scale.set(4.6, 3.6, 3.6);
+      for (const s of [-1, 1]) mesh(G.sphLow, DARK, s * 1.3, -2.6, 12, g).scale.setScalar(.7);
+    } else { nose = mesh(new THREE.ConeGeometry(1.7, 4.8, 12), skin, 0, -1.4, 9.6, g); nose.rotation.x = Math.PI / 2 - .25; }
     for (const s of [-1, 1]) {
       const ew = mesh(G.sph, WHITE, s * 3.7, 1.4, 8.1, g); ew.scale.set(1.9, 1.15, .7);
       const pu = mesh(G.sph, sp.evil ? std(0xff3b1f, { emissive: 0xff2a10, emissiveIntensity: 2 }) : DARK, s * 3.7, 1.4, 8.7, g); pu.scale.set(.85, .85, .5);
       const br = mesh(new THREE.BoxGeometry(3.6, .55, .7), DARK, s * 3.9, 3.7, 8.3, g); br.rotation.z = s * (sp.evil ? -.35 : .12);
-      const ear = mesh(G.sph, skin, s * 8.5, -.2, -.4, g); ear.scale.set(1.1, 2.5, 1.6);
+      const ear = mesh(G.sph, skin, s * 8.5, -.2, -.4, g); ear.scale.set(sp.monkey ? 2.2 : 1.1, sp.monkey ? 3.4 : 2.5, 1.6);
       mesh(G.sph, GOLD, s * 8.9, -3.2, -.4, g).scale.setScalar(sp.female ? 1.5 : 1.1);
     }
     const lips = mesh(G.sph, std(0xb5403d, { roughness: .4 }), 0, -5.2, 8.4, g); lips.scale.set(2.5, .75, .8);
@@ -1277,6 +1286,12 @@ window.R3 = (function () {
     const head = makeHead(sp, opts.headScale || 1.32); head.position.set(0, 57, 0); torso.add(head); H.head = head;
     // arms
     for (const s of [1, -1]) { const a = makeArm(sp, s); a.position.set(s * 15, 37, 0); torso.add(a); H.arms.push(a); }
+    if (sp.monkey) {   // a long tail and a mace
+      const tc = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 2, -9), new THREE.Vector3(0, -4, -24), new THREE.Vector3(0, 14, -38), new THREE.Vector3(0, 44, -30), new THREE.Vector3(0, 58, -20)]);
+      H.tail = mesh(new THREE.TubeGeometry(tc, 28, 2, 8), skin, 0, 0, 0, body);
+      const tip = mesh(G.sph, glowMat(0xffa030), 0, 58, -20, body); tip.scale.setScalar(5); tip.visible = false; H.tailTip = tip;
+      const mace = new THREE.Group(); mesh(new THREE.CylinderGeometry(1.5, 1.5, 44, 8), std(0x8a5a2a), 0, -16, 0, mace); mesh(G.sph, GOLD, 0, 8, 0, mace).scale.setScalar(8); mace.position.set(0, -24, 2); mace.rotation.x = -.2; H.arms[0].userData.el.add(mace); H.mace = mace;
+    }
     // soft ground shadow
     const sh = mesh(new THREE.CircleGeometry(1, 24), shadowMat(), 0, -hipY + .6, 0, body); sh.rotation.x = -Math.PI / 2; sh.scale.set(26, 14, 1); H.shadow = sh;
     root.rotation.y = YAW; return H;
@@ -1318,6 +1333,10 @@ window.R3 = (function () {
       b.rotation.x = lerp(b.rotation.x, -1.45, a); b.rotation.z = lerp(b.rotation.z, -.02, a); b.userData.el.rotation.x = lerp(b.userData.el.rotation.x, -.1 - 2.45 * d, a);
       H.torso.rotation.y = lerp(H.torso.rotation.y, -.25, a);
     }
+    if (o.kneel) { const k = o.kneel; H.body.position.y -= 34 * k; H.legs[0].rotation.x = -1.35 * k; H.knees[0].rotation.x = 2.3 * k; H.legs[1].rotation.x = -.15 * k; H.knees[1].rotation.x = 1.6 * k; H.torso.rotation.x += .35 * k; for (const i of [0, 1]) { H.arms[i].rotation.x = lerp(H.arms[i].rotation.x, -1.1, k); H.arms[i].userData.el.rotation.x = lerp(H.arms[i].userData.el.rotation.x, -1.4, k); } }
+    if (o.fly) { const f = o.fly; H.legs[0].rotation.x = lerp(H.legs[0].rotation.x, .7, f); H.legs[1].rotation.x = lerp(H.legs[1].rotation.x, .5, f); H.knees[0].rotation.x = lerp(H.knees[0].rotation.x, .9, f); H.knees[1].rotation.x = lerp(H.knees[1].rotation.x, .5, f); H.arms[0].rotation.x = lerp(H.arms[0].rotation.x, -2.9, f); H.arms[1].rotation.x = lerp(H.arms[1].rotation.x, -2.4, f); H.torso.rotation.x = lerp(H.torso.rotation.x, .5, f); }
+    if (o.cheer) { const c = o.cheer, w = Math.sin(t * 7) * .15; for (const i of [0, 1]) { H.arms[i].rotation.x = lerp(H.arms[i].rotation.x, -2.9 + w * (i ? -1 : 1), c); H.arms[i].userData.el.rotation.x = lerp(H.arms[i].userData.el.rotation.x, -.2, c); } }
+    if (H.tail) { H.tail.rotation.x = Math.sin(t * 3 + H.root.id) * .06 + (o.fly ? .25 * o.fly : 0); H.tail.rotation.z = Math.sin(t * 2.3 + H.root.id) * .08; }
     if (o.victory) { const v = o.victory; for (const i of [0, 1]) { H.arms[i].rotation.x = lerp(H.arms[i].rotation.x, -2.8, v); H.arms[i].userData.el.rotation.x = lerp(H.arms[i].userData.el.rotation.x, -.25, v); } }
   }
 
@@ -1394,11 +1413,11 @@ window.R3 = (function () {
     mesh(new THREE.CylinderGeometry(1.2, 1.2, 38, 6), GOLD, 180, 240, -80, g);
     for (let k = 0; k < 8; k++) if (k !== 3 && k !== 4) mesh(new THREE.BoxGeometry(11, 22, 1), win, 20 + k * 45, 50, -49, g);
     for (const [x, y] of [[180, 150], [160, 110], [200, 110]]) mesh(new THREE.BoxGeometry(11, 22, 1), win, x, y, -59, g);
-    g.scale.setScalar(sc); return g;
+    g.userData.win = win; g.scale.setScalar(sc); return g;
   }
-  function makeTree(h) {
+  function makeTree(h, leafColor, leafEmissive) {
     const g = new THREE.Group(); mesh(new THREE.CylinderGeometry(3.4, 5.2, h * .55, 8), std(0x2a1a10, { roughness: .9 }), 0, h * .27, 0, g);
-    const leaf = std(0x0e5a52, { roughness: .6, emissive: 0x052a26 });
+    const leaf = std(leafColor || 0x0e5a52, { roughness: .6, emissive: leafEmissive || 0x052a26 });
     for (let k = 0; k < 4; k++) { const c = mesh(new THREE.ConeGeometry(34 - k * 6, h * .42, 10), leaf, 0, h * .5 + k * h * .17, 0, g); }
     return g;
   }
@@ -1434,15 +1453,15 @@ window.R3 = (function () {
   const babyLight = new THREE.PointLight(0xffd9a0, 0, 500, 1.5); scene.add(babyLight);
 
   const palaceL = makePalace(.9); palaceL.position.set(-60, 0, 0); scene.add(palaceL);
-  const palaceR = makePalace(1.15); palaceR.position.set(5640, 0, 0); scene.add(palaceR);
-  const court = makePillars(); court.position.set(1050, 0, 0); scene.add(court);
-  for (const [x, h] of [[2380, 215], [2610, 250], [2890, 200], [3140, 240], [3420, 210], [3680, 250], [3920, 200], [2150, 190]]) { const t = makeTree(h); t.position.set(x, 0, rnd(-70, -30)); scene.add(t); world.trees.push(t); }
-  const lanka = makeLanka(); lanka.position.set(4250, 0, 0); scene.add(lanka);
-  const moon = mesh(G.sph, new THREE.MeshBasicMaterial({ color: 0xfff1d0 }), 5400, 215, -300, scene); moon.scale.setScalar(26);
-  const redMoon = mesh(G.sph, new THREE.MeshBasicMaterial({ color: 0xff4a2a }), 4200, 215, -300, scene); redMoon.scale.setScalar(26);
+  const palace2 = makePalace(.9); palace2.position.set(2230, 0, 0); scene.add(palace2);
+  const court = makePillars(); court.position.set(1100, 0, 0); scene.add(court);
+  for (const [x, h] of [[2720, 215], [2900, 250], [3070, 200], [3430, 240], [3620, 210], [3790, 250], [3980, 200], [2620, 190]]) { const t = makeTree(h); t.position.set(x, 0, rnd(-70, -30)); scene.add(t); world.trees.push(t); }
+  const lanka = makeLanka(); lanka.position.set(5150, 0, 0); scene.add(lanka);
+  const moon = mesh(G.sph, new THREE.MeshBasicMaterial({ color: 0xfff1d0 }), 540, 215, -300, scene); moon.scale.setScalar(26);
+  const redMoon = mesh(G.sph, new THREE.MeshBasicMaterial({ color: 0xff4a2a }), 5400, 215, -300, scene); redMoon.scale.setScalar(26);
 
   // Shiva's bow on a pedestal
-  const pedestal = mesh(new THREE.BoxGeometry(70, 26, 26), std(0x3a2a4a, { roughness: .4, metalness: .4 }), 1500, 13, 0, scene);
+  const pedestal = mesh(new THREE.BoxGeometry(70, 26, 26), std(0x3a2a4a, { roughness: .4, metalness: .4 }), 1700, 13, 0, scene);
   function bowCurve(h, belly) { return new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, h, 0), new THREE.Vector3(belly * 2, 0, 0), new THREE.Vector3(0, -h, 0)); }
   const bowMat = std(0xc58a3a, { metalness: .5, roughness: .35, emissive: 0x5a3200, emissiveIntensity: .8 });
   const bigBow = new THREE.Group(), bigBowMesh = new THREE.Mesh(new THREE.TubeGeometry(bowCurve(78, 24), 24, 2.6, 8), bowMat); bigBow.add(bigBowMesh);
@@ -1458,31 +1477,74 @@ window.R3 = (function () {
   const ag = mesh(G.sph, glowMat(0xffb04a), 36, 0, 0, arrow); ag.scale.set(10, 10, 10); ag.material.opacity = .5; arrow.visible = false; scene.add(arrow);
 
   // characters
-  const ram = makeHuman('ram'), sita = makeHuman('sita'), lak = makeHuman('lakshman'), rav = makeRavan(); rav.root.position.set(4650, 0, -10);
+  const ram = makeHuman('ram'), sita = makeHuman('sita'), lak = makeHuman('lakshman'), rav = makeRavan(); rav.root.position.set(5560, 0, -10);
   const deer = makeDeer(); scene.add(deer); deer.visible = false;
   for (const h of [ram, sita, lak, rav]) scene.add(h.root);
-  ram.root.visible = false;
+  ram.root.visible = lak.root.visible = sita.root.visible = rav.root.visible = false;
 
   // diyas along the last stretch and near the start
   const diyaGeo = new THREE.LatheGeometry([[0, 0], [4.4, 1.2], [6, 4.4], [5.2, 5.6], [0, 4.6]].map(p => new THREE.Vector2(p[0], p[1])), 12), diyaMat = std(0xb85a1c, { roughness: .6, emissive: 0x3a1204 });
   const flameGeo = new THREE.ConeGeometry(2.1, 9, 8); flameGeo.translate(0, 4.5, 0);
-  for (const x of [...Array.from({ length: 12 }, (_, k) => 4700 + k * 100), ...Array.from({ length: 10 }, (_, k) => 5560 + k * 38), 100, 160, 220, 280, 380, 440, 500, 560]) {
+  for (const x of [...Array.from({ length: 70 }, (_, k) => 70 + k * 84), 100, 160, 220, 280, 380, 440, 500, 560]) {
     const d = new THREE.Group(); d.position.set(x, 0, 36 + (x % 3) * 3); d.add(new THREE.Mesh(diyaGeo, diyaMat));
     const fl = new THREE.Mesh(flameGeo, glowMat(0xffb24a)); fl.position.set(0, 5.6, 0); d.add(fl); const gl = mesh(G.sph, glowMat(0xff8a2a), 0, 8, 0, d); gl.scale.setScalar(10); gl.material.opacity = .0;
     d.userData = { x, fl, gl, ph: Math.random() * 10 }; scene.add(d); world.diyas.push(d);
   }
   // lanterns for the homecoming
   const lanMat = std(0xff9a3c, { emissive: 0xff7a18, emissiveIntensity: 1.3, roughness: .6 });
-  for (let k = 0; k < 14; k++) { const l = mesh(new THREE.CylinderGeometry(9, 6, 22, 10), lanMat, 0, 0, 0, scene); l.userData = { x: 4900 + k * 85 + rnd(-30, 30), y0: rnd(40, 130), sp: rnd(7, 14), ph: rnd(0, 6) }; l.visible = false; world.lanterns.push(l); }
+  for (let k = 0; k < 14; k++) { const l = mesh(new THREE.CylinderGeometry(9, 6, 22, 10), lanMat, 0, 0, 0, scene); l.userData = { x: 80 + k * 90 + rnd(-30, 30), y0: rnd(40, 130), sp: rnd(7, 14), ph: rnd(0, 6) }; l.visible = false; world.lanterns.push(l); }
   // greeting text
   const label = (function () {
     const c = document.createElement('canvas'); c.width = 1024; c.height = 256; const x = c.getContext('2d');
     x.textAlign = 'center'; x.textBaseline = 'middle'; x.shadowColor = 'rgba(255,170,60,1)'; x.shadowBlur = 24; x.fillStyle = '#ffe9b0';
-    x.font = '700 130px "Noto Sans Devanagari","Mangal",Georgia,serif'; x.fillText('शुभ दीपावली', 512, 96);
-    x.font = '600 54px Georgia,serif'; x.fillStyle = '#ffcf70'; x.fillText('Happy Diwali', 512, 205);
+    x.font = '700 120px Georgia,serif'; x.fillText('Happy Diwali', 512, 128);
     const m = new THREE.Mesh(new THREE.PlaneGeometry(400, 100), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
-    m.position.set(5900, 200, 20); m.material.opacity = 0; scene.add(m); return m;
+    m.position.set(900, 205, 20); m.material.opacity = 0; scene.add(m); return m;
   })();
+
+  // ---------- more of the story's cast and props ----------
+  const han = makeHuman('hanuman', { headScale: 1.2 }), kum = makeHuman('kumbha');
+  scene.add(han.root, kum.root); han.root.visible = kum.root.visible = false;
+  const vanaras = Array.from({ length: 6 }, () => { const v = makeHuman('vanara', { headScale: 1.2 }); v.root.scale.setScalar(.58); v.root.visible = false; scene.add(v.root); return v; });
+  function makeJatayu() {
+    const g = new THREE.Group(), m = std(0x9a6a44, { roughness: .7, emissive: 0x2a1408 });
+    mesh(G.sph, m, 0, 0, 0, g).scale.set(22, 10, 9);
+    const neck = mesh(new THREE.CylinderGeometry(3, 4.5, 16, 8), m, 24, 6, 0, g); neck.rotation.z = -1.0;
+    mesh(G.sph, m, 32, 13, 0, g).scale.set(6, 5, 5);
+    const beak = mesh(new THREE.ConeGeometry(2.4, 10, 8), std(0xffc94a, { emissive: 0x6a4a00 }), 40, 11, 0, g); beak.rotation.z = -Math.PI / 2 - .2;
+    mesh(G.sphLow, WHITE, 34, 15, 4, g).scale.setScalar(1.3); mesh(G.sphLow, DARK, 35, 15, 5, g).scale.setScalar(.7);
+    mesh(new THREE.BoxGeometry(22, 2, 12), m, -26, 2, 0, g);
+    g.userData.wings = [-1, 1].map(s => { const w = new THREE.Group(); w.position.set(2, 4, s * 6); const f = mesh(G.sph, std(0xb88a5a, { roughness: .7, emissive: 0x2a1408 }), -2, 0, s * 26, w); f.scale.set(11, 1.6, 30); g.add(w); return w; });
+    g.rotation.y = -.45; return g;
+  }
+  const jat = makeJatayu(); jat.visible = false; scene.add(jat);
+  function makeChariot() {   // the flying chariot, Pushpaka
+    const g = new THREE.Group(), mat = std(0xffd23a, { metalness: .7, roughness: .3, emissive: 0x6a4a00, emissiveIntensity: .6 }); g.userData.mat = mat;
+    mesh(new THREE.BoxGeometry(96, 12, 56), mat, 0, 14, 0, g); mesh(new THREE.BoxGeometry(100, 4, 60), GOLD, 0, 21, 0, g);
+    for (const [x, z] of [[-44, -24], [44, -24], [-44, 24], [44, 24]]) mesh(new THREE.CylinderGeometry(2.4, 2.4, 70, 8), mat, x, 56, z, g);
+    const dome = mesh(new THREE.SphereGeometry(54, 24, 12, 0, 6.283, 0, 1.45), mat, 0, 90, 0, g); dome.scale.set(1, .55, .62);
+    mesh(new THREE.CylinderGeometry(1.4, 1.4, 22, 6), GOLD, 0, 128, 0, g); mesh(G.sphLow, RUBY, 0, 142, 0, g).scale.setScalar(3);
+    g.userData.wheels = [-1, 1].map(s => mesh(new THREE.TorusGeometry(15, 2.4, 8, 20), std(0x35e0ff, { emissive: 0x10b0d0, emissiveIntensity: 1.2 }), s * 30, 10, 30, g));
+    const jet = mesh(G.sph, glowMat(0x35c0ff), 0, 2, 0, g); jet.scale.set(52, 8, 30); jet.material.opacity = .35;
+    g.visible = false; return g;
+  }
+  const chariot = makeChariot(); scene.add(chariot);
+  // the hut at Panchavati
+  const hut = new THREE.Group(); hut.position.set(3250, 0, -50); scene.add(hut);
+  mesh(new THREE.CylinderGeometry(42, 46, 60, 16), std(0x6a4a2a, { roughness: .9, emissive: 0x1a1008 }), 0, 30, 0, hut);
+  mesh(new THREE.ConeGeometry(62, 46, 16), std(0x8a6a3a, { roughness: .9, emissive: 0x2a1a08 }), 0, 83, 0, hut);
+  mesh(new THREE.BoxGeometry(16, 30, 2), new THREE.MeshBasicMaterial({ color: 0xffc070 }), 0, 17, 46, hut);
+  // the sea between the forest and Lanka, and the bridge of stones
+  const seaGeo = new THREE.PlaneGeometry(900, 18, 90, 2); gradient(seaGeo, 0x1b4fff, 0x20e0ff, 0, -450, 450);
+  const seaBase = Float32Array.from(seaGeo.attributes.position.array);
+  mesh(seaGeo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: .85 }), 4575, 9, 46, scene);
+  const seaTop = mesh(new THREE.PlaneGeometry(900, 90), new THREE.MeshBasicMaterial({ color: 0x0a2a6a, transparent: true, opacity: .55 }), 4575, .8, 0, scene); seaTop.rotation.x = -Math.PI / 2;
+  const stones = Array.from({ length: 16 }, (_, k) => { const m = mesh(new THREE.BoxGeometry(44, 14, 60), std(0xd8c09a, { roughness: .6, emissive: 0x4a3a18 }), 4170 + k * 52, 7, 6, scene); m.userData = { t: 119 + k * .85 }; m.scale.setScalar(.001); return m; });
+  const mount = new THREE.Group();
+  { const mg = new THREE.IcosahedronGeometry(34, 1); gradient(mg, 0x0a5a3a, 0x1fe08a, 1, -34, 34);
+    const mm = mesh(mg, std(0xffffff, { roughness: .5, emissive: 0x108a50, emissiveIntensity: .9 }), 0, 0, 0, mount); mm.material.vertexColors = true;
+    const mh = mesh(G.sph, glowMat(0x20ff90), 0, 0, 0, mount); mh.scale.setScalar(54); mh.material.opacity = .22; mount.visible = false; scene.add(mount); }
+  const ash = makeTree(190, 0xff7ab0, 0x5a1030); ash.position.set(5700, 0, -40); scene.add(ash);   // Sita's tree in Lanka
 
   // ---------- particles ----------
   const MAXP = 3200, pGeo = new THREE.SphereGeometry(1, 6, 4);
@@ -1522,119 +1584,214 @@ window.R3 = (function () {
   }
 
   // ---------- the story, as a function of time ----------
+  const LOOP_T = 225;
   const seg = (T, t0, t1, x0, x1) => T <= t0 ? x0 : T >= t1 ? x1 : lerp(x0, x1, ease((T - t0) / (t1 - t0)));
-  function ramX(T) {
-    if (T < 7) return 430;
-    if (T < 16.5) return seg(T, 7, 16.5, 430, 1335);
-    if (T < 26) return 1335;
-    if (T < 54) return seg(T, 26, 54, 1335, 3720);
-    if (T < 64) return 3720;
-    return seg(T, 64, 83, 3720, 5640);
+  const K = (T, keys) => {   // eased path through [time, value] keys
+    if (T <= keys[0][0]) return keys[0][1];
+    for (let i = 0; i < keys.length - 1; i++) if (T < keys[i + 1][0]) { const a = keys[i], b = keys[i + 1]; return a[1] === b[1] ? a[1] : lerp(a[1], b[1], ease((T - a[0]) / (b[0] - a[0]))); }
+    return keys[keys.length - 1][1];
+  };
+  const RAM_K = [[6, 430], [9, 470], [22, 1380], [26, 1560], [41, 1560], [43, 1640], [53, 2250], [60, 2250], [62, 2330], [69, 3050], [70, 3050], [77, 3560], [79, 3560], [81, 3480], [91, 3330], [93, 3330], [96, 3900], [119, 3900], [121, 4000], [136, 4950], [150, 4950], [152, 5050], [183, 5050], [185.5, 5160]];
+  const chX = (T) => T < 91 ? K(T, [[82.5, 3330], [91, 5560]]) : K(T, [[182, 5130], [186, 5130], [205, 560]]);
+  const chY = (T) => T < 91 ? (T < 82.5 ? 0 : 36 + 150 * Math.sin(Math.PI * clamp((T - 82.5) / 8.5))) : (T < 186 ? 0 : (T < 205 ? 30 + 130 * Math.sin(Math.PI * clamp((T - 186) / 19)) : 0));
+  const ramX = (T) => T < 185.5 ? K(T, RAM_K) : T < 205 ? chX(T) + 30 : K(T, [[205, 590], [212, 720]]);
+  const sitaX = (T) => T < 34 ? 2000 : T < 37.5 ? K(T, [[34, 2000], [37.5, 1660]]) : T < 70 ? Math.max(1660, ramX(T) - 100) : T < 72 ? K(T, [[70, 2950], [72, 3250]]) : T < 82.5 ? 3250 : T < 91 ? chX(T) : T < 176 ? 5700 : T < 185 ? K(T, [[176, 5700], [185, 5130]]) : T < 205 ? chX(T) : ramX(T) - 30;
+  const LAK_K = [[69, 2955], [71, 3180], [77.5, 3180], [80.5, 3480], [91, 3240], [93, 3235], [96, 3805]];
+  const lakX = (T) => T < 69 ? ramX(T) - 95 : T < 96 ? K(T, LAK_K) : T < 152 ? ramX(T) - 95 : T < 168 ? K(T, [[152, 4955], [155.5, 5110], [164, 5110], [168, 4955]]) : T < 185 ? K(T, [[168, 4955], [185, 5100]]) : T < 205 ? chX(T) - 30 : ramX(T) - 60;
+  const deerX = (T) => K(T, [[66, 3150], [77, 3640]]);
+  // Hanuman: meets Ram, leaps the sea, finds Sita, burns Lanka, leaps back, brings the healing mountain
+  function hanPos(T) {
+    const o = { x: 4350, y: 0, vis: T >= 96, fly: 0, kneel: 0, tail: 0, mount: 0 };
+    if (T < 96) return o;
+    if (T < 101) o.x = K(T, [[96, 4350], [101, 3990]]);
+    else if (T < 108) { o.x = 3990; o.kneel = sstep(101, 102, T) * (1 - sstep(103.6, 104.6, T)); }
+    else if (T < 112) { const u = (T - 108) / 4; o.x = lerp(3990, 5620, ease(u)); o.y = 215 * Math.sin(Math.PI * u); o.fly = 1; }
+    else if (T < 116) { o.x = 5620; o.kneel = sstep(112.4, 113.2, T) * (1 - sstep(115, 116, T)); }
+    else if (T < 121) { o.x = T < 118 ? K(T, [[116, 5620], [118, 5780]]) : K(T, [[118, 5780], [121, 5300]]); o.y = 96 + Math.sin(T * 9) * 4; o.tail = 1; }
+    else if (T < 125) { const u = (T - 121) / 4; o.x = lerp(5300, 4300, ease(u)); o.y = 170 * Math.sin(Math.PI * u); o.fly = 1; }
+    else if (T < 146) o.x = T < 126 ? lerp(4300, ramX(126) + 170, T - 125) : ramX(T) + 170;
+    else if (T < 149) { const u = (T - 146) / 3; o.x = lerp(ramX(146) + 170, 3300, ease(u)); o.y = 250 * Math.sin(Math.PI * u); o.fly = 1; }
+    else if (T < 152) o.vis = false;
+    else if (T < 156) { const u = (T - 152) / 4; o.x = lerp(3300, 4900, ease(u)); o.y = 40 + 190 * Math.sin(Math.PI * u); o.fly = 1; o.mount = 1; }
+    else if (T < 185.5) { o.x = K(T, [[156, 4900], [183, 4900], [185.5, 5070]]); o.mount = 1 - sstep(157.4, 158.2, T); }
+    else if (T < 205) { o.x = chX(T) - 62; o.y = chY(T) + 16; }
+    else o.x = ramX(T) - 92;
+    return o;
   }
-  const sitaX = (T) => T < 21.5 ? 1690 : T < 25.2 ? seg(T, 21.5, 25.2, 1690, 1410) : Math.max(1410, ramX(T) - 100);
-  const lakX = (T) => Math.max(2330, ramX(T) - 200);
-  // where the camera looks when it follows the story
-  const follow = (T) => lerp(ramX(T) - 120, 4220, sstep(52.5, 56, T) * (1 - sstep(65, 69, T)));
+  const WIN = [[26.2, 31, 28.4, 31], [74.2, 76.9, 75, 76], [144.3, 147.2, 145.2, 146.6], [164.8, 168.2, 165.6, 167.6]];   // raise, release, start of draw, shot
+  const SHOTS = [[76.0, .9, 3640, 64], [146.6, 1.0, 5255, 150], [167.6, 1.0, 5510, 150]];
+  const FOC = [[0, 380], [9, 520], [22, 1250], [30, 1650], [41, 1700], [53, 2250], [62, 2500], [69, 3000], [77, 3450], [86, 3700], [93, 3600], [100, 3900], [108, 4500], [112, 5300], [118, 5450], [124, 4600], [130, 4500], [140, 4900], [150, 5150], [160, 5250], [170, 5350], [177, 5300], [184, 5100]];
+  const follow = (T) => T < 185 ? K(T, FOC) : T < 205 ? chX(T) : K(T, [[205, 560], [212, 600], [225, 450]]);
   const vel = (f, T) => (f(T + .06) - f(T - .06)) / .12;
   const STEP = 58;   // length of one stride
 
-  const fired = {}; let lastT = -1, flashV = 0, babyT = -1;
+  const fired = {}; let lastT = -1, flashV = 0;
   const once = (k, c, fn) => { if (c && !fired[k]) { fired[k] = 1; fn(); } };
   function resetAll() { for (const k in fired) delete fired[k]; parts = []; pets = []; flashV = 0; }
+  const wp = new THREE.Vector3();
 
   function update(T, dt) {
     if (T < lastT - .0001) resetAll();
     lastT = T; flashV = Math.max(0, flashV - dt * 1.7);
-    spotC = follow(T) + 80; spotH = lerp(950, 1250, sstep(52.5, 56, T) * (1 - sstep(65, 69, T)));
-    const rx = ramX(T), vR = vel(ramX, T), vS = vel(sitaX, T), vL = vel(lakX, T);
+    const wide = Math.max(sstep(104, 110, T) * (1 - sstep(124, 128, T)), sstep(134, 140, T) * (1 - sstep(184, 187, T)), sstep(185, 188, T) * (1 - sstep(204, 206, T)));
+    spotC = follow(T) + 80; spotH = lerp(950, 1300, wide);
+    const rx = ramX(T), vR = vel(ramX, T);
 
-    // lotus and the baby of light (the birth of Ram)
+    // 1. birth: a lotus, and a baby of light who becomes Ram (and his brother Lakshman)
     const open = sstep(1, 5, T);
     petals.forEach(p => { const d = p.userData, ang = lerp(.1, 1.12 - d.ring * .25, open); p.position.set(Math.cos(d.a) * (2 + d.ring * 2), 3, Math.sin(d.a) * (2 + d.ring * 2) * .8); p.rotation.set(0, -d.a, 0); p.rotateZ(-ang); });
     baby.visible = T > 3 && T < 6.6;
     if (baby.visible) { const u = sstep(3, 6, T); baby.position.set(330, 34 + u * 70 + Math.sin(T * 3) * 2, 10); baby.scale.setScalar(1 + sstep(5.4, 6.4, T) * 3); babyLight.position.copy(baby.position); babyLight.intensity = 1.6 * sstep(3, 4, T); } else babyLight.intensity = 0;
     once('birth', T >= 6.0, () => { flashV = 1; burst(380, 100, 10, .12, 150, 150); petalRain(60, 900, 40, 260); });
-    ram.root.visible = T >= 6.0;
-    const born = sstep(6.0, 7.2, T); ram.root.scale.setScalar(.2 + .8 * ease(born));
+    ram.root.visible = T >= 6.0; ram.root.scale.setScalar(.2 + .8 * ease(sstep(6.0, 7.2, T)));
+    lak.root.visible = T >= 6.3; lak.root.scale.setScalar(.2 + .8 * ease(sstep(6.3, 7.5, T)));
 
-    // Ram
-    const rs = clamp(Math.abs(vR) / 55) , rph = rx * Math.PI / STEP;
-    ram.root.position.set(rx, 0, 6);
-    const lift = sstep(16.5, 18.2, T), draw1 = sstep(18.4, 21, T), snapped = T >= 21.0;
-    const aim2 = sstep(54.2, 55.6, T) * (1 - sstep(58, 58.6, T)), draw2 = sstep(55.2, 57.4, T) * (T < 57.5 ? 1 : 0);
-    const po = { ph: rph, s: rs, t: T };
-    if (T >= 16.5 && T < 21.0) { po.aim = lift; po.draw = draw1; }
-    else if (T >= 54.2 && T < 59) { po.aim = aim2; po.draw = draw2; }
-    if (snapped && T < 24) po.victory = sstep(21.1, 21.8, T) * (1 - sstep(23, 24, T));
-    if (T >= 82.5) po.victory = sstep(82.5, 83.6, T) * .0;
+    // Ram: walking, aiming, cheering
+    let aw = null;
+    for (const [a0, a1, d0, d1] of WIN) if (T >= a0 && T < a1 + .6) aw = { aim: sstep(a0, a0 + 1.2, T) * (1 - sstep(a1, a1 + .6, T)), draw: sstep(d0, d1, T) * (T < d1 + .05 ? 1 : 0), big: a0 < 30 };
+    const rider = T >= 185.5 && T < 205;
+    ram.root.position.set(rx, rider ? chY(T) + 16 : 0, 6);
+    const po = { ph: rx * Math.PI / STEP, s: rider ? 0 : clamp(Math.abs(vR) / 55), t: T };
+    if (aw) { po.aim = aw.aim; po.draw = aw.draw; }
+    if (T >= 31 && T < 34) po.victory = sstep(31.1, 31.8, T) * (1 - sstep(33, 34, T));
+    if (T >= 168.8 && T < 172) po.victory = sstep(168.9, 169.6, T) * (1 - sstep(171, 172, T));
     pose(ram, po);
-    // Sita and Lakshman
-    sita.root.position.set(sitaX(T), 0, 22); pose(sita, { ph: sitaX(T) * Math.PI / STEP + 1.4, s: clamp(Math.abs(vS) / 55), t: T });
-    sita.root.rotation.y = T < 21.5 ? YAW + .55 : YAW;
-    lak.root.position.set(lakX(T), 0, 2); pose(lak, { ph: lakX(T) * Math.PI / STEP + 2.6, s: clamp(Math.abs(vL) / 55), t: T });
-    sita.root.visible = T > 1;   // she is there from the start, waiting at Mithila
-    // Shiva's bow: lies on the pedestal, is lifted, bent, and snapped
-    const handAt = new THREE.Vector3(), rt = ram.arms[0].userData.hand;
-    ram.root.updateMatrixWorld(true);
-    if (T < 16.8) { bigBow.visible = true; bigBow.position.set(1500, 40 + Math.sin(T * 2) * 2, 4); bigBow.rotation.set(0, 0, Math.PI / 2); bigBow.scale.setScalar(.95); }
-    else if (T < 21.0) { rt.getWorldPosition(handAt); bigBow.position.copy(handAt).add(new THREE.Vector3(5, 0, 0)); bigBow.rotation.set(0, 0, 0); bigBow.scale.setScalar(1); bigBow.position.x += 2; }
-    bigBow.visible = T < 21.0;
-    // bend the big bow while drawing
+
+    // Lakshman
+    const lx = lakX(T), vL = vel(lakX, T), lfall = sstep(155.5, 156.4, T) * (1 - sstep(164.5, 166, T));
+    lak.root.position.set(lx, T >= 185.5 && T < 205 ? chY(T) + 16 : 12 * lfall, 2);
+    pose(lak, { ph: lx * Math.PI / STEP + 2.6, s: (T >= 185.5 && T < 205) ? 0 : clamp(Math.abs(vL) / 55), t: T });
+    lak.root.rotation.z = -1.45 * lfall;
+
+    // Sita
+    const sx = sitaX(T), vS = vel(sitaX, T), captive = T >= 91 && T < 176, sRide = (T >= 82.5 && T < 91) || (T >= 185 && T < 205);
+    sita.root.visible = T >= 25.5; sita.root.scale.setScalar(.2 + .8 * ease(sstep(25.5, 26.7, T)));
+    sita.root.position.set(sx, sRide ? chY(T) + 16 : 0, 22);
+    pose(sita, { ph: sx * Math.PI / STEP + 1.4, s: sRide ? 0 : clamp(Math.abs(vS) / 55), t: T, kneel: captive ? .85 * sstep(91.5, 92.5, T) * (1 - sstep(174.5, 176, T)) : 0 });
+    sita.root.rotation.y = (T < 34 || captive) ? YAW + .55 : YAW;
+
+    // Hanuman and the vanaras
+    const hp = hanPos(T); han.root.visible = hp.vis;
+    if (hp.vis) {
+      han.root.position.set(hp.x, hp.y, 10); const hv = (hanPos(T + .06).x - hanPos(T - .06).x) / .12;
+      han.root.rotation.y = hp.fly ? (hv >= 0 ? 1.4 : -1.4 + Math.PI) : (hp.tail ? (hv >= 0 ? YAW : YAW + 2.4) : YAW);
+      pose(han, { ph: hp.x * Math.PI / STEP, s: hp.fly ? 0 : clamp(Math.abs(hv) / 55), t: T, kneel: hp.kneel, fly: hp.fly, cheer: sstep(176, 177, T) * (1 - sstep(182, 183, T)) });
+      han.tailTip.visible = hp.tail > 0;
+      if (hp.tail) { han.tailTip.getWorldPosition(wp); for (let i = 0; i < 4; i++) ember(wp.x, wp.y, wp.z, true); }
+    }
+    mount.visible = hp.vis && hp.mount > .02; if (mount.visible) { mount.position.set(hp.x, hp.y + 150, 10); mount.scale.setScalar(hp.mount); mount.rotation.y = T * .8; }
+    vanaras.forEach((v, i) => {
+      const vis = T >= 119 && T < 185; v.root.visible = vis; if (!vis) return;
+      const f = (t) => (t < 152 ? ramX(t) : ramX(152)) - 130 - i * 44, x = f(T), vv = (f(T + .06) - f(T - .06)) / .12;
+      v.root.position.set(x, 0, 14 + (i % 2) * 14); pose(v, { ph: x * Math.PI / STEP + i, s: clamp(Math.abs(vv) / 55), t: T, cheer: sstep(176, 177, T) * (1 - sstep(182, 183, T)) });
+    });
+
+    // 3. Shiva's bow: lifted, bent, snapped; then Sita's garland
+    const handAt = new THREE.Vector3(), rt = ram.arms[0].userData.hand; ram.root.updateMatrixWorld(true);
+    if (T < 26.2) { bigBow.position.set(1700, 40 + Math.sin(T * 2) * 2, 4); bigBow.rotation.set(0, 0, Math.PI / 2); bigBow.scale.setScalar(.95); }
+    else if (T < 31.0) { rt.getWorldPosition(handAt); bigBow.position.copy(handAt).add(new THREE.Vector3(7, 0, 0)); bigBow.rotation.set(0, 0, 0); bigBow.scale.setScalar(1); }
+    bigBow.visible = T < 31.0;
     if (bigBow.visible) {
-      const d = T >= 16.8 ? draw1 : 0, curve = bowCurve(78 - d * 8, 24 + d * 8);
+      const d = T >= 28.4 ? sstep(28.4, 31, T) : 0, curve = bowCurve(78 - d * 8, 24 + d * 8);
       bigBowMesh.geometry.dispose(); bigBowMesh.geometry = new THREE.TubeGeometry(curve, 24, 2.6, 8);
       const sp = bigString.geometry.attributes.position; sp.setXYZ(0, 0, 78 - d * 8, 0); sp.setXYZ(1, -d * 34, 0, 0); sp.setXYZ(2, 0, -(78 - d * 8), 0); sp.needsUpdate = true;
     }
-    once('snap', T >= 21.0, () => { flashV = 1; ring3(); burst(1470, 130, 12, .12, 160, 170); petalRain(1000, 1900, 70, 280); halves.forEach(h => { h.visible = true; h.userData = { t0: T }; h.position.set(1475, 130, 10); }); });
-    halves.forEach((h, i) => { if (!h.visible) return; const a = T - h.userData.t0, g = i ? -1 : 1; h.position.set(1475 + g * a * 90, 130 - a * 70 + 190 * a * a * -.0 + (-170 * a * a), 10); h.rotation.z = g * a * 3; h.rotation.x = Math.PI / 2; if (a > 2.2 || h.position.y < 6) h.visible = false; });
-    // Ram's bow: slung while walking, in hand to shoot Ravan
-    if (T < 26) bow.visible = false; else bow.visible = true;
-    if (T >= 54.2 && T < 59) {
+    once('snap', T >= 31.0, () => { flashV = 1; burst(1590, 130, 12, .12, 160, 170); petalRain(1100, 2100, 70, 280); halves.forEach(h => { h.visible = true; h.userData = { t0: T }; h.position.set(1595, 130, 10); }); });
+    halves.forEach((h, i) => { if (!h.visible) return; const a = T - h.userData.t0, g = i ? -1 : 1; h.position.set(1595 + g * a * 90, 130 - 170 * a * a, 10); h.rotation.z = g * a * 3; if (a > 2.2 || h.position.y < 6) h.visible = false; });
+    once('garland', T >= 37.6, () => { burst(1700, 150, 12, .1, 80, 90); petalRain(1500, 1900, 40, 260); });
+    palace2.userData.win.color.setRGB(1, .81, .44).multiplyScalar(1 - .88 * sstep(44, 60, T) * (1 - sstep(190, 200, T)) * (T < 200 ? 1 : 0));
+
+    // Ram's bow: slung on the back, in hand to shoot
+    const bowOn = aw && !aw.big;
+    bow.visible = T >= 43;
+    if (bowOn) {
       const f = ram.arms[0].userData.hand, b = ram.arms[1].userData.hand, fp = new THREE.Vector3(), bp = new THREE.Vector3(); f.getWorldPosition(fp); b.getWorldPosition(bp);
       bow.position.copy(fp); bow.rotation.set(0, 0, 0); bow.scale.setScalar(1.3); bow.updateMatrixWorld(true);
-      const bl = bow.worldToLocal(bp.clone()), sp = bowString.geometry.attributes.position;
-      sp.setXYZ(0, 0, 38, 0); sp.setXYZ(1, bl.x, bl.y, bl.z); sp.setXYZ(2, 0, -38, 0); sp.needsUpdate = true;
-      arrow.visible = T < 57.5 && draw2 > .05; if (arrow.visible) { arrow.position.copy(bp).add(new THREE.Vector3(30, 0, 0)); arrow.rotation.set(0, 0, 0); }
-    } else if (T >= 26) {
+      const bl = bow.worldToLocal(bp.clone()), sp = bowString.geometry.attributes.position; sp.setXYZ(0, 0, 38, 0); sp.setXYZ(1, bl.x, bl.y, bl.z); sp.setXYZ(2, 0, -38, 0); sp.needsUpdate = true;
+      arrow.visible = aw.draw > .05 && !SHOTS.some(([t0, d]) => T >= t0 && T < t0 + d + .1); if (arrow.visible) { arrow.position.copy(bp).add(new THREE.Vector3(30, 0, 0)); arrow.rotation.set(0, 0, 0); }
+    } else if (T >= 43) {
       bow.position.set(rx - 22, 112, -14); bow.rotation.set(0, .5, .3); bow.scale.setScalar(1.25);
       const sp = bowString.geometry.attributes.position; sp.setXYZ(0, 0, 38, 0); sp.setXYZ(1, 0, 0, 0); sp.setXYZ(2, 0, -38, 0); sp.needsUpdate = true; arrow.visible = false;
     }
-    // the arrow flies to Ravan
-    const shot = T - 57.6, flying = shot >= 0 && shot < 1.0;
-    if (flying) {
-      const p = shot / 1.0, x0 = rx + 62, y0 = 128, x1 = rav.root.position.x - 40, y1 = 150; arrow.visible = true;
-      arrow.position.set(lerp(x0, x1, p), lerp(y0, y1, p) + Math.sin(Math.PI * p) * 8, 10); arrow.rotation.set(0, 0, Math.atan2(y1 - y0, x1 - x0));
-      for (let i = 0; i < 3; i++) ember(arrow.position.x - 18, arrow.position.y, 10, true);
-    } else if (T >= 58.6) arrow.visible = false;
-    once('hit', T >= 58.6, () => { flashV = 1; ring3(); burst(rav.root.position.x, 150, 12, .02, 170, 190); });
-    for (const [k, t, dx, y, h] of [['r2', 59.2, -60, 250, .12], ['r3', 59.9, 70, 210, .9], ['r4', 60.8, 10, 120, .55], ['r5', 61.8, -300, 230, .12], ['r6', 62.8, 250, 250, .08], ['r7', 64, -120, 260, .8]]) once(k, T >= t, () => burst(rav.root.position.x + dx, y, 20, h, 125));
-    // Ravan wakes, burns and crumbles
-    const burn = sstep(58.6, 67, T), ravS = 1.1 * (1 - .5 * burn);
-    rav.root.scale.set(1.1 * (1 + burn * .1), ravS, 1.1);
-    rav.root.position.x = 4650 + (T > 58.6 && T < 66 ? Math.sin(T * 60) * 2.5 * (1 - burn) : 0);
-    rav.root.visible = burn < .985;
-    rav.root.traverse(o => { if (o.material && o.material.opacity !== undefined && o.material.transparent === false) {} });
-    const rpose = { ph: 0, s: 0, t: T }; pose(rav, rpose); rav.root.rotation.y = YAW - .4;
-    rav.heads.forEach((h, i) => { h.rotation.y = Math.sin(T * 1.1 + i) * .18; });
-    if (T > 58.6 && T < 67) for (let i = 0; i < 6; i++) ember(rav.root.position.x + rnd(-45, 45), rnd(5, 230) * ravS, rnd(0, 20), true);
-    if (T > 66.5 && T < 72) for (let i = 0; i < 2; i++) ember(rav.root.position.x + rnd(-60, 60), rnd(0, 30), rnd(0, 20), false);
-    // the golden deer
-    const dv = T > 30 && T < 50;
+    if (rider) bow.visible = false;
+    // arrows in flight
+    SHOTS.forEach(([t0, dur, tx, ty], i) => {
+      const p = (T - t0) / dur; if (p < 0 || p >= 1) return;
+      const x0 = rx + 62, y0 = 128; arrow.visible = true;
+      arrow.position.set(lerp(x0, tx, p), lerp(y0, ty, p) + Math.sin(Math.PI * p) * 8, 10); arrow.rotation.set(0, 0, Math.atan2(ty - y0, tx - x0));
+      for (let k = 0; k < 3; k++) ember(arrow.position.x - 18, arrow.position.y, 10, true);
+    });
+    if (!SHOTS.some(([t0, d]) => T >= t0 && T < t0 + d) && !(bowOn && aw.draw > .05)) arrow.visible = false;
+
+    // 6. the golden deer, and the arrow that ends the illusion
+    const dv = T >= 66 && T < 77;
     deer.visible = dv;
-    if (dv) { const u = (T - 30) / 20, dx = lerp(2600, 4180, u), hop = Math.abs(Math.sin(T * 4.2)) * 26; deer.position.set(dx, hop, -30); deer.legs.forEach((l, i) => { l.rotation.x = Math.sin(T * 8.4 + (i % 2) * 2.4 + (i > 1 ? 1.4 : 0)) * .9; }); deer.scale.setScalar(.85 + sstep(30, 32, T) * .15 - sstep(48, 50, T) * .85); if (Math.random() < .5) ember(dx, 60 + hop, -30, false); }
-    // diyas light up as Ram passes
-    world.diyas.forEach((d, i) => { const u = d.userData, lit = u.x < 700 ? sstep(7, 9, T) : sstep(u.x - 130, u.x + 10, rx), fl = .85 + .15 * Math.sin(T * 12 + u.ph); u.fl.visible = lit > .02; u.fl.scale.set(1, (.6 + .4 * lit) * fl, 1); u.gl.material.opacity = .55 * lit * fl; });
-    world.lanterns.forEach(l => { const u = l.userData, a = sstep(70, 74, T); l.visible = a > 0; l.position.set(u.x + Math.sin(T * .6 + u.ph) * 14, u.y0 + (T - 70) * u.sp, -10 + Math.sin(u.ph) * 20); l.scale.setScalar(.8 + (u.ph % 1) * .5); });
-    // Diwali fireworks and greeting
-    [[0, 70], [1, 71.3], [2, 72.5], [3, 73.8], [4, 75], [5, 76.4], [6, 77.8], [7, 79.2], [8, 80.6], [9, 82], [10, 83.6], [11, 85]].forEach(([k, t]) => once('fw' + k, T >= t, () => burst(5100 + (k * 173) % 1000, 150 + (k * 47) % 110, rnd(-30, 20), [.1, .92, .55, .35, .02, .78][k % 6], 120)));
-    once('petal2', T >= 72, () => petalRain(5000, 6000, 60, 260));
-    label.material.opacity = sstep(76, 79, T) * (1 - sstep(87.2, 89, T));
-    // light flashes
-    lights.flash.intensity = flashV * 2.6; if (flashV > 0) lights.flash.position.set(T < 20 ? 1470 : T < 40 ? 1470 : rav.root.position.x, 150, 200);
-    if (T >= 6 && T < 6.2) lights.flash.position.set(330, 120, 200);
+    if (dv) { const dx = deerX(T), hop = Math.abs(Math.sin(T * 4.2)) * 26; deer.position.set(dx, hop, -26); deer.legs.forEach((l, i) => { l.rotation.x = Math.sin(T * 8.4 + (i % 2) * 2.4 + (i > 1 ? 1.4 : 0)) * .9; }); deer.scale.setScalar(.85 + sstep(66, 68, T) * .15); if (Math.random() < .6) ember(dx, 60 + hop, -26, false); }
+    once('deerhit', T >= 76.9, () => { flashV = .6; burst(3640, 70, 0, .12, 110, 120); });
+
+    // 7. Ravan comes to the hut, takes Sita in his flying chariot; Jatayu fights him and falls
+    const rp = T < 80 ? null : T < 82.5 ? { x: 3420, y: 0 } : T < 91 ? { x: chX(T) - 14, y: chY(T) + 18 } : { x: 5560, y: 0 };
+    const burn = sstep(168.6, 177, T), ravS = 1.1 * (1 - .5 * burn);
+    rav.root.visible = rp !== null && burn < .985;
+    if (rp) {
+      rav.root.scale.set(1.1 * (1 + burn * .1), ravS, 1.1);
+      rav.root.position.set(rp.x + (T > 168.6 && T < 175 ? Math.sin(T * 60) * 2.5 * (1 - burn) : 0), rp.y, -10);
+      pose(rav, { ph: 0, s: 0, t: T }); rav.root.rotation.y = YAW - .4; rav.heads.forEach((h, i) => { h.rotation.y = Math.sin(T * 1.1 + i) * .18; });
+    }
+    once('abduct', T >= 80, () => { flashV = 1; burst(3420, 110, 10, .78, 120, 130); });
+    const cv = (T >= 82.5 && T < 92) || (T >= 182 && T < 213);
+    chariot.visible = cv;
+    if (cv) {
+      chariot.position.set(chX(T), chY(T), 0); const pushpak = T > 100; chariot.userData.mat.color.setHex(pushpak ? 0xffd23a : 0x8a1a2a); chariot.userData.mat.emissive.setHex(pushpak ? 0x6a4a00 : 0x400610);
+      chariot.userData.wheels.forEach(w => { w.rotation.z = T * 4; });
+      chariot.scale.setScalar(pushpak ? sstep(182, 183.4, T) * (1 - sstep(210, 212.5, T)) + .001 : 1);
+      if (T > 83 && T < 91 || (T > 186 && T < 205)) for (let i = 0; i < 2; i++) ember(chX(T) + rnd(-40, 40), chY(T) + 4, 0, true);
+    }
+    once('chariotfly', T >= 82.5, () => { flashV = .5; });
+    const jv = T >= 83.5 && T < 100; jat.visible = jv;
+    if (jv) {
+      let jx, jy, rot = 0;
+      if (T < 86.4) { const u = (T - 83.5) / 2.9; jx = lerp(3050, 3720, ease(u)); jy = 200 - 40 * u; }
+      else if (T < 89.2) { const u = (T - 86.4) / 2.8; jx = lerp(3720, 3930, u); jy = lerp(160, 8, u * u); rot = u * 1.3; }
+      else { jx = 3930; jy = 8; rot = 1.3; }
+      jat.position.set(jx, jy, -20); jat.rotation.z = rot; const flap = T < 86.4 ? Math.sin(T * 14) * .7 : (T < 89.2 ? Math.sin(T * 6) * .4 : 0); jat.userData.wings.forEach((w, i) => { w.rotation.x = (i ? -1 : 1) * flap; });
+    }
+    once('jhit', T >= 86.4, () => { flashV = .5; burst(3720, 150, 0, .02, 90, 120); });
+    once('jspirit', T >= 100, () => { burst(3930, 40, 0, .13, 90, 90); for (let i = 0; i < 20; i++) ember(3930 + rnd(-20, 20), 20, 0, true); });
+
+    // 8. Hanuman meets Ram; the sea and the bridge of stones
+    once('hmeet', T >= 104.6, () => { burst(3990, 150, 0, .1, 60, 80); });
+    once('leap', T >= 108, () => { flashV = .4; burst(3990, 40, 0, .08, 80, 110); });
+    once('ring', T >= 113.4, () => { burst(5640, 120, 0, .13, 70, 70); });
+    if (T > 116 && T < 121) for (let i = 0; i < 6; i++) ember(rnd(5170, 5810), rnd(40, 190), rnd(-30, 10), true);
+    once('lankaburn', T >= 116, () => { flashV = .5; });
+    if (hp.fly && hp.vis) ember(hp.x - 20, hp.y + 60, 10, false);
+    stones.forEach(m => { const a = clamp((T - m.userData.t) / .7), sc = a <= 0 ? .001 : (a < 1 ? 1 + .35 * Math.sin(Math.PI * a) : 1); m.scale.setScalar(sc * (a > 0 ? 1 : .001)); if (a > 0 && a < 1 && Math.random() < .6) ember(m.position.x, 16, 10, false); });
+    const sp = seaGeo.attributes.position; for (let i = 0; i < sp.count; i++) { const x = seaBase[i * 3], y = seaBase[i * 3 + 1]; sp.setY(i, y + Math.sin(x * .045 + T * 2.2) * 2.6 + Math.sin(x * .11 - T * 3) * 1.1); } sp.needsUpdate = true;
+
+    // 11. Kumbhakarna, Lakshman struck down, the healing mountain
+    kum.root.visible = T >= 138 && T < 155.5;
+    if (kum.root.visible) { const f = sstep(148, 150.5, T); kum.root.position.set(5320, 14 * f, -10); kum.root.rotation.y = YAW - .5; kum.root.rotation.z = -1.5 * f; kum.root.scale.setScalar(1.9 * (1 - .9 * sstep(153, 155.5, T))); pose(kum, { ph: 0, s: 0, t: T }); }
+    once('khit', T >= 147.6, () => { flashV = .8; burst(5255, 150, 0, .02, 130, 160); });
+    once('lakhit', T >= 155.5, () => { flashV = .6; burst(5110, 110, 0, .02, 80, 110); });
+    once('mount', T >= 158, () => { flashV = .9; burst(4900, 120, 0, .38, 130, 150); burst(5110, 60, 0, .38, 90, 100); });
+    // 12. Ravan falls
+    once('hit', T >= 168.6, () => { flashV = 1; burst(5560, 150, 0, .02, 170, 190); });
+    for (const [k, t, dx, y, h] of [['r2', 169.2, -60, 250, .12], ['r3', 169.9, 70, 210, .9], ['r4', 170.8, 10, 120, .55], ['r5', 171.8, -300, 230, .12], ['r6', 172.8, 250, 250, .08], ['r7', 174, -120, 260, .8]]) once(k, T >= t, () => burst(5560 + dx, y, 20, h, 125));
+    if (T > 168.6 && T < 177) for (let i = 0; i < 6; i++) ember(rav.root.position.x + rnd(-45, 45), rnd(5, 230) * ravS, rnd(0, 20), true);
+    once('freed', T >= 176, () => { burst(5700, 100, 0, .13, 90, 90); });
+    once('board', T >= 185.5, () => { flashV = .6; });
+    once('land', T >= 205, () => { flashV = .7; burst(560, 110, 0, .1, 100, 110); petalRain(100, 1100, 60, 280); });
+
+    // 13–14. diyas light as the chariot flies home; lanterns, fireworks and the greeting
+    world.diyas.forEach(d => { const u = d.userData, chp = chX(T), lit = Math.max(u.x < 700 ? sstep(7, 9, T) : 0, T >= 186 ? sstep(chp - 30, chp + 120, u.x) : 0), fl = .85 + .15 * Math.sin(T * 12 + u.ph); u.fl.visible = lit > .02; u.fl.scale.set(1, (.6 + .4 * lit) * fl, 1); u.gl.material.opacity = .55 * lit * fl; });
+    world.lanterns.forEach(l => { const u = l.userData, a = sstep(205, 209, T); l.visible = a > 0 && T < 225; l.position.set(u.x + Math.sin(T * .6 + u.ph) * 14, u.y0 + (T - 205) * u.sp, -10 + Math.sin(u.ph) * 20); l.scale.setScalar(.8 + (u.ph % 1) * .5); });
+    for (let k = 0; k < 12; k++) once('fw' + k, T >= 206 + k * 1.4, () => burst(150 + (k * 173) % 1100, 150 + (k * 47) % 110, rnd(-30, 20), [.1, .92, .55, .35, .02, .78][k % 6], 120));
+    once('petal2', T >= 207, () => petalRain(100, 1200, 60, 260));
+    label.material.opacity = sstep(208, 211, T) * (1 - sstep(221, 223.5, T));
+    lights.flash.intensity = flashV * 2.6; if (flashV > 0) lights.flash.position.set(follow(T), 150, 200);
     stepParts(dt);
   }
-  function ring3() { }
 
   // ---------- view and render ----------
   let vw = 0, vh = 0, spotC = 400, spotH = 950;
@@ -2438,25 +2595,39 @@ window.R3 = (function () {
 
   const TEST_COL = ['#ffffff', '#ffe6a8', '#bfe3ff', '#ffc4d6', '#c9f5c0'];
   // ---------- story text: what is happening, shown in the 'Story text' areas ----------
-  const STORY_CAP = [   // for the 3D walk: [from, to, English, Hindi]
-    [0, 6, 'Ayodhya: a lotus blooms and a baby of light appears', 'अयोध्या: कमल खिला, श्रीराम का जन्म'],
-    [6, 16, 'Prince Ram walks to Mithila', 'राम मिथिला की ओर चले'],
-    [16, 21.5, "Mithila: Ram lifts and breaks Shiva's great bow", 'मिथिला: राम ने शिव धनुष तोड़ा'],
-    [21.5, 26.5, 'Sita garlands Ram: they are married', 'सीता ने राम को जयमाला पहनाई'],
-    [26.5, 38, 'Exile: Ram, Sita and Lakshman walk into the forest', 'वनवास: राम, सीता और लक्ष्मण वन की ओर'],
-    [38, 52, 'A golden deer leads them deeper into the forest', 'स्वर्ण मृग उन्हें वन में आगे ले गया'],
-    [52, 58.6, 'Lanka: Ram draws his bow against ten-headed Ravan', 'लंका: राम ने रावण पर बाण साधा'],
-    [58.6, 67, 'Ravan falls: good wins over evil', 'रावण वध: बुराई पर अच्छाई की जीत'],
-    [67, 76, 'Fourteen years are over: they walk home to Ayodhya', 'चौदह वर्ष पूरे: अयोध्या वापसी'],
-    [76, 90, 'Diwali: Ayodhya lights a lamp for every step of their return', 'दीपावली: दीपों से जगमग अयोध्या'],
+  const STORY_CAP = [   // for the 3D walk: [from, to, text]
+    [0, 6, 'Ayodhya: a lotus blooms and a baby of light appears'],
+    [6, 10, 'Ram and his brother Lakshman are born'],
+    [10, 22, 'The brothers grow up into brave princes'],
+    [22, 26, 'Mithila: King Janak holds a contest to win his daughter Sita'],
+    [26, 31, "Ram lifts Shiva's great bow"],
+    [31, 37.5, 'The bow breaks! Sita walks toward Ram'],
+    [37.5, 40, 'Sita garlands Ram: they are married'],
+    [40, 52, 'Back in Ayodhya, a promise forces Ram into exile'],
+    [52, 66, 'Ram, Sita and Lakshman leave the palace for fourteen years in the forest'],
+    [66, 77, 'A golden deer appears. Sita wants it, and Ram goes after it'],
+    [77, 82.5, 'The deer was a demon in disguise. Ram shoots it, and it cries out in Ram\'s voice'],
+    [82.5, 92, 'Ravan carries Sita away in his flying chariot. The vulture Jatayu tries to stop him'],
+    [92, 100, 'Ram and Lakshman find the dying Jatayu, who tells them where Ravan went'],
+    [100, 108, 'Hanuman, the monkey hero, bows to Ram and promises to find Sita'],
+    [108, 116, 'Hanuman leaps across the sea to Lanka and finds Sita, and gives her Ram\'s ring'],
+    [116, 124, 'Hanuman sets Lanka on fire with his tail and leaps back'],
+    [124, 138, 'The monkey army builds a bridge of stones across the sea'],
+    [138, 150, 'The battle of Lanka: the giant Kumbhakarna falls'],
+    [150, 160, 'Lakshman is struck down. Hanuman flies to bring a healing mountain'],
+    [160, 168.6, 'Ram faces the ten-headed Ravan'],
+    [168.6, 177, 'Ravan falls: good wins over evil'],
+    [177, 186, 'Sita is free. They board the flying chariot Pushpak'],
+    [186, 205, 'The fourteen years are over: the chariot flies them home to Ayodhya'],
+    [205, 225, 'Diwali: Ayodhya lights a lamp for every step of their return'],
   ];
   const SCENE_CAP = [   // for the five-scene 2D looks
-    ['Ayodhya: the birth of Ram', 'श्रीराम जन्म'], ["Mithila: Ram lifts the bow of Shiva", 'सीता स्वयंवर'], ['Vanvaas: fourteen years in the forest', 'वनवास'],
-    ['Lanka: Ravan falls', 'रावण वध'], ['Ayodhya: Ram returns, Diwali begins', 'दीपावली'],
+    ['Ayodhya: the birth of Ram', ''], ["Mithila: Ram lifts the bow of Shiva", ''], ['Vanvaas: fourteen years in the forest', ''],
+    ['Lanka: Ravan falls', ''], ['Ayodhya: Ram returns, Diwali begins', ''],
   ];
   function captionNow() {
     if (cfg.look === '3d' && window.R3) {
-      for (const [a, b, en, hi] of STORY_CAP) if (T >= a && T < b) return { en, hi, a: sstep(a, a + .9, T) * (1 - sstep(b - .9, b, T)) };
+      for (const [a, b, en] of STORY_CAP) if (T >= a && T < b) return { en, hi: '', a: sstep(a, a + .9, T) * (1 - sstep(b - .9, b, T)) };
       return null;
     }
     const i = Math.min(NP - 1, Math.floor((T + 1.5) / SEG)), lt = i === 0 ? T : T - (i * SEG - 1.5);
@@ -2472,8 +2643,8 @@ window.R3 = (function () {
       ctx.font = EN(fs); const words = en.split(' '), lines = []; let cur = '';
       for (const wd of words) { const t = cur ? cur + ' ' + wd : wd; if (ctx.measureText(t).width > w * .92 && cur) { lines.push(cur); cur = wd; } else cur = t; }
       lines.push(cur);
-      const hs = fs * .9; ctx.font = HI(hs); const hw = ctx.measureText(hi).width;
-      const need = lines.length * fs * 1.2 + hs * 1.35;
+      const hs = hi ? fs * .9 : 0; ctx.font = HI(hs || 1); const hw = hi ? ctx.measureText(hi).width : 0;
+      const need = lines.length * fs * 1.2 + (hi ? hs * 1.35 : 0);
       if (lines.length <= 3 && hw <= w * .92 && need <= h * .94 && Math.max(...lines.map(l => (ctx.font = EN(fs), ctx.measureText(l).width))) <= w * .92) { best = { fs, hs, lines, EN: EN(fs), HI: HI(hs) }; break; }
     }
     return (fitCache[key] = best || { fs: 8, hs: 8, lines: [en], EN: EN(8), HI: HI(8) });
@@ -2482,11 +2653,11 @@ window.R3 = (function () {
     const xs = q.map(p => p[0]), ys = q.map(p => p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
     const vs = cfg.vstretch, w = x1 - x0, h = (y1 - y0) / vs; if (w < 20 || h < 8) return;
     ctx.save(); clipTo([q]); ctx.translate(x0, y0); ctx.scale(1, vs);
-    const L = fitText(en, hi, w, h), total = L.lines.length * L.fs * 1.2 + L.hs * 1.35; let y = (h - total) / 2;
+    const L = fitText(en, hi, w, h), total = L.lines.length * L.fs * 1.2 + (hi ? L.hs * 1.35 : 0); let y = (h - total) / 2;
     const g = ctx.createLinearGradient(0, y, 0, y + total); g.addColorStop(0, '#fff3c8'); g.addColorStop(1, '#ffae42');
     ctx.globalAlpha = alpha; ctx.fillStyle = g; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.shadowColor = 'rgba(255,160,50,.85)'; ctx.shadowBlur = L.fs * .3;
     ctx.font = L.EN; for (const l of L.lines) { y += L.fs * .6; ctx.fillText(l, w / 2, y); y += L.fs * .6; }
-    ctx.font = L.HI; y += L.hs * .68; ctx.fillText(hi, w / 2, y);
+    if (hi) { ctx.font = L.HI; y += L.hs * .68; ctx.fillText(hi, w / 2, y); }
     ctx.restore();
   }
   function drawStoryText(PT) {
@@ -2496,7 +2667,7 @@ window.R3 = (function () {
 
   function drawTest(P) {
     P.forEach((q, n) => {
-      if (cfg.surfaces[n].role === 'text') { ctx.save(); clipTo([q]); ctx.fillStyle = '#2a2a38'; ctx.fillRect(0, 0, W, H); ctx.restore(); drawCaptionIn(q, 'The story is written here', 'कहानी यहाँ लिखी जाती है', 1); return; }
+      if (cfg.surfaces[n].role === 'text') { ctx.save(); clipTo([q]); ctx.fillStyle = '#2a2a38'; ctx.fillRect(0, 0, W, H); ctx.restore(); drawCaptionIn(q, 'The story is written here', '', 1); return; }
       ctx.save(); clipTo([q]);
       ctx.fillStyle = TEST_COL[n % TEST_COL.length]; ctx.fillRect(0, 0, W, H);
       const xs = q.map(p => p[0]), ys = q.map(p => p[1]);
@@ -2599,8 +2770,8 @@ window.R3 = (function () {
     if (mode === 'play' || recording) hideTimer = setTimeout(() => { ui.classList.add('hidden'); hint.classList.add('hidden'); document.body.classList.add('hide-cursor'); }, 4000);
   }
   function seek(sec) { resetWorld(); T = 0; const step = 1 / 30; const n = Math.round(sec / step); for (let i = 0; i < n; i++) update(step); }
-  const STORY_T = [0, 14, 28, 52, 68];   // where the five chapters begin in the 3D walk
-  const jump = (i) => { const n = ((i % NP) + NP) % NP; seek(cfg.look === '3d' ? STORY_T[n] : Math.max(0, n * SEG)); };
+  const STORY_T = [0, 10, 22, 40, 52, 66, 82.5, 100, 108, 124, 138, 160, 186, 205];   // where the chapters begin in the 3D walk
+  const jump = (i) => { if (cfg.look === '3d') { seek(STORY_T[((i % STORY_T.length) + STORY_T.length) % STORY_T.length]); return; } const n = ((i % NP) + NP) % NP; seek(Math.max(0, n * SEG)); };
   const curScene = () => cfg.look === '3d' ? Math.max(0, STORY_T.filter(t => T + .5 >= t).length - 1) : Math.min(NP - 1, Math.floor((T + 1.5) / SEG));
   const $ = (id) => document.getElementById(id);
   const bPlay = $('bPlay');
