@@ -35,6 +35,27 @@ def speakable(t):
 def heading(t):   # 'BOOK TWO. AYODHYA KANDA. THE EXILE' -> 'Book Two. Ayodhya Kaand. The Exile.'
     return speakable(' '.join(w.capitalize() for w in t.split(' ')).replace("'S", "'s")) + '.'
 
+def intro_sfx(sr, dur):
+    """Sound for the opening titles: page flips that speed up, a rising whoosh, a deep boom and a shimmering chord."""
+    n = int(dur * sr); out = np.zeros(n, dtype=np.float32); rng = np.random.default_rng(7); t = np.arange(n) / sr
+    ph = lambda x: 1.6 * x + 3.2 * max(0.0, x - 3) ** 1.8
+    last = int(ph(.8))
+    for x in np.arange(.8, 8.4, 1 / 200):
+        if int(ph(x)) != last:
+            last = int(ph(x)); i0 = int(x * sr); L = int(.03 * sr); b = rng.standard_normal(L).astype(np.float32); b = np.diff(b, prepend=0) * np.exp(-np.linspace(0, 6, L))
+            out[i0:i0 + L] += b[: max(0, min(L, n - i0))] * (.05 + .1 * x / 8.4)
+    w0, w1 = int(6.2 * sr), int(8.8 * sr); wn = rng.standard_normal(w1 - w0).astype(np.float32); k = np.linspace(0, 1, w1 - w0)
+    sm = np.zeros_like(wn); a = 0.0
+    for i in range(len(wn)): a += (wn[i] - a) * (.02 + .5 * k[i] ** 2); sm[i] = a
+    out[w0:w1] += sm * (k ** 2) * .5
+    b0 = int(8.85 * sr); L = int(3 * sr); tt = np.arange(L) / sr; f = 30 + 30 * np.exp(-tt * 3)
+    boom = np.sin(2 * np.pi * np.cumsum(f) / sr) * np.exp(-tt * 1.4) * .9 + rng.standard_normal(L) * np.exp(-tt * 18) * .25
+    out[b0:b0 + L] += boom[: n - b0].astype(np.float32)
+    c0 = int(9.1 * sr); L = int(4.6 * sr); tt = np.arange(L) / sr; env = np.minimum(1, tt / 1.2) * np.exp(-np.maximum(0, tt - 2.6) * 1.2)
+    chord = sum(np.sin(2 * np.pi * fr * tt) * g for fr, g in [(146.8, .5), (220, .4), (293.7, .35), (370, .25), (440, .2), (587.3, .12)])
+    out[c0:c0 + L] += (chord * env * .12)[: n - c0].astype(np.float32)
+    return out
+
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument('sched'); ap.add_argument('video'); ap.add_argument('out')
     ap.add_argument('--voice', default='narrator'); ap.add_argument('--models', default='.'); ap.add_argument('--wav'); ap.add_argument('--cache', default='.narration-cache')
@@ -51,7 +72,11 @@ def main():
     d = json.load(open(a.sched)); loop = d['loop']; ev = d['ev']; SR = 24000
     track = np.zeros(int((loop + 2) * SR), dtype=np.float32)
     caps = [e for e in ev if e['type'] == 'cap']
-    busy = 0.0; report = []; said = set()
+    if d.get('intro'):   # the opening titles: sound, and the narrator's first line
+        sfx = intro_sfx(SR, d['intro']); track[: len(sfx)] += sfx
+        s, sr = say(speakable('Vishnu presents. The Ramayana, as told by the sage Valmiki.'), .82); i0 = int(12.7 * SR); track[i0:i0 + len(s)] += s[: len(track) - i0]; intro_end = 12.7 + len(s) / sr
+    else: intro_end = 0.0
+    busy = intro_end; report = []; said = set()
     for i, e in enumerate(ev):
         if e['type'] != 'kanda' and e['en'] in said: continue
         said.add(e['en'])

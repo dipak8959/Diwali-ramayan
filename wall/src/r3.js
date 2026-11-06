@@ -108,6 +108,7 @@ window.R3 = (function () {
     agastya:  { skin: 0xc8905a, hair: 0xf8f8f8, dress: [0xff9a2a, 0xc05a00], sash: 0xffd23a, beard: true },
     guha:     { skin: 0x8a5a36, hair: 0x1a1008, dress: [0xb0462a, 0x5a1a10], sash: 0xffc94a, beard: true },
     samudra:  { skin: 0x3aa0c8, hair: 0x0a2a5a, dress: [0x30e0c0, 0x0a5a8a], sash: 0xf4f4ff, crown: true },
+    sushena:  { skin: 0xd8b48a, hair: 0xf0f0f0, dress: [0x2a9a6a, 0x0a5a3a], sash: 0xffd23a, monkey: true, beard: true },
     kumbha:   { skin: 0x5e9a62, hair: 0x120508, dress: [0x8a3a2a, 0x2a120a], sash: 0xc0392b, crown: true, evil: true },
   };
 
@@ -760,6 +761,18 @@ window.R3 = (function () {
     const crown = mesh(new THREE.TorusGeometry(14, 2, 6, 18, Math.PI), GOLD, 8, 18, 0, head); crown.rotation.set(0, Math.PI / 2, .4); }
   surasa.visible = false; scene.add(surasa);
 
+  // ---------- the seventh wave: Sushena, Ravan's spear, Indrajit's storm cloud and the Himalayas ----------
+  const sushena = addNew('sushena', .95, { headScale: 1.2 });
+  const spear = new THREE.Group(); { mesh(new THREE.CylinderGeometry(1.1, 1.1, 120, 6), std(0x3a2a1a, { roughness: .6 }), 0, 0, 0, spear); const hd = mesh(new THREE.ConeGeometry(4, 22, 6), std(0xffe0a0, { emissive: 0xff8a20, emissiveIntensity: 1.6, metalness: .6 }), 0, 70, 0, spear); const g = mesh(G.sph, glowMat(0xff7a20), 0, 70, 0, spear); g.scale.set(12, 20, 12); g.material.opacity = .5; hd.rotation.z = 0; }
+  spear.rotation.z = Math.PI; spear.visible = false; scene.add(spear);   // the shaft points along +y; the scenes turn it
+  const herb = mesh(G.sph, glowMat(0x7aff9a), 0, 0, 0, scene); herb.visible = false;
+  const cloud = new THREE.Group(); { const cm = std(0x1a1028, { roughness: 1, emissive: 0x0c0614 }); for (let k = 0; k < 11; k++) { const c = mesh(G.sph, cm, (k - 5) * 34 + srnd(-10, 10), srnd(-12, 12), srnd(-20, 10), cloud); c.scale.set(srnd(34, 56), srnd(18, 28), srnd(24, 36)); }
+    for (const s of [-1, 1]) mesh(G.sphLow, new THREE.MeshBasicMaterial({ color: 0xff3020 }), s * 9, -4, 34, cloud).scale.set(3.2, 1.6, 1); }
+  cloud.visible = false; scene.add(cloud);
+  const himalaya = new THREE.Group(); { const snow = (h, r) => { const g = new THREE.ConeGeometry(r, h, 14, 6), p = g.attributes.position; for (let i = 0; i < p.count; i++) { const y = p.getY(i); if (y < h / 2 - 1) { const n = 1 + .16 * Math.sin(i * 12.9898) * Math.sin(i * 4.1414); p.setX(i, p.getX(i) * n); p.setZ(i, p.getZ(i) * n); p.setY(i, y + 6 * Math.sin(i * 7.3)); } } g.computeVertexNormals(); gradient(g, 0x2a3a5a, 0xf4f8ff, 1, -h / 2, h / 2); return g; }, sm = VC({ roughness: .9, flatShading: true });
+    for (const [x, h, r, z] of [[-560, 240, 120, -140], [-380, 160, 90, -60], [-240, 200, 100, -120], [-700, 180, 100, -200], [-120, 130, 80, -180]]) mesh(snow(h, r), sm, x, h / 2, z, himalaya); }
+  himalaya.visible = false; scene.add(himalaya);
+
   // ---------- particles ----------
   const MAXP = 3200, pGeo = new THREE.SphereGeometry(1, 6, 4);
   const pMat = new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
@@ -833,10 +846,8 @@ window.R3 = (function () {
     else if (T < 121) { o.x = T < 118 ? K(T, [[116, 5620], [118, 5780]]) : K(T, [[118, 5780], [121, 5300]]); o.y = 96 + Math.sin(T * 9) * 4; o.tail = 1; }
     else if (T < 125) { const u = (T - 121) / 4; o.x = lerp(5300, 4300, ease(u)); o.y = 170 * Math.sin(Math.PI * u); o.fly = 1; }
     else if (T < 146) o.x = T < 126 ? lerp(4300, ramX(126) + 170, T - 125) : ramX(T) + 170;
-    else if (T < 149) { const u = (T - 146) / 3; o.x = lerp(ramX(146) + 170, 3300, ease(u)); o.y = 250 * Math.sin(Math.PI * u); o.fly = 1; }
-    else if (T < 152) o.vis = false;
-    else if (T < 156) { const u = (T - 152) / 4; o.x = lerp(3300, 4900, ease(u)); o.y = 40 + 190 * Math.sin(Math.PI * u); o.fly = 1; o.mount = 1; }
-    else if (T < 185.5) { o.x = K(T, [[156, 4900], [183, 4900], [185.5, 5070]]); o.mount = 1 - sstep(157.4, 158.2, T); }
+    else if (T < 150) o.x = K(T, [[146, ramX(146) + 170], [150, 4880]]);
+    else if (T < 185.5) o.x = K(T, [[150, 4880], [183, 4880], [185.5, 5070]]);
     else if (T < 205) { o.x = chX(T) - 62; o.y = chY(T) + 16; }
     else o.x = ramX(T) - 92;
     return o;
@@ -885,6 +896,10 @@ window.R3 = (function () {
     { id: 'crown', s0: 138, n: 12, fx: 5250, cap: "Ravan himself enters the battle. Ram shatters his crown with one arrow and says, 'You are tired. Go home and rest, and come back tomorrow.' Humbled, Ravan retreats.", moral: 'A true warrior shows mercy to the beaten' },
     { id: 'wake', s0: 139, n: 14, fx: 5330, cap: "Ravan sends for his giant brother Kumbhakarna, who sleeps for months. Drums, shouts and even elephants wake him. He tells Ravan he was wrong to take Sita, but chooses to fight out of loyalty.", moral: 'Loyalty is not enough if it serves a wrong cause' },
     { id: 'niku', s0: 160, n: 14, fx: 5250, cap: "Indrajit begins a secret fire ritual to become unbeatable. Vibhishana tells Lakshman where to find him. Lakshman interrupts the ritual and kills Indrajit.", moral: 'Righteous effort defeats even the strongest tricks' },
+    { id: 'shakti', s0: 162, n: 11, fx: 5240, cap: "In the fierce battle Ravan hurls a mighty spear, the Shakti, at Lakshman. It strikes his chest and he falls senseless. Ram pulls out the spear, breaks it, and holds his brother, weeping: 'A brother like Lakshman can never be found again.'", moral: '' },
+    { id: 'sushena', s0: 162, n: 10, fx: 4980, cap: "The wise monkey physician Sushena finds that Lakshman still lives. 'Hurry,' he tells Hanuman, 'bring the healing herbs from the great mountain in the Himalayas.' Hanuman bows and leaps into the sky.", moral: '' },
+    { id: 'himalaya', s0: 162, n: 10, fx: -380, cut: true, cap: 'In moments Hanuman reaches the snowy Himalayas. The mountain glows with herbs, but he cannot tell which ones Sushena needs. So he lifts the whole mountain peak and flies back with it.', moral: '' },
+    { id: 'herbs', s0: 162, n: 12, fx: 4980, cut: true, cap: 'Hanuman lands with the mountain. Sushena crushes the healing herb and holds it to Lakshman, who breathes it in and rises, healed. Ram embraces his brother, and the whole army cheers Hanuman.', moral: 'Loyal friends bring help even when it seems impossible' },
     { id: 'aditya', s0: 164, n: 12, fx: 5170, cap: "Indra sends his own chariot, driven by Matali. Ram is weary from the long battle. The sage Agastya appears beside him and teaches him the Aditya Hridayam, a hymn to the Sun, the light behind all light. Ram chants it three times and his strength returns.", moral: 'When you are weary, draw strength from faith' },
     { id: 'headcut', s0: 164, n: 18, fx: 5300, cap: "Now Ram on Indra's chariot cuts off Ravan's heads and arms one by one, but each grows back. Matali reminds Ram of the Brahma weapon given by the sage Agastya.", moral: 'Some evils need the right weapon, not more force' },
     { id: 'mando', s0: 176, n: 14, fx: 5500, cap: "Ravan's wife Mandodari mourns him. Ram tells Vibhishana to perform the funeral rites: 'Enmity ends with death. He is as dear to me as to you.' Vibhishana is crowned king of Lanka.", moral: 'Enmity ends with death: forgive and honour' },
@@ -926,8 +941,9 @@ window.R3 = (function () {
     [126.5, 136, 'Nala, son of the divine builder Vishwakarma, leads the monkeys to build a bridge of rocks and trees across the sea in five days', 'Working together builds what seems impossible', 131],
     [136, 139, 'The army crosses to Lanka. Ram offers peace, and when it is refused, the war begins'],
     [139, 150, "Kumbhakarna devours monkeys by the hundreds, until Ram's arrow ends him"],
-    [150, 160, "Then Indrajit, fighting unseen from the sky, fells Ram, Lakshman and the army with the Brahma weapon. Hanuman flies to the Himalayas and brings a mountain of healing herbs", 'Loyal friends bring help even when it seems impossible', 155],
-    [160, 164, 'Ravan, wild with grief and rage, comes out for the last battle'],
+    [150, 160, "Then Indrajit, hidden in the clouds, rains arrows on the army. No one can see him to strike back. Vibhishana knows his secret: a hidden fire ritual that will make him unbeatable"],
+    [160, 162, "Ravan, wild with grief at his son's death, comes out to fight"],
+    [162, 164, 'Lakshman, healed, stands beside Ram again. The final battle begins'],
     [164, 168.6, 'Ram fits the arrow of Brahma, the gift of the sage Agastya'],
     [168.6, 176, "The arrow pierces Ravan's heart. Good wins over evil", 'Pride and wrongdoing destroy even the mightiest', 171.5],
     [176, 186, 'The fourteen years are over. Vibhishana gives Ram the flying chariot Pushpaka, and they fly home'],
@@ -981,7 +997,7 @@ window.R3 = (function () {
   const showAt = (h, x, y, z, ry, sc) => { h.root.visible = sc > .02; h.root.position.set(x, y, z); h.root.rotation.set(0, ry, 0); h.root.scale.setScalar(sc); };
   const pop = (a, b, u, sc) => u < a ? 0 : u >= b ? 0 : sc * (.2 + .8 * ease(sstep(a, a + 1.1, u))) * (1 - sstep(b - 1.1, b, u) * .97);   // scale in at a, out at b
   function insertActors(ins, Tr, rx, base) {
-    hide(tataka, dash, kaik, bharat, sugr, vali, indra, sabari, vibh, surp, hermit, agni, ahalya, angada, brahma, vishnu, youngd, shravan, blindA, blindB, rishya, kausalya, sumitra, vasishtha, parashu, mandodari); pot.visible = false; bowL.g.visible = false; feast.visible = false; astra.visible = false; astra.scale.setScalar(9); river.visible = false; hide(agastya, guha, samudra); boat.visible = bed.visible = grass.visible = ring.visible = jewel.visible = memGlow.visible = divGlow.visible = sun.visible = surasa.visible = false; rays.forEach(r => { r.visible = false; }); redMoon.visible = true; palace2.visible = true; court.visible = true; river.material.color.setHex(0x4a90ff); seaAmp = 1; tower.visible = false; stone.visible = false; heart.visible = false;
+    hide(tataka, dash, kaik, bharat, sugr, vali, indra, sabari, vibh, surp, hermit, agni, ahalya, angada, brahma, vishnu, youngd, shravan, blindA, blindB, rishya, kausalya, sumitra, vasishtha, parashu, mandodari); pot.visible = false; bowL.g.visible = false; feast.visible = false; astra.visible = false; astra.scale.setScalar(9); river.visible = false; hide(agastya, guha, samudra, sushena); spear.visible = herb.visible = himalaya.visible = false; spear.scale.setScalar(1); boat.visible = bed.visible = grass.visible = ring.visible = jewel.visible = memGlow.visible = divGlow.visible = sun.visible = surasa.visible = false; rays.forEach(r => { r.visible = false; }); redMoon.visible = true; palace2.visible = true; palaceL.visible = true; court.visible = true; river.material.color.setHex(0x4a90ff); seaAmp = 1; tower.visible = false; stone.visible = false; heart.visible = false;
     garuda.visible = false; sandals.visible = false; berry.visible = false; throne.visible = false; fireGlow.visible = false; orbs.forEach(o => { o.visible = false; }); serpents.forEach(g => { g.visible = false; }); coils.forEach(g => { g.visible = false; });
     if (ins.i < 0) return;
     const id = INS[ins.i].id, u = ins.u, face = -YAW;
@@ -1023,6 +1039,68 @@ window.R3 = (function () {
     const act = (h, x, y, z, ry, sc, o) => { showAt(h, x, y, z, ry, sc); pose(h, Object.assign({ ph: x * Math.PI / STEP, s: 0, t: Tr }, o || {})); };
     const fire = (x, a, b, k) => { if (u > a && u < b) for (let q = 0; q < 2; q++) flame(x + rnd(-14, 14), 4, 8, k || 1.3); };
     const T = ins.S;
+    // ---- Lakshman, the Shakti, and the healing herbs (Yuddha Kanda 100–101), told in four clear steps ----
+    const LAK_DOWN = (h, k) => { h.root.rotation.z = 1.45 * k; h.root.position.y = 12 * k; };   // falls backwards, head away from Ravan
+    const closeEyes = (h, k) => { const ey = h.head.userData.eyes; if (ey && k > 0) ey.forEach(e => { e.scale.y = e.userData.by * lerp(1, .06, k); }); };
+    if (id === 'shakti') {   // Ravan's spear strikes Lakshman
+      rav.root.visible = true; rav.root.position.set(5560, 0, -10); rav.root.scale.set(1.1, 1.1, 1.1); rav.root.rotation.y = -(YAW - .1);
+      pose(rav, { ph: 0, s: 0, t: Tr, angry: 1, point: sstep(.6, 1.6, u) * (1 - sstep(2.4, 2.9, u)), talk: u < 2.4 });
+      const fly = clamp((u - 2.2) / .8), stuck = u >= 3 && u < 6.9;
+      spear.visible = u > .6 && u < 7.6;
+      if (u < 2.2) { rav.root.updateMatrixWorld(true); rav.arms[0].userData.hand.getWorldPosition(wp); spear.position.copy(wp); spear.rotation.set(0, 0, Math.PI - .15); }
+      else if (u < 3) { spear.position.set(lerp(5520, 5126, fly), lerp(175, 108, fly) + Math.sin(fly * Math.PI) * 26, 14); spear.rotation.set(0, 0, Math.PI - .17); if (Math.random() < .9) flame(spear.position.x + 40, spear.position.y, 14, .6); }
+      else if (stuck) { spear.position.set(5110 - 20, 22, 18); spear.rotation.set(0, 0, Math.PI / 2 + .3); }
+      else { const b = ease(sstep(6.9, 7.6, u)); spear.position.set(5040 + 30 * b, 110 + 40 * b, 18); spear.rotation.set(0, 0, Math.PI / 2 + b * 2.4); spear.scale.setScalar(1 - b * .9); }
+      if (u < 6.9) spear.scale.setScalar(1);
+      once('nsh_a', u >= 3, () => { flashV = 1; burst(5110, 110, 10, .02, 120, 140); burst(5110, 110, 10, .12, 60, 90); });
+      once('nsh_b', u >= 7.2, () => { flashV = .5; burst(5060, 130, 18, .08, 50, 70); });
+      const down = ease(sstep(3, 3.8, u)); LAK_DOWN(lak, down); base.lak.sad = 1; closeEyes(lak, down);
+      const rx2 = lerp(rx, 5036, ease(sstep(3.4, 4.4, u))); ram.root.position.x = rx2; ram.root.rotation.y = lerp(YAW, -YAW, ease(sstep(3.6, 4.4, u)));
+      base.ram.ph = rx2 * Math.PI / STEP; base.ram.s = spd(3.4, 4.4); base.ram.kneel = sstep(4.2, 5, u); base.ram.sad = sstep(4, 5, u); base.ram.angry = sstep(3, 3.4, u) * (1 - sstep(4, 4.6, u));
+      base.ram.point = sstep(6.2, 6.7, u) * (1 - sstep(7.4, 8, u)); base.ram.talk = u > 8.2 && u < 10.4; base.ram.join = sstep(8, 8.8, u);
+      if (u > 8.6 && u < 10.6 && Math.random() < .2) parts.push({ x: 5030, y: 112, z: 30, vx: 0, vy: -8, vz: 0, life: .8, age: 0, hue: .55, r: .8, drag: .9, g: 40 });   // tears
+    }
+    if (id === 'sushena') {   // the physician Sushena; Hanuman is sent to the Himalayas
+      LAK_DOWN(lak, 1); closeEyes(lak, 1); base.lak.sad = 1;
+      ram.root.position.x = 5036; ram.root.rotation.y = -YAW; base.ram.ph = 5036 * Math.PI / STEP; base.ram.kneel = 1; base.ram.sad = 1; base.ram.join = 1 - sstep(4, 4.6, u); base.ram.look = sstep(4, 5, u) * -.3;
+      const sx = wk(4760, 4958, .3, 2.4);
+      act(sushena, sx, 0, 26, R, pop(.1, 99, u, .95), { s: spd(.3, 2.4, .7), kneel: sstep(2.4, 3, u), point: sstep(3, 3.6, u) * (1 - sstep(4, 4.4, u)), talk: u > 4.4 && u < 6.6, look: .1 });
+      const hb = hanPos(T).x, go = ease(sstep(7.4, 9.6, u)), hx = u < 7.4 ? wk(hb, 4905, 3.6, 5) : lerp(4905, 4300, go), hy = u < 7.4 ? 0 : 280 * go;
+      han.root.position.set(hx, hy, 6); han.root.rotation.y = u < 5 ? YAW : (u < 7.2 ? YAW * .4 : -1.4);
+      pose(han, { ph: hx * Math.PI / STEP, s: spd(3.6, 5), t: Tr, join: sstep(5.4, 6, u) * (1 - sstep(6.8, 7.2, u)), kneel: sstep(5.4, 6, u) * (1 - sstep(6.8, 7.2, u)) * .6, fly: sstep(7.2, 7.6, u), talk: u > 6.2 && u < 6.9 });
+      once('nsu2_a', u >= 7.4, () => { flashV = .6; burst(4905, 30, 6, .08, 90, 110); });
+      if (u > 7.4 && u < 9.6) ember(hx + 20, hy + 60, 6, false);
+    }
+    if (id === 'himalaya') {   // the mountain of herbs
+      himalaya.visible = true; mount.visible = true; palaceL.visible = false;
+      const land = ease(sstep(.3, 2.6, u)), lift = ease(sstep(5.8, 7.2, u)), away = ease(sstep(7.6, 9.8, u));
+      const hx = u < 7.6 ? lerp(-60, -300, land) : lerp(-300, 120, away), hy = u < 7.6 ? 230 * (1 - land) + 20 * Math.sin(land * Math.PI) : 60 + 200 * away;
+      const grow = 1 + .5 * sstep(5.2, 6, u) * (1 - sstep(9.4, 10, u));
+      han.root.visible = true; han.root.position.set(hx, hy, 20); han.root.scale.setScalar(grow); han.root.rotation.y = u < 2.6 ? -1.4 : (u < 7.6 ? -YAW + Math.sin(u * 2.4) * .5 * sstep(2.6, 3, u) * (1 - sstep(5, 5.4, u)) : 1.4);
+      pose(han, { ph: 0, s: 0, t: Tr, fly: u < 2.4 || u > 7.6 ? 1 : 0, cheer: sstep(5.6, 6.2, u) * (u < 7.6 ? 1 : 0), look: u > 2.8 && u < 5.2 ? Math.sin(u * 2.4) * .5 : 0, talk: u > 3 && u < 4.6 });
+      const top = new THREE.Vector3(-380, 150, -20);
+      if (u < 5.8) mount.position.copy(top); else { const hold = new THREE.Vector3(hx - 4, hy + 175 * grow + 30, 10); mount.position.lerpVectors(top, hold, lift); }
+      mount.scale.setScalar(1); mount.rotation.y = Tr * .3;
+      const fl = u > 2.6 && u < 5.6 ? .5 + .5 * Math.sin(Tr * 9) : 1; mount.children[1].material.opacity = .22 * fl;   // the herbs flicker and hide
+      if (u > 6 && Math.random() < .6) ember(mount.position.x + rnd(-30, 30), mount.position.y - 20, 10, false);
+      once('nhi_a', u >= 6.2, () => { flashV = .7; burst(-380, 150, 0, .38, 110, 120); });
+    }
+    if (id === 'herbs') {   // Lakshman healed
+      const land = ease(sstep(.2, 3.2, u)), hx = lerp(4560, 4860, land), hy = 240 * (1 - land) + 30 * Math.sin(land * Math.PI);
+      han.root.position.set(hx, hy, 8); han.root.rotation.y = u < 3.4 ? 1.4 : YAW; han.root.scale.setScalar(1 + .5 * (1 - sstep(3.4, 4.2, u)));
+      pose(han, { ph: 0, s: 0, t: Tr, fly: 1 - sstep(2.8, 3.4, u), cheer: 1 - sstep(3.4, 4, u), join: sstep(9.2, 9.8, u) * (1 - sstep(11, 11.6, u)), kneel: sstep(9.2, 9.8, u) * (1 - sstep(11, 11.6, u)) * .5 });
+      mount.visible = u < 11.8; const set = ease(sstep(3.2, 4.2, u)); mount.position.set(lerp(hx - 4, 4800, set), lerp(hy + 260, 70, set), lerp(10, -40, set)); mount.rotation.y = Tr * .3;
+      mount.scale.setScalar(1 - sstep(10.8, 11.8, u) * .95); mount.children[1].material.opacity = .22;
+      act(sushena, 4958, 0, 26, R, .95, { kneel: 1, point: sstep(4.6, 5.2, u) * (1 - sstep(6.2, 6.8, u)) });
+      const hp2 = ease(sstep(4.4, 5.6, u)); herb.visible = u > 4.4 && u < 6.6; if (herb.visible) { herb.position.set(lerp(4810, 4952, hp2), lerp(70, 34, hp2) + Math.sin(hp2 * Math.PI) * 18, 28); herb.scale.setScalar(5 * (1 - sstep(6.2, 6.6, u)) + .01); }
+      const rise = ease(sstep(6.6, 8, u)); LAK_DOWN(lak, 1 - rise); closeEyes(lak, 1 - sstep(6.2, 6.8, u)); base.lak.cheer = sstep(8.4, 9, u) * (1 - sstep(9.8, 10.4, u)) * .6; base.lak.join = sstep(10, 10.6, u);
+      ram.root.position.x = lerp(5036, 5050, rise); ram.root.rotation.y = lerp(-YAW, YAW, ease(sstep(8, 8.8, u))); base.ram.ph = ram.root.position.x * Math.PI / STEP;
+      base.ram.kneel = 1 - sstep(7.2, 8, u); base.ram.sad = 1 - sstep(6.8, 7.6, u); base.ram.point = sstep(8, 8.6, u) * (1 - sstep(9.4, 10, u)); base.ram.talk = u > 9.6 && u < 10.8; base.ram.join = sstep(10, 10.6, u);
+      vanaras.forEach((v, i) => { pose(v, { ph: 0, s: 0, t: Tr + i, cheer: sstep(8 + i * .1, 8.6 + i * .1, u) * (1 - sstep(10.6, 11.2, u)) }); });
+      once('nhe_a', u >= 3.2, () => { flashV = .8; burst(4800, 70, -20, .38, 120, 130); });
+      once('nhe_b', u >= 6.4, () => { flashV = .9; burst(4990, 40, 20, .38, 110, 110); burst(4990, 40, 20, .13, 60, 80); });
+      for (let q = 0; q < 2; q++) if (u > 3.4 && u < 10.8 && Math.random() < .5) parts.push({ x: 4800 + rnd(-40, 40), y: rnd(40, 110), z: -20, vx: rnd(5, 25), vy: rnd(5, 20), vz: 0, life: rnd(1, 2), age: 0, hue: .38, r: rnd(.8, 1.6), drag: .7, g: -5 });   // the healing scent drifts over the field
+    }
     if (id === 'guha') {   // Guha ferries the exiles across the Ganga (Ayodhya Kanda 50–52)
       palace2.visible = false; court.visible = false;
       river.visible = true; river.position.set(2445, 3, 30); river.scale.set(200, 5, 22); river.material.color.setHex(0x2a7aff); river.material.opacity = .55 + .08 * Math.sin(Tr * 2);
@@ -1431,7 +1509,7 @@ window.R3 = (function () {
   function resetAll() { for (const k in fired) delete fired[k]; parts = []; pets = []; flashV = 0; }
   const wp = new THREE.Vector3();
 
-  function update(Tr, dt) {
+  function updateStory(Tr, dt) {
     const ins = mapT(Tr), T = ins.S, frozen = ins.i >= 0, fz = frozen ? 0 : 1;   // T is story time; during an inserted scene it stands still
     if (Tr < lastTr - .0001) resetAll();
     lastTr = Tr; flashV = Math.max(0, flashV - dt * 1.7);
@@ -1469,9 +1547,9 @@ window.R3 = (function () {
     pose(ram, po); const chV = fz * vel(chX, T); if (!frozen) turn(ram, rider ? chV : vR, dt);
 
     // Lakshman
-    const lx = lakX(T), vL = fz * vel(lakX, T), lfall = sstep(155.5, 156.4, T) * (1 - sstep(158.8, 159.8, T));
+    const lx = lakX(T), vL = fz * vel(lakX, T), lfall = 0;
     lak.root.position.set(lx, T >= 185.5 && T < 205 ? chY(T) + 16 : 12 * lfall, 2);
-    pose(lak, { ph: lx * Math.PI / STEP + 2.6, s: (T >= 185.5 && T < 205) ? 0 : clamp(Math.abs(vL) / SPDN), t: Tr });
+    pose(lak, { ph: lx * Math.PI / STEP + 2.6, s: (T >= 185.5 && T < 205) ? 0 : clamp(Math.abs(vL) / SPDN), t: Tr, point: sstep(152, 153, T) * (1 - sstep(157, 158, T)), angry: sstep(151, 152, T) * (1 - sstep(159, 160, T)) });
     lak.root.rotation.z = -1.45 * lfall; ram.root.rotation.z = -1.45 * lfall; ram.root.position.y = 12 * lfall;
     { const onCh = T >= 164 && T < 176; indraCh.visible = onCh; matali.root.visible = onCh;
       if (onCh) { ram.root.position.y = 26; indraCh.position.set(rx - 6, 10, -46); indraCh.scale.setScalar(1); indraCh.userData.wheels.forEach(w => { w.rotation.z = Tr * 3; }); matali.root.position.set(rx - 46, 26, 4); matali.root.rotation.y = YAW; matali.root.scale.setScalar(1); pose(matali, { ph: 0, s: 0, t: Tr, point: .6 }); } }
@@ -1498,7 +1576,7 @@ window.R3 = (function () {
     vanaras.forEach((v, i) => {
       const vis = T >= 119 && T < 185; v.root.visible = vis; if (!vis) return;
       const f = (t) => (t < 152 ? ramX(t) : ramX(152)) - 130 - i * 44, x = f(T), vv = fz * (f(T + .06) - f(T - .06)) / .12;
-      v.root.position.set(x, 0, 14 + (i % 2) * 14); pose(v, { ph: x * Math.PI / STEP + i, s: clamp(Math.abs(vv) / SPDN), t: Tr, cheer: sstep(176, 177, T) * (1 - sstep(182, 183, T)) }); if (!frozen) turn(v, vv, dt);
+      v.root.position.set(x, 0, 14 + (i % 2) * 14); pose(v, { ph: x * Math.PI / STEP + i, s: clamp(Math.abs(vv) / SPDN), t: Tr, cheer: sstep(176, 177, T) * (1 - sstep(182, 183, T)), kneel: .55 * sstep(151, 152, T) * (1 - sstep(158.4, 159.4, T)) }); if (!frozen) turn(v, vv, dt);
     });
 
     // 3. Shiva's bow: lifted, bent, snapped; then Sita's garland
@@ -1595,8 +1673,11 @@ window.R3 = (function () {
     kum.root.visible = T >= 139 && T < 155.5;
     if (kum.root.visible) { const f = sstep(148, 150.5, T); kum.root.position.set(5320, 14 * f, -10); kum.root.rotation.z = 0; if (!frozen) turn(kum, -10, dt, YAW - .1); kum.root.rotation.z = -1.5 * f; kum.root.scale.setScalar(1.9 * (1 - .9 * sstep(153, 155.5, T))); pose(kum, { ph: 0, s: 0, t: Tr }); }
     once('khit', T >= 147.6, () => { flashV = .8; burst(5255, 150, 0, .02, 130, 160); });
-    once('lakhit', T >= 155.5, () => { flashV = .6; burst(5110, 110, 0, .02, 80, 110); });
-    once('mount', T >= 158, () => { flashV = .9; burst(4900, 120, 0, .38, 130, 150); burst(5110, 60, 0, .38, 90, 100); });
+    // Indrajit, hidden in a storm cloud, rains arrows on the army
+    { const rk = sstep(150.2, 151.4, T) * (1 - sstep(158.6, 159.6, T)); cloud.visible = rk > .02;
+      if (cloud.visible) { cloud.position.set(4930 + Math.sin(Tr * .4) * 30, 236, -60); cloud.scale.set(rk, .3 + .7 * rk, 1);
+        if (!frozen) { for (let q = 0; q < 3; q++) parts.push({ x: 4930 + rnd(-160, 160), y: 220, z: rnd(0, 40), vx: rnd(10, 40), vy: -rnd(220, 300), vz: 0, life: .9, age: 0, hue: .02, r: rnd(.8, 1.4), sy: 6, drag: 1, g: 0, lt: .55 });
+          if (Math.random() < .02) { flashV = .45; burst(4930 + rnd(-120, 120), 210, -40, .7, 30, 90); } } } }
     // 12. Ravan falls
     once('hit', T >= 168.6, () => { flashV = 1; burst(5560, 150, 0, .02, 170, 190); });
     for (const [k, t, dx, y, h] of [['r2', 169.2, -60, 250, .12], ['r3', 169.9, 70, 210, .9], ['r4', 170.8, 10, 120, .55], ['r5', 171.8, -300, 230, .12], ['r6', 172.8, 250, 250, .08], ['r7', 174, -120, 260, .8]]) once(k, T >= t, () => burst(5560 + dx, y, 20, h, 125));
@@ -1649,6 +1730,7 @@ window.R3 = (function () {
   let vw = 0, vh = 0, spotC = 400, spotH = 950;
   function setView(x0, x1, yTop, yBottom, pxW, pxH, sx, sy) {
     pxW = Math.max(16, Math.round(pxW)); pxH = Math.max(8, Math.round(pxH));
+    viewStretch = (pxH / Math.max(1e-6, yTop - yBottom)) / (pxW / Math.max(1e-6, x1 - x0));
     if (pxW !== vw || pxH !== vh) { vw = pxW; vh = pxH; renderer.setSize(pxW, pxH, false); composer.setSize(pxW, pxH); streakPass.uniforms.uTexel.value.set(1 / pxW, 1 / pxH); }
     const cx = (x0 + x1) / 2;
     camera.left = x0 - cx; camera.right = x1 - cx; camera.top = yTop; camera.bottom = yBottom; camera.position.set(cx, 0, 3000); camera.lookAt(cx, 0, 0);
@@ -1659,6 +1741,15 @@ window.R3 = (function () {
     const shear = new THREE.Matrix4().set(1, 0, kx, kx * 3000, 0, 1, ky, ky * 3000, 0, 0, 1, 0, 0, 0, 0, 1);
     camera.projectionMatrix.multiply(shear); camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
   }
-  function render() { drawParts(); composer.render(); return canvas; }
-  return { canvas, setView, update, render, LOOP: TOTAL * SLOW, WORLD, ramX, sitaX, lakX, hanPos, follow: () => camC, caption: captionAt, chapters, bloom };
+  function render() { if (inIntro) return renderIntro(); drawParts(); composer.render(); return canvas; }
+  // ---------- the opening titles (intro.js), before the story ----------
+  const INTRO = window.VishnuIntro ? VishnuIntro.DUR : 0, introCanvas = document.createElement('canvas'), ictx = introCanvas.getContext('2d');
+  let inIntro = false, introT = 0, viewStretch = 1;
+  function renderIntro() {
+    if (introCanvas.width !== vw || introCanvas.height !== vh) { introCanvas.width = vw; introCanvas.height = vh; }
+    ictx.setTransform(1, 0, 0, 1, 0, 0); VishnuIntro.drawBand(ictx, vw, vh, introT, viewStretch); return introCanvas;
+  }
+  function update(Tr, dt) { inIntro = Tr < INTRO; if (inIntro) { introT = Tr; return; } updateStory(Tr - INTRO, dt); }
+  function caption(Tr) { return Tr < INTRO ? { en: '', moral: '', a: 0, am: 0, age: 0, intro: Tr, kanda: null } : captionAt(Tr - INTRO); }
+  return { canvas, setView, update, render, LOOP: TOTAL * SLOW + INTRO, INTRO, WORLD, ramX, sitaX, lakX, hanPos, follow: () => camC, caption, chapters: [0].concat(chapters.map(x => x + INTRO)), bloom };
 })();

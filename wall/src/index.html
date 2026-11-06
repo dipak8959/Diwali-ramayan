@@ -83,6 +83,7 @@
 <script src="../vendor/MaskPass.js"></script>
 <script src="../vendor/UnrealBloomPass.js"></script>
 <script src="../vendor/fonts.js"></script>
+<script src="intro.js"></script>
 <script src="r3.js"></script>
 <script>
 (() => {
@@ -918,6 +919,7 @@
     const xs = q.map(p => p[0]), ys = q.map(p => p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
     const vs = cfg.vstretch, w = x1 - x0, h = (y1 - y0) / vs; if (w < 20 || h < 8) return;
     ctx.save(); clipTo([q]); ctx.translate(x0, y0); ctx.scale(1, vs);
+    if (c.intro !== undefined && window.VishnuIntro) { VishnuIntro.drawTitle(ctx, w, h, c.intro); ctx.restore(); return; }
     const hh = c.kanda ? Math.min(h * .17, w * .05) : 0; drawHeading(w, hh, c.kanda);
     if (c.en && c.a > .004) {
       const bh = h - hh * 1.15, L = fitText(c.en, c.moral, w, bh), total = L.lines.length * L.fs * 1.17 + (L.mlines.length ? L.fs * .5 + L.mlines.length * L.ms * 1.17 : 0);

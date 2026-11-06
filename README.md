@@ -111,3 +111,7 @@ node tools/caption-schedule.js schedule.json
 python3 tools/narrate.py schedule.json wall-video.mp4 wall-video-narrated.mp4 --models <model folder> [--voice am_onyx]
 ```
 To use a real narrator instead, record one audio file per caption and replace the generated clips, or send the recording and it can be lined up with the captions.
+
+### Round seven: a clear Sanjivani sequence and the Vishnu opening titles
+- **Sanjivani, step by step (Yuddha Kanda 100–101):** Ravan's spear, the Shakti, strikes Lakshman; Ram pulls it out and weeps over his brother; the monkey physician Sushena sends Hanuman to the Himalayas; Hanuman cannot tell the herbs apart and lifts the whole peak; he flies back, Sushena gives Lakshman the herb, and he rises. Before that, Indrajit attacks from a storm cloud, which leads into his secret fire ritual. Hanuman no longer leaves before anyone is hurt.
+- **Opening titles (`wall/src/intro.js`):** a superhero-studio style flip-book of Vishnu's ten avatars (Matsya, Kurma, Varaha, Narasimha, Vamana, Parashurama, Rama, Krishna, Balarama, Kalki), a red title box with VISHNU and DASHAVATARA, the ten avatars in a row with Rama lit, then "Vishnu presents The Ramayana". The narrated video adds page-flip sounds, a rising whoosh, a deep boom and a chord, all made in code, and the narrator's first line.
