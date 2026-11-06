@@ -209,54 +209,148 @@
     ctx.fillRect(-2, GY, PW + 4, 900);
   }
 
-  // A person as a shadow-puppet silhouette. Origin is at the feet, facing right (flip to face left).
+  // ---------- characters: painted in the style of an Indian miniature, facing right (flip to face left) ----------
+  const WHO = {
+    ram:      { skin: '#58a6ea', edge: '#2c5c99', dress: '#ffd23a', fold: '#b98a14', sash: '#e8503a', hair: '#27307a', crown: 1, quiver: 1 },
+    lakshman: { skin: '#eeaa72', edge: '#a2653a', dress: '#fff0d0', fold: '#b9a47a', sash: '#35c46a', hair: '#4a2c1c', crown: 1, quiver: 1 },
+    sita:     { skin: '#f2b98f', edge: '#b0714a', dress: '#2fbf71', fold: '#16804a', sash: '#ffd23a', hair: '#4a2c1c', female: 1 },
+  };
+  const JEWEL = '#ffd84a', RUBY = '#ff3b4a';
+  function limb(x0, y0, x1, y1, w0, w1) {   // a tapered arm or leg
+    const dx = x1 - x0, dy = y1 - y0, d = Math.hypot(dx, dy) || 1, nx = -dy / d, ny = dx / d;
+    ctx.beginPath(); ctx.moveTo(x0 + nx * w0 / 2, y0 + ny * w0 / 2); ctx.lineTo(x1 + nx * w1 / 2, y1 + ny * w1 / 2);
+    ctx.lineTo(x1 - nx * w1 / 2, y1 - ny * w1 / 2); ctx.lineTo(x0 - nx * w0 / 2, y0 - ny * w0 / 2); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.arc(x0, y0, w0 / 2, 0, 6.283); ctx.arc(x1, y1, w1 / 2, 0, 6.283); ctx.fill();
+  }
+  function band(x, y, ang, len, w, col) { ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.fillStyle = col; ctx.fillRect(-len / 2, -w / 2, len, w); ctx.restore(); }
+
   function figure(x, y, s, o) {
-    o = o || {}; s *= cfg.view === 'frieze' ? .8 : 1;
-    const dir = o.flip ? -1 : 1;
-    const w = o.walk || 0, mv = !!o.moving;
-    const sw = mv ? Math.sin(w) : 0;
-    const bob = mv ? Math.abs(Math.cos(w)) * 3 : 0;
-    ctx.save();
-    ctx.translate(x, y - bob * s);
-    ctx.scale(s * dir, s);
-    ctx.fillStyle = INK; ctx.strokeStyle = INK; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    o = o || {};
+    const who = o.who || (o.female ? 'sita' : 'ram'), C = WHO[who], fem = !!C.female;
+    s *= cfg.view === 'frieze' ? .8 : 1;
+    const dir = o.flip ? -1 : 1, w = o.walk || 0, mv = !!o.moving;
+    const sw = mv ? Math.sin(w) : 0, bob = mv ? Math.abs(Math.cos(w)) * 3 : 0;
+    ctx.save(); ctx.translate(x, y - bob * s); ctx.scale(s * dir, s);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
-    ctx.lineWidth = 10;
-    for (const g of [1, -1]) { ctx.beginPath(); ctx.moveTo(g * 4, -72 + bob); ctx.lineTo(g * 4 + g * sw * 24, bob); ctx.stroke(); }
-    const hem = o.female ? -6 : -30, wd = o.female ? 21 : 16;
-    ctx.beginPath(); ctx.moveTo(-11, -82); ctx.lineTo(11, -82); ctx.lineTo(wd + sw * 3, hem + bob); ctx.lineTo(-wd + sw * 3, hem + bob); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(-14, -120); ctx.lineTo(14, -120); ctx.lineTo(10, -80); ctx.lineTo(-10, -80); ctx.closePath(); ctx.fill();
-    ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(0, -118); ctx.lineTo(0, -125); ctx.stroke();
-    ctx.beginPath(); ctx.arc(0, -134, 10, 0, 6.283); ctx.fill();
-    if (o.crown) {
-      ctx.beginPath(); ctx.moveTo(-9, -140); ctx.lineTo(-7, -156); ctx.lineTo(-3, -147); ctx.lineTo(0, -162);
-      ctx.lineTo(3, -147); ctx.lineTo(7, -156); ctx.lineTo(9, -140); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = GOLD; ctx.lineWidth = 1.2; ctx.stroke(); ctx.strokeStyle = INK;
-    }
-    if (o.female) { ctx.beginPath(); ctx.arc(-9, -139, 6, 0, 6.283); ctx.fill(); }
-
-    // arms
-    let fh = [14 + sw * 9, -86], bh = [-14 - sw * 9, -86];
+    // hands: where the arms reach
+    let fh = [15 + sw * 9, -62], bh = [-15 - sw * 9, -62];
     const d = o.bow;
     if (d !== undefined) { fh = [38, -112]; bh = d > 0.02 ? [38 - 30 * d, -112] : [18, -98]; }
     if (o.hands) { fh = o.hands[0]; bh = o.hands[1]; }
-    ctx.lineWidth = 8;
-    for (const [sh, h] of [[[-10, -114], bh], [[10, -114], fh]]) {
-      ctx.beginPath(); ctx.moveTo(sh[0], sh[1]);
-      ctx.quadraticCurveTo((sh[0] + h[0]) / 2, (sh[1] + h[1]) / 2 + 7, h[0], h[1]); ctx.stroke();
+
+    const arm = (sh, h, front) => {
+      const e = [(sh[0] + h[0]) / 2 + (front ? 1 : -1), (sh[1] + h[1]) / 2 + 7];
+      ctx.fillStyle = C.skin; limb(sh[0], sh[1], e[0], e[1], 8.4, 6.8); limb(e[0], e[1], h[0], h[1], 6.8, 5);
+      ctx.beginPath(); ctx.arc(h[0], h[1], 3.3, 0, 6.283); ctx.fill();
+      const ax = lerp(sh[0], e[0], .5), ay = lerp(sh[1], e[1], .5);   // armlet and bangles
+      ctx.strokeStyle = JEWEL; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(ax - 4, ay); ctx.lineTo(ax + 4, ay + .5); ctx.stroke();
+      const bx = lerp(e[0], h[0], .82), by = lerp(e[1], h[1], .82);
+      ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(bx - 3.4, by); ctx.lineTo(bx + 3.4, by + .4); ctx.stroke();
+    };
+
+    // quiver of arrows behind the shoulder
+    if (C.quiver) {
+      ctx.save(); ctx.translate(-13, -104); ctx.rotate(-.16);
+      ctx.fillStyle = '#a8652a'; ctx.fillRect(-3.4, -4, 7, 36); ctx.fillStyle = JEWEL; ctx.fillRect(-3.4, 8, 7, 2.4); ctx.fillRect(-3.4, 24, 7, 2.4);
+      ctx.strokeStyle = '#fff6df'; ctx.lineWidth = 1.2; for (const k of [-2, 0, 2]) { ctx.beginPath(); ctx.moveTo(k, -4); ctx.lineTo(k - 1, -12); ctx.stroke(); }
+      ctx.restore();
+    }
+    arm([-10, -114], bh, false);   // far arm
+
+    // legs and feet
+    ctx.fillStyle = C.skin;
+    for (const g of [1, -1]) {
+      const fx = g * 4 + g * sw * 24;
+      limb(g * 4, -76, fx, -5, 9.5, 5.6);
+      ctx.beginPath(); ctx.ellipse(fx + 3, -1.8, 5.4, 2.3, 0, 0, 6.283); ctx.fill();
+      ctx.strokeStyle = JEWEL; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(fx - 3, -7); ctx.lineTo(fx + 3, -7); ctx.stroke();
     }
 
-    if (d !== undefined) {
+    // dhoti (men) or saree (Sita)
+    const hem = fem ? -5 : -26, wd = fem ? 21 : 16.5;
+    ctx.fillStyle = C.dress; ctx.strokeStyle = C.fold; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-12, -88); ctx.lineTo(12, -88); ctx.lineTo(wd + sw * 3, hem);
+    ctx.quadraticCurveTo(4 + sw * 3, hem + 4, -wd + sw * 3, hem); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = C.fold; ctx.lineWidth = .9;
+    for (const k of [-6, -1.5, 3, 7.5]) { ctx.beginPath(); ctx.moveTo(k, -86); ctx.quadraticCurveTo(k * 1.6 + sw * 2, (hem - 86) / 2, k * 2.1 + sw * 3, hem); ctx.stroke(); }
+    if (!fem) {   // fluttering end of the cloth
+      ctx.fillStyle = C.dress; ctx.beginPath(); ctx.moveTo(-11, -86); ctx.quadraticCurveTo(-22, -70 + sw * 4, -25 - sw * 3, -48); ctx.lineTo(-12, -62); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = C.fold; ctx.stroke();
+    } else {      // gold border of the saree
+      ctx.strokeStyle = JEWEL; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(-wd + sw * 3, hem - 1); ctx.quadraticCurveTo(4 + sw * 3, hem + 3, wd + sw * 3, hem - 1); ctx.stroke();
+    }
+    // belt
+    ctx.fillStyle = JEWEL; ctx.fillRect(-12.5, -90, 25, 4.4); ctx.fillStyle = RUBY; ctx.beginPath(); ctx.arc(0, -87.8, 1.6, 0, 6.283); ctx.fill();
+
+    // chest
+    if (fem) {
+      ctx.fillStyle = C.skin; ctx.fillRect(-9, -100, 18, 12);
+      ctx.fillStyle = '#ff6a3a'; ctx.beginPath(); ctx.moveTo(-13, -120); ctx.lineTo(13, -120); ctx.lineTo(9.5, -98); ctx.lineTo(-9.5, -98); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = JEWEL; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-9.5, -98); ctx.lineTo(9.5, -98); ctx.stroke();
+      // pallu draped from the shoulder
+      ctx.fillStyle = C.dress; ctx.strokeStyle = C.fold; ctx.lineWidth = .9;
+      ctx.beginPath(); ctx.moveTo(6, -121); ctx.quadraticCurveTo(-12, -108, -14, -94); ctx.quadraticCurveTo(-26 - sw * 3, -78, -22 - sw * 4, -52); ctx.lineTo(-11, -90); ctx.quadraticCurveTo(-6, -104, 6, -121); ctx.closePath(); ctx.fill(); ctx.stroke();
+    } else {
+      ctx.fillStyle = C.skin; ctx.strokeStyle = C.edge; ctx.lineWidth = .9;
+      ctx.beginPath(); ctx.moveTo(-14.5, -120); ctx.quadraticCurveTo(0, -125, 14.5, -120); ctx.quadraticCurveTo(12, -100, 9.5, -88); ctx.lineTo(-9.5, -88); ctx.quadraticCurveTo(-12, -100, -14.5, -120); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = C.edge; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(1, -113); ctx.quadraticCurveTo(7, -108, 11, -112); ctx.moveTo(-1, -113); ctx.quadraticCurveTo(-7, -108, -11, -112); ctx.moveTo(0, -105); ctx.lineTo(0, -92); ctx.stroke();
+      // sash across the chest
+      ctx.fillStyle = C.sash; ctx.beginPath(); ctx.moveTo(-14, -120); ctx.lineTo(-7, -121); ctx.lineTo(11, -90); ctx.lineTo(5, -88); ctx.closePath(); ctx.fill();
+      // garland of flowers
+      ctx.strokeStyle = '#ff9d1c'; ctx.lineWidth = 3; ctx.setLineDash([3, 2]); ctx.beginPath(); ctx.moveTo(-7, -121); ctx.quadraticCurveTo(0, -96, 7, -121); ctx.stroke(); ctx.setLineDash([]);
+    }
+    // gold necklace with a ruby
+    ctx.strokeStyle = JEWEL; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-6.5, -122); ctx.quadraticCurveTo(0, -111, 6.5, -122); ctx.stroke();
+    ctx.fillStyle = RUBY; ctx.beginPath(); ctx.arc(0, -114.6, 1.7, 0, 6.283); ctx.fill();
+
+    // neck and head
+    ctx.fillStyle = C.skin; limb(0, -118, 0, -126, 7.5, 6.5);
+    ctx.save(); ctx.translate(0, -124); ctx.scale(1.14, 1.14); ctx.translate(0, 124);   // a slightly larger head, as in miniature paintings
+    ctx.fillStyle = C.hair;   // hair behind the head
+    ctx.beginPath(); ctx.ellipse(-3, -134, 10, 11.4, 0, 0, 6.283); ctx.fill();
+    if (fem) {   // long braid with flowers
+      ctx.strokeStyle = C.hair; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(-9, -132); ctx.quadraticCurveTo(-17, -118 + sw * 2, -14 - sw * 3, -92); ctx.stroke();
+      ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-14 - sw * 3, -98); ctx.lineTo(-14 - sw * 3, -88); ctx.stroke();
+      ctx.fillStyle = '#fff6df'; for (const [fx, fy] of [[-9, -138], [-11, -132], [-10, -126]]) { ctx.beginPath(); ctx.arc(fx, fy, 1.8, 0, 6.283); ctx.fill(); }
+    }
+    ctx.fillStyle = C.skin; ctx.strokeStyle = C.edge; ctx.lineWidth = .8;
+    ctx.beginPath(); ctx.moveTo(-6, -142); ctx.quadraticCurveTo(7.5, -146, 9.2, -137); ctx.quadraticCurveTo(10, -134, 11.8, -131.6);   // forehead and nose
+    ctx.quadraticCurveTo(10.2, -130.6, 9.4, -130); ctx.quadraticCurveTo(10.4, -128.6, 9, -127.6); ctx.quadraticCurveTo(9.8, -125.6, 7, -124);   // lips and chin
+    ctx.quadraticCurveTo(0, -121, -6, -126); ctx.quadraticCurveTo(-9, -134, -6, -142); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(-4.4, -133, 2, 3.3, 0, 0, 6.283); ctx.fill(); ctx.stroke();   // ear
+    ctx.fillStyle = JEWEL; ctx.beginPath(); ctx.arc(-4.4, -128.8, fem ? 2.3 : 1.8, 0, 6.283); ctx.fill();   // earring
+    ctx.fillStyle = '#fffaf0'; ctx.beginPath(); ctx.ellipse(4.4, -136.4, 2.7, 1.5, -.08, 0, 6.283); ctx.fill();   // eye
+    ctx.fillStyle = '#25102a'; ctx.beginPath(); ctx.arc(5.2, -136.3, 1.15, 0, 6.283); ctx.fill();
+    ctx.strokeStyle = '#25102a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(1.4, -140); ctx.quadraticCurveTo(4.8, -141.8, 8.2, -140); ctx.stroke();   // eyebrow
+    ctx.strokeStyle = '#a8403a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(8.2, -127.8); ctx.lineTo(10.4, -128.4); ctx.stroke();   // lips
+    ctx.strokeStyle = RUBY; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(7.6, -143); ctx.lineTo(8.4, -139.6); ctx.stroke();   // tilak
+    if (C.crown) {   // crown with jewels
+      ctx.fillStyle = JEWEL; ctx.strokeStyle = '#b8860b'; ctx.lineWidth = .8;
+      ctx.beginPath(); ctx.moveTo(-8.8, -141); ctx.lineTo(-6.6, -157); ctx.lineTo(-2.6, -150); ctx.lineTo(1, -167); ctx.lineTo(4.6, -150); ctx.lineTo(8, -157); ctx.lineTo(9.6, -141); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#ff9d1c'; ctx.fillRect(-9, -143, 19, 3.2);
+      ctx.fillStyle = RUBY; ctx.beginPath(); ctx.arc(1, -152, 2, 0, 6.283); ctx.fill();
+      ctx.fillStyle = '#35e0a0'; ctx.beginPath(); ctx.arc(-4, -148, 1.4, 0, 6.283); ctx.arc(6, -148, 1.4, 0, 6.283); ctx.fill();
+    } else {   // maang tikka and hair parting
+      ctx.strokeStyle = JEWEL; ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(-2, -143); ctx.quadraticCurveTo(3, -144, 7.2, -140); ctx.stroke();
+      ctx.fillStyle = RUBY; ctx.beginPath(); ctx.arc(7.4, -139.6, 1.3, 0, 6.283); ctx.fill();
+    }
+
+    ctx.restore();
+    arm([10, -114], fh, true);   // near arm
+
+    if (d !== undefined) {   // bow and arrow
       const z = o.bowSize || 1, hx = 38, hy = -112, tx = hx - 8 * d * z, t1 = hy - 46 * z, t2 = hy + 46 * z;
-      ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(tx, t1); ctx.quadraticCurveTo(hx + 36 * z, hy, tx, t2); ctx.stroke();
-      ctx.strokeStyle = GOLD; ctx.lineWidth = 1.2; ctx.stroke();
-      ctx.strokeStyle = INK; ctx.lineWidth = 1.3;
+      ctx.strokeStyle = '#c58a3a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(tx, t1); ctx.quadraticCurveTo(hx + 36 * z, hy, tx, t2); ctx.stroke();
+      ctx.strokeStyle = JEWEL; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.strokeStyle = '#f4e6c2'; ctx.lineWidth = 1.1;
       ctx.beginPath(); ctx.moveTo(tx, t1); ctx.lineTo(hx - 30 * d, hy); ctx.lineTo(tx, t2); ctx.stroke();
       if (o.arrow) {
         const bx = hx - 30 * d;
-        ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(bx, hy); ctx.lineTo(hx + 14, hy); ctx.stroke();
-        ctx.fillStyle = GOLD; ctx.beginPath(); ctx.moveTo(hx + 20, hy); ctx.lineTo(hx + 11, hy - 3.5); ctx.lineTo(hx + 11, hy + 3.5); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = '#f4e6c2'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(bx, hy); ctx.lineTo(hx + 14, hy); ctx.stroke();
+        ctx.fillStyle = JEWEL; ctx.beginPath(); ctx.moveTo(hx + 20, hy); ctx.lineTo(hx + 11, hy - 3.5); ctx.lineTo(hx + 11, hy + 3.5); ctx.closePath(); ctx.fill();
       }
+      ctx.fillStyle = C.skin; ctx.beginPath(); ctx.arc(hx, hy, 3.4, 0, 6.283); ctx.fill();
     }
     if (o.garland) {
       ctx.strokeStyle = '#ff9d1c'; ctx.lineWidth = 5; ctx.setLineDash([4, 3]);
@@ -278,33 +372,44 @@
   }
 
   function ravan(x, y, s, t, alpha, squash) {
+    const SK = '#c84b32', ED = '#7a2a1a', DR = '#6a2a9a';
     ctx.save(); ctx.translate(x, y); ctx.scale(s, s * squash); ctx.globalAlpha = alpha;
-    ctx.fillStyle = RAV; ctx.strokeStyle = RAV; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.lineWidth = 14; for (const g of [1, -1]) { ctx.beginPath(); ctx.moveTo(g * 9, -72); ctx.lineTo(g * 14, 0); ctx.stroke(); }
-    ctx.beginPath(); ctx.moveTo(-17, -84); ctx.lineTo(17, -84); ctx.lineTo(24, -26); ctx.lineTo(-24, -26); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(-30, -122); ctx.lineTo(30, -122); ctx.lineTo(15, -80); ctx.lineTo(-15, -80); ctx.closePath(); ctx.fill();
-    // six arms with swords
-    ctx.lineWidth = 7;
-    const arms = [[-48, -150], [48, -150], [-60, -108], [60, -108], [-42, -78], [42, -78]];
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    // legs and dhoti
+    ctx.fillStyle = SK; for (const g of [1, -1]) limb(g * 10, -72, g * 14, -4, 14, 9);
+    ctx.fillStyle = DR; ctx.strokeStyle = JEWEL; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-17, -86); ctx.lineTo(17, -86); ctx.lineTo(25, -24); ctx.quadraticCurveTo(0, -18, -25, -24); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#4a1a72'; ctx.lineWidth = 1; for (const k of [-9, -3, 3, 9]) { ctx.beginPath(); ctx.moveTo(k, -84); ctx.lineTo(k * 2.3, -22); ctx.stroke(); }
+    // torso
+    ctx.fillStyle = SK; ctx.strokeStyle = ED; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(-31, -122); ctx.quadraticCurveTo(0, -130, 31, -122); ctx.lineTo(15, -82); ctx.lineTo(-15, -82); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = ED; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, -118); ctx.lineTo(0, -88); ctx.moveTo(-3, -112); ctx.quadraticCurveTo(-14, -104, -22, -114); ctx.moveTo(3, -112); ctx.quadraticCurveTo(14, -104, 22, -114); ctx.stroke();
+    ctx.fillStyle = JEWEL; ctx.fillRect(-16, -88, 32, 5); ctx.fillStyle = RUBY; ctx.beginPath(); ctx.arc(0, -85.5, 2, 0, 6.283); ctx.fill();
+    ctx.strokeStyle = JEWEL; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(-17, -121); ctx.quadraticCurveTo(0, -98, 17, -121); ctx.stroke();
+    ctx.strokeStyle = '#fff6df'; ctx.lineWidth = 2; ctx.setLineDash([2, 2]); ctx.beginPath(); ctx.moveTo(-14, -121); ctx.quadraticCurveTo(0, -104, 14, -121); ctx.stroke(); ctx.setLineDash([]);
+    // six arms with weapons
+    const arms = [[-50, -152], [50, -152], [-62, -110], [62, -110], [-44, -80], [44, -80]];
     arms.forEach(([hx, hy], i) => {
-      const g = hx < 0 ? -1 : 1, sx = g * 26, sy = -116 + (i > 3 ? 14 : 0);
-      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo((sx + hx) / 2, (sy + hy) / 2 - 8, hx, hy); ctx.stroke();
-      ctx.lineWidth = 3.5; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + g * 6, hy - 30); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(hx - 6, hy - 3); ctx.lineTo(hx + 6, hy - 3); ctx.stroke(); ctx.lineWidth = 7;
+      const g = hx < 0 ? -1 : 1, sx = g * 28, sy = -116 + (i > 3 ? 12 : 0), ex = (sx + hx) / 2, ey = (sy + hy) / 2 - 8;
+      ctx.fillStyle = SK; limb(sx, sy, ex, ey, 10, 8); limb(ex, ey, hx, hy, 8, 6); ctx.beginPath(); ctx.arc(hx, hy, 4, 0, 6.283); ctx.fill();
+      ctx.strokeStyle = JEWEL; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(lerp(sx, ex, .5) - 5, lerp(sy, ey, .5)); ctx.lineTo(lerp(sx, ex, .5) + 5, lerp(sy, ey, .5)); ctx.stroke();
+      ctx.strokeStyle = '#e8eef5'; ctx.lineWidth = 3.4; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + g * 6, hy - 32); ctx.stroke();
+      ctx.strokeStyle = JEWEL; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(hx - 6, hy - 3); ctx.lineTo(hx + 6, hy - 3); ctx.stroke();
     });
-    // ten heads: centre head and a fan of nine
-    const heads = [[0, -142, 12]];
-    for (let k = 0; k < 9; k++) {
-      const th = Math.PI + 0.32 + (k / 8) * (Math.PI - 0.64);
-      heads.push([Math.cos(th) * 48, -138 + Math.sin(th) * 44 - 4, 8.5]);
-    }
-    for (const [hx, hy, r] of heads) {
-      const sway = Math.sin(t * 1.6 + hx * .1) * 1.5;
-      ctx.beginPath(); ctx.arc(hx + sway, hy, r, 0, 6.283); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(hx + sway - r, hy - r * .6); ctx.lineTo(hx + sway - r * .5, hy - r * 1.9); ctx.lineTo(hx + sway, hy - r * 1.2);
-      ctx.lineTo(hx + sway + r * .5, hy - r * 1.9); ctx.lineTo(hx + sway + r, hy - r * .6); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = GOLD; ctx.lineWidth = 1; ctx.stroke(); ctx.strokeStyle = RAV;
-      glow(hx + sway - r * .35, hy, 4, '255,60,30', 0.9); glow(hx + sway + r * .35, hy, 4, '255,60,30', 0.9);
+    // ten heads: one in the middle and a fan of nine
+    const heads = [[0, -144, 12.5]];
+    for (let k = 0; k < 9; k++) { const th = Math.PI + 0.32 + (k / 8) * (Math.PI - 0.64); heads.push([Math.cos(th) * 50, -140 + Math.sin(th) * 46 - 4, 9]); }
+    for (const [hx0, hy, r] of heads) {
+      const hx = hx0 + Math.sin(t * 1.6 + hx0 * .1) * 1.5;
+      ctx.fillStyle = SK; ctx.strokeStyle = ED; ctx.lineWidth = .9;
+      ctx.beginPath(); ctx.ellipse(hx, hy, r * .9, r, 0, 0, 6.283); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = JEWEL; ctx.beginPath(); ctx.moveTo(hx - r * .95, hy - r * .55); ctx.lineTo(hx - r * .6, hy - r * 1.9); ctx.lineTo(hx - r * .15, hy - r * 1.2);
+      ctx.lineTo(hx, hy - r * 2.2); ctx.lineTo(hx + r * .15, hy - r * 1.2); ctx.lineTo(hx + r * .6, hy - r * 1.9); ctx.lineTo(hx + r * .95, hy - r * .55); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = RUBY; ctx.beginPath(); ctx.arc(hx, hy - r * 1.05, r * .17, 0, 6.283); ctx.fill();
+      for (const e of [-1, 1]) { ctx.fillStyle = '#fff3b0'; ctx.beginPath(); ctx.ellipse(hx + e * r * .38, hy - r * .15, r * .2, r * .12, 0, 0, 6.283); ctx.fill(); glow(hx + e * r * .38, hy - r * .15, 5, '255,60,30', .9); }
+      ctx.strokeStyle = '#2a0a08'; ctx.lineWidth = Math.max(.8, r * .13);   // brows and moustache
+      ctx.beginPath(); ctx.moveTo(hx - r * .65, hy - r * .42); ctx.lineTo(hx - r * .12, hy - r * .3); ctx.moveTo(hx + r * .65, hy - r * .42); ctx.lineTo(hx + r * .12, hy - r * .3); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(hx, hy + r * .18); ctx.quadraticCurveTo(hx - r * .5, hy + r * .5, hx - r * .85, hy + r * .28); ctx.moveTo(hx, hy + r * .18); ctx.quadraticCurveTo(hx + r * .5, hy + r * .5, hx + r * .85, hy + r * .28); ctx.stroke();
     }
     ctx.restore();
   }
@@ -606,7 +711,7 @@
       const wp = lerp(-300, 1130, sstep(0.3, 11.5, lt)), ph = lt * 7.5;
       figure(wp, GY, 1.15, { crown: true, walk: ph, moving: true, bow: 0 });
       figure(wp - 105, GY, 1.05, { female: true, walk: ph + 1, moving: true });
-      figure(wp - 215, GY, 1.1, { crown: true, walk: ph + 2, moving: true, bow: 0 });
+      figure(wp - 215, GY, 1.1, { who: 'lakshman', crown: true, walk: ph + 2, moving: true, bow: 0 });
       caption(lt, 'Vanvaas · Fourteen years in the forest', 'वनवास');
     }
     else if (i === 3) {
@@ -617,7 +722,7 @@
       ctx.restore();
       glow(900, GY - 20, 330, '255,90,30', .25 + .08 * Math.sin(t * 5));
       ground();
-      figure(110, GY, 1.2, { crown: true, hands: lt > 1 ? [[16, -95], [-10, -90]] : undefined });
+      figure(110, GY, 1.2, { who: 'lakshman', crown: true, hands: lt > 1 ? [[16, -95], [-10, -90]] : undefined });
       const dr = lt < 4.0 ? sstep(1.0, 3.8, lt) : 1 - sstep(4.0, 4.15, lt);
       figure(P3.ramX, GY, P3.ramS, { crown: true, bow: dr, bowSize: 1.15, arrow: lt < 4.0 && dr > .05 });
       const burn = sstep(4.9, 9.5, lt);
@@ -643,7 +748,7 @@
       const arrive = sstep(0.8, 6.0, lt), wp = lerp(-300, 520, arrive), mv = lt > .8 && lt < 6.0, ph = lt * 7;
       figure(wp, GY, 1.2, { crown: true, walk: ph, moving: mv });
       figure(wp - 100, GY, 1.1, { female: true, walk: ph + 1, moving: mv });
-      figure(wp - 205, GY, 1.15, { crown: true, walk: ph + 2, moving: mv });
+      figure(wp - 205, GY, 1.15, { who: 'lakshman', crown: true, walk: ph + 2, moving: mv });
       if (lt > 6) glow(480, GY - 130, 190 * sstep(6, 8, lt), '255,210,130', .3);
       const ta = sstep(8.3, 9.5, lt) * (1 - sstep(11.6, 12.6, lt));
       if (ta > 0) {
@@ -761,7 +866,17 @@
     ctx.restore();
   }
 
+  function drawSheet() {   // ?sheet : the characters large, for a close look
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+    const gy = H * .93, u = H / 220;
+    figure(W * .1, gy, u, { who: 'ram', crown: true, bow: .5, arrow: true });
+    figure(W * .27, gy, u, { who: 'sita', female: true });
+    figure(W * .42, gy, u, { who: 'lakshman', crown: true });
+    figure(W * .55, gy, u, { who: 'ram', crown: true, necklace: true });
+    ravan(W * .83, gy, u * .8, T, 1, 1);
+  }
   function render() {
+    if (query.has('sheet')) { setLook(cfg.look !== 'day'); drawSheet(); return; }
     setLook(cfg.look !== 'day');
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
