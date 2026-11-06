@@ -54,6 +54,7 @@
   <button id="mPlay" aria-pressed="false" title="Show the journey (P)">Play</button>
   <span class="sep"></span>
   <button id="bAdd">+ Surface</button>
+  <button id="bAddText" title="Add an area where the story is written out">+ Text</button>
   <button id="bDel">− Surface</button>
   <span class="sep"></span>
   <span class="lbl">Art / ground</span>
@@ -1689,7 +1690,10 @@ window.R3 = (function () {
   // 'frieze': one long band in the gap between the ceiling and the tops of the doors, all five scenes side by side.
   // 'doors':  separate windows on the left door, the wall and the right door, with the story panning across them.
   const SURFACES = {
-    frieze: () => [{ name: 'Above doors', pts: [[.012, .01], [.988, .01], [.988, .145], [.012, .145]] }],
+    frieze: () => [
+      { name: 'Above doors', pts: [[.012, .01], [.988, .01], [.988, .145], [.012, .145]] },
+      { name: 'Story text', role: 'text', pts: [[.34, .27], [.68, .27], [.68, .55], [.34, .55]] },   // blank wall between the doors
+    ],
     doors: () => [
       { name: 'Left door',  pts: [[.081, .214], [.308, .219], [.308, .99], [.081, .99]] },
       { name: 'Wall',       pts: [[.337, .02], [.685, .02], [.685, .98], [.337, .98]] },
@@ -1706,7 +1710,7 @@ window.R3 = (function () {
     s && Array.isArray(s.pts) && s.pts.length === 4 && s.pts.every(p => Array.isArray(p) && isFinite(p[0]) && isFinite(p[1])));
   const applyLayout = (o) => {
     if (!validLayout(o)) return false;
-    cfg.surfaces = o.surfaces.map((s, i) => ({ name: String(s.name || 'Surface ' + (i + 1)).slice(0, 30), pts: s.pts.map(p => [+p[0], +p[1]]) }));
+    cfg.surfaces = o.surfaces.map((s, i) => ({ name: String(s.name || 'Surface ' + (i + 1)).slice(0, 30), pts: s.pts.map(p => [+p[0], +p[1]]), ...(s.role === 'text' ? { role: 'text' } : {}) }));
     cfg.view = o.view in SURFACES ? o.view : 'doors';
     cfg.look = o.look === 'day' ? 'day' : (o.look === 'night' ? 'night' : '3d');
     for (const k of ['win', 'ground', 'vstretch', 'inset']) if (isFinite(o[k])) cfg[k] = +o[k];
@@ -2433,8 +2437,66 @@ window.R3 = (function () {
   }
 
   const TEST_COL = ['#ffffff', '#ffe6a8', '#bfe3ff', '#ffc4d6', '#c9f5c0'];
+  // ---------- story text: what is happening, shown in the 'Story text' areas ----------
+  const STORY_CAP = [   // for the 3D walk: [from, to, English, Hindi]
+    [0, 6, 'Ayodhya: a lotus blooms and a baby of light appears', 'अयोध्या: कमल खिला, श्रीराम का जन्म'],
+    [6, 16, 'Prince Ram walks to Mithila', 'राम मिथिला की ओर चले'],
+    [16, 21.5, "Mithila: Ram lifts and breaks Shiva's great bow", 'मिथिला: राम ने शिव धनुष तोड़ा'],
+    [21.5, 26.5, 'Sita garlands Ram: they are married', 'सीता ने राम को जयमाला पहनाई'],
+    [26.5, 38, 'Exile: Ram, Sita and Lakshman walk into the forest', 'वनवास: राम, सीता और लक्ष्मण वन की ओर'],
+    [38, 52, 'A golden deer leads them deeper into the forest', 'स्वर्ण मृग उन्हें वन में आगे ले गया'],
+    [52, 58.6, 'Lanka: Ram draws his bow against ten-headed Ravan', 'लंका: राम ने रावण पर बाण साधा'],
+    [58.6, 67, 'Ravan falls: good wins over evil', 'रावण वध: बुराई पर अच्छाई की जीत'],
+    [67, 76, 'Fourteen years are over: they walk home to Ayodhya', 'चौदह वर्ष पूरे: अयोध्या वापसी'],
+    [76, 90, 'Diwali: Ayodhya lights a lamp for every step of their return', 'दीपावली: दीपों से जगमग अयोध्या'],
+  ];
+  const SCENE_CAP = [   // for the five-scene 2D looks
+    ['Ayodhya: the birth of Ram', 'श्रीराम जन्म'], ["Mithila: Ram lifts the bow of Shiva", 'सीता स्वयंवर'], ['Vanvaas: fourteen years in the forest', 'वनवास'],
+    ['Lanka: Ravan falls', 'रावण वध'], ['Ayodhya: Ram returns, Diwali begins', 'दीपावली'],
+  ];
+  function captionNow() {
+    if (cfg.look === '3d' && window.R3) {
+      for (const [a, b, en, hi] of STORY_CAP) if (T >= a && T < b) return { en, hi, a: sstep(a, a + .9, T) * (1 - sstep(b - .9, b, T)) };
+      return null;
+    }
+    const i = Math.min(NP - 1, Math.floor((T + 1.5) / SEG)), lt = i === 0 ? T : T - (i * SEG - 1.5);
+    return { en: SCENE_CAP[i][0], hi: SCENE_CAP[i][1], a: sstep(.8, 1.8, lt) * (1 - sstep(11, 12.4, lt)) };
+  }
+  const fitCache = {};
+  function fitText(en, hi, w, h) {   // the largest type that fits: English on up to two lines, Hindi on one
+    const key = en + '|' + hi + '|' + Math.round(w) + '|' + Math.round(h);
+    if (fitCache[key]) return fitCache[key];
+    const EN = (px) => `700 ${px}px Georgia, "Times New Roman", serif`, HI = (px) => `600 ${px}px "Noto Sans Devanagari", "Mangal", Georgia, serif`;
+    let best = null;
+    for (let fs = Math.min(h * .3, w * .13); fs >= 8; fs -= 1) {
+      ctx.font = EN(fs); const words = en.split(' '), lines = []; let cur = '';
+      for (const wd of words) { const t = cur ? cur + ' ' + wd : wd; if (ctx.measureText(t).width > w * .92 && cur) { lines.push(cur); cur = wd; } else cur = t; }
+      lines.push(cur);
+      const hs = fs * .9; ctx.font = HI(hs); const hw = ctx.measureText(hi).width;
+      const need = lines.length * fs * 1.2 + hs * 1.35;
+      if (lines.length <= 3 && hw <= w * .92 && need <= h * .94 && Math.max(...lines.map(l => (ctx.font = EN(fs), ctx.measureText(l).width))) <= w * .92) { best = { fs, hs, lines, EN: EN(fs), HI: HI(hs) }; break; }
+    }
+    return (fitCache[key] = best || { fs: 8, hs: 8, lines: [en], EN: EN(8), HI: HI(8) });
+  }
+  function drawCaptionIn(q, en, hi, alpha) {
+    const xs = q.map(p => p[0]), ys = q.map(p => p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const vs = cfg.vstretch, w = x1 - x0, h = (y1 - y0) / vs; if (w < 20 || h < 8) return;
+    ctx.save(); clipTo([q]); ctx.translate(x0, y0); ctx.scale(1, vs);
+    const L = fitText(en, hi, w, h), total = L.lines.length * L.fs * 1.2 + L.hs * 1.35; let y = (h - total) / 2;
+    const g = ctx.createLinearGradient(0, y, 0, y + total); g.addColorStop(0, '#fff3c8'); g.addColorStop(1, '#ffae42');
+    ctx.globalAlpha = alpha; ctx.fillStyle = g; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.shadowColor = 'rgba(255,160,50,.85)'; ctx.shadowBlur = L.fs * .3;
+    ctx.font = L.EN; for (const l of L.lines) { y += L.fs * .6; ctx.fillText(l, w / 2, y); y += L.fs * .6; }
+    ctx.font = L.HI; y += L.hs * .68; ctx.fillText(hi, w / 2, y);
+    ctx.restore();
+  }
+  function drawStoryText(PT) {
+    const c = captionNow(); if (!c || c.a <= .004) return;
+    for (const q of PT) drawCaptionIn(q, c.en, c.hi, c.a);
+  }
+
   function drawTest(P) {
     P.forEach((q, n) => {
+      if (cfg.surfaces[n].role === 'text') { ctx.save(); clipTo([q]); ctx.fillStyle = '#2a2a38'; ctx.fillRect(0, 0, W, H); ctx.restore(); drawCaptionIn(q, 'The story is written here', 'कहानी यहाँ लिखी जाती है', 1); return; }
       ctx.save(); clipTo([q]);
       ctx.fillStyle = TEST_COL[n % TEST_COL.length]; ctx.fillRect(0, 0, W, H);
       const xs = q.map(p => p[0]), ys = q.map(p => p[1]);
@@ -2456,10 +2518,10 @@ window.R3 = (function () {
     ctx.setLineDash([6, 6]); ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 1; ctx.strokeRect(.5, .5, W - 1, H - 1); ctx.setLineDash([]);
     cfg.surfaces.forEach((s, n) => {
       const q = s.pts.map(p => [p[0] * W, p[1] * H]), on = n === sel;
-      ctx.strokeStyle = on ? '#3fe0ff' : '#ff9d1c'; ctx.lineWidth = on ? 3 : 2;
+      const tx = s.role === 'text', col = on ? '#3fe0ff' : (tx ? '#ff6ad5' : '#ff9d1c'); ctx.strokeStyle = col; ctx.lineWidth = on ? 3 : 2;
       ctx.beginPath(); ctx.moveTo(q[0][0], q[0][1]); for (let i = 1; i < 4; i++) ctx.lineTo(q[i][0], q[i][1]); ctx.closePath(); ctx.stroke();
-      for (const p of q) { ctx.fillStyle = on ? '#3fe0ff' : '#ff9d1c'; ctx.beginPath(); ctx.arc(p[0], p[1], 9, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.stroke(); }
-      ctx.fillStyle = on ? '#3fe0ff' : '#ff9d1c'; ctx.font = '600 14px system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      for (const p of q) { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(p[0], p[1], 9, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.stroke(); }
+      ctx.fillStyle = col; ctx.font = '600 14px system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
       const bx = Math.min(...q.map(p => p[0])) + 12, by = Math.min(...q.map(p => p[1])) + 12;
       ctx.shadowColor = '#000'; ctx.shadowBlur = 4; ctx.fillText((n + 1) + ' ' + s.name, bx, by); ctx.shadowBlur = 0;
     });
@@ -2481,7 +2543,9 @@ window.R3 = (function () {
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
     const P = polys();
-    if (mode === 'test') drawTest(P); else drawWorld(P);
+    const isText = cfg.surfaces.map(s => s.role === 'text');
+    const PP = P.filter((_, i) => !isText[i]), PT = P.filter((_, i) => isText[i]);
+    if (mode === 'test') drawTest(P); else { drawWorld(PP); drawStoryText(PT); }
     if (mode !== 'play') drawEditor(P);
   }
 
@@ -2553,6 +2617,7 @@ window.R3 = (function () {
     } catch (_) {}
   }
   modeBtn.edit.onclick = () => setMode('edit'); modeBtn.test.onclick = () => setMode('test'); modeBtn.play.onclick = () => { setMode('play'); showUI(); };
+  $('bAddText').onclick = () => { cfg.surfaces.push({ name: 'Story text', role: 'text', pts: [[.35, .3], [.65, .3], [.65, .55], [.35, .55]] }); sel = cfg.surfaces.length - 1; saveCfg(); };
   $('bAdd').onclick = () => { cfg.surfaces.push({ name: 'Surface ' + (cfg.surfaces.length + 1), pts: [[.4, .3], [.6, .3], [.6, .7], [.4, .7]] }); sel = cfg.surfaces.length - 1; saveCfg(); };
   $('bDel').onclick = () => { if (cfg.surfaces.length > 1) { cfg.surfaces.splice(sel, 1); sel = Math.max(0, sel - 1); saveCfg(); } };
   $('bSmall').onclick = () => setWin(1.05); $('bBig').onclick = () => setWin(1 / 1.05);

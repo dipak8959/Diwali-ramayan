@@ -49,6 +49,8 @@ The story is one continuous world, so a character or an arrow leaves one surface
 
 Character close-up: open `wall/index.html?sheet` to see Ram, Sita, Lakshman and Ravan large.
 
+**Story text:** the default layout has a pink **Story text** area (on the blank wall between the doors). It writes what is happening, in English and Hindi, and changes with each chapter. Drag its corners anywhere, or use **+ Text** to add another one.
+
 ### Building the single file
 `wall/src/` holds the page and the 3D story (`r3.js`); `wall/vendor/` holds Three.js (MIT licence) and its glow effects.
 Run `python3 tools/bundle-wall.py` to rebuild `wall/index.html`, which is one self-contained file that works offline.
