@@ -19,6 +19,8 @@ The site is served by GitHub Pages from the `main` branch (root):
 
 Open a link in Safari or Chrome and press **Fullscreen**. Add `?play` to the wall link (`.../wall/?play`) to start the story straight away.
 
+**Full-screen version** (for a TV, a tablet, or a projector on a plain wall): https://dipak8959.github.io/diwali-ramayan/wall/?cinema&play — the camera follows the story so the characters fill the screen, and the story text runs along the bottom. The default `.../wall/` view is the wall-mapping version for the strip above the doors.
+
 If a link shows a 404, Pages is not switched on yet: open the repository, then **Settings, Pages**, choose **Deploy from a branch**, branch `main`, folder `/ (root)`, and save. It goes live in a minute or two.
 
 ## Cast to a TV or projector
