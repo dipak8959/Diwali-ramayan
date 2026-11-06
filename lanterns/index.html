@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05030f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Diwali Lanterns</title>
+<style>
+  :root {
+    --bg: #05030f;
+    --ui-bg: rgba(20, 12, 30, 0.72);
+    --ui-border: rgba(255, 190, 110, 0.35);
+    --ui-text: #ffe8c7;
+    --accent: #ffb347;
+  }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); }
+  canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; cursor: pointer; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+  #err { position: fixed; top: 8px; left: 8px; right: 8px; color: #ffb4b4; font: 12px/1.4 monospace; pointer-events: none; white-space: pre-wrap; }
+  body.hide-cursor canvas { cursor: none; }
+
+  #ui {
+    position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+    max-width: calc(100vw - 32px);
+    padding: 10px; border-radius: 14px;
+    background: var(--ui-bg); border: 1px solid var(--ui-border);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    font: 500 14px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
+    transition: opacity .6s ease;
+  }
+  #ui.hidden { opacity: 0; pointer-events: none; }
+  #ui button {
+    font: inherit; color: var(--ui-text); background: rgba(255,255,255,0.06);
+    border: 1px solid var(--ui-border); border-radius: 10px;
+    padding: 10px 14px; cursor: pointer; white-space: nowrap;
+  }
+  #ui button:hover { background: rgba(255,179,71,0.18); }
+  @media (max-width: 480px) { #ui { gap: 6px; padding: 8px; } #ui button { padding: 8px 10px; font-size: 13px; } }
+  #ui button[aria-pressed="false"] { opacity: .55; }
+  #ui button.rec { border-color: #ff6b6b; color: #ffd0d0; }
+
+  #hint {
+    position: fixed; top: max(16px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+    color: var(--ui-text); opacity: .75; text-align: center;
+    font: 13px/1.4 system-ui, -apple-system, sans-serif; padding: 0 16px;
+    transition: opacity .6s ease; pointer-events: none;
+  }
+  #hint.hidden { opacity: 0; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hint">Tap the sky for fireworks · tap near the bottom to release a lantern</div>
+
+<div id="err" hidden></div>
+
+<div id="ui">
+  <button id="btnFull">⛶ Fullscreen</button>
+  <button id="btnPlay">⏸ Pause</button>
+  <button id="btnFireworks" aria-pressed="true">🎆 Fireworks</button>
+  <button id="btnText" aria-pressed="true">✨ Greeting</button>
+  <button id="btnRec">⏺ Record 30s video</button>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W = 0, H = 0, DPR = 1;
+
+  const state = { paused: false, fireworks: true, text: true };
+
+  function resize() {
+    W = canvas.clientWidth || window.innerWidth || document.documentElement.clientWidth;
+    H = canvas.clientHeight || window.innerHeight || document.documentElement.clientHeight;
+    if (!W || !H) return;
+    // iPad Safari limits canvas memory: cap the backing store at ~3.5M pixels
+    DPR = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(3.5e6 / (W * H)));
+    canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    buildStars(); buildDiyas();
+  }
+
+  const rand = (a, b) => a + Math.random() * (b - a);
+
+  // ---------- Stars ----------
+  let stars = [];
+  function buildStars() {
+    const n = Math.round((W * H) / 3500);
+    stars = Array.from({ length: n }, () => ({
+      x: Math.random() * W, y: Math.random() * H * 0.85,
+      r: Math.random() < 0.9 ? rand(0.3, 1.1) : rand(1.1, 1.8),
+      phase: Math.random() * Math.PI * 2, speed: rand(0.5, 2),
+    }));
+  }
+
+  // ---------- Sky lanterns ----------
+  const lanterns = [];
+  function makeLantern(x, y) {
+    const depth = Math.random();               // 0 = far, 1 = near
+    const size = 10 + depth * depth * 38;
+    return {
+      x: x ?? rand(-0.05, 1.05) * W,
+      y: y ?? H + size * 2 + rand(0, H * 0.3),
+      size, depth,
+      vy: 10 + depth * 28,
+      swayAmp: rand(6, 22), swayFreq: rand(0.15, 0.4), swayPhase: Math.random() * 6.28,
+      flicker: Math.random() * 100,
+      hue: rand(18, 38),
+      tilt: rand(-0.08, 0.08),
+    };
+  }
+  function seedLanterns() {
+    lanterns.length = 0;
+    const n = Math.max(14, Math.round(W / 55));
+    for (let i = 0; i < n; i++) lanterns.push(makeLantern(undefined, rand(0, H * 1.1)));
+    lanterns.sort((a, b) => a.depth - b.depth);
+  }
+
+  function drawLantern(l, t) {
+    const s = l.size;
+    const fl = 0.85 + 0.15 * Math.sin(t * 9 + l.flicker) * Math.sin(t * 5.3 + l.flicker * 2);
+    const x = l.x + Math.sin(t * l.swayFreq * 6.28 + l.swayPhase) * l.swayAmp;
+    const y = l.y;
+    const alphaFade = Math.min(1, Math.max(0, (y + s) / (H * 0.25))); // fade near top
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(l.tilt + Math.sin(t * l.swayFreq * 6.28 + l.swayPhase) * 0.05);
+    ctx.globalAlpha = alphaFade * (0.55 + l.depth * 0.45);
+
+    // outer glow
+    const g = ctx.createRadialGradient(0, s * 0.2, 0, 0, s * 0.2, s * 3.2);
+    g.addColorStop(0, `hsla(${l.hue + 10}, 100%, 65%, ${0.45 * fl})`);
+    g.addColorStop(0.4, `hsla(${l.hue}, 100%, 50%, ${0.15 * fl})`);
+    g.addColorStop(1, 'hsla(20, 100%, 40%, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(0, s * 0.2, s * 3.2, 0, Math.PI * 2); ctx.fill();
+
+    // body (tapered paper lantern: wider top, narrower bottom)
+    const topW = s * 0.62, botW = s * 0.42, hTop = -s * 0.9, hBot = s * 0.75;
+    ctx.beginPath();
+    ctx.moveTo(-topW * 0.85, hTop);
+    ctx.quadraticCurveTo(0, hTop - s * 0.22, topW * 0.85, hTop);
+    ctx.quadraticCurveTo(topW * 1.05, 0, botW, hBot);
+    ctx.lineTo(-botW, hBot);
+    ctx.quadraticCurveTo(-topW * 1.05, 0, -topW * 0.85, hTop);
+    ctx.closePath();
+    const body = ctx.createLinearGradient(0, hTop, 0, hBot);
+    body.addColorStop(0, `hsl(${l.hue - 8}, 90%, ${(38 * fl).toFixed(1)}%)`);
+    body.addColorStop(0.55, `hsl(${l.hue + 8}, 100%, ${(58 * fl).toFixed(1)}%)`);
+    body.addColorStop(1, `hsl(${l.hue + 20}, 100%, ${(78 * fl).toFixed(1)}%)`);
+    ctx.fillStyle = body;
+    ctx.fill();
+
+    // paper ribs
+    if (s > 16) {
+      ctx.strokeStyle = `hsla(${l.hue - 10}, 80%, 30%, 0.25)`;
+      ctx.lineWidth = 1;
+      for (const k of [-0.45, 0, 0.45]) {
+        ctx.beginPath();
+        ctx.moveTo(k * topW, hTop - (k === 0 ? s * 0.1 : 0));
+        ctx.quadraticCurveTo(k * topW * 1.15, 0, k * botW, hBot);
+        ctx.stroke();
+      }
+    }
+
+    // flame at the opening
+    ctx.globalCompositeOperation = 'lighter';
+    const fg = ctx.createRadialGradient(0, hBot - s * 0.05, 0, 0, hBot - s * 0.05, s * 0.45);
+    fg.addColorStop(0, `rgba(255, 250, 220, ${0.95 * fl})`);
+    fg.addColorStop(0.4, `rgba(255, 190, 80, ${0.6 * fl})`);
+    fg.addColorStop(1, 'rgba(255, 120, 20, 0)');
+    ctx.fillStyle = fg;
+    ctx.beginPath(); ctx.arc(0, hBot - s * 0.05, s * 0.45, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  // ---------- Diyas (oil lamps) along the bottom ----------
+  let diyas = [];
+  function buildDiyas() {
+    const n = Math.max(5, Math.round(W / 120));
+    diyas = Array.from({ length: n }, (_, i) => ({
+      x: (i + 0.5) * (W / n), phase: Math.random() * 10,
+      size: Math.min(28, Math.max(14, W / 60)),
+    }));
+  }
+  function drawDiya(d, t) {
+    const s = d.size, y = H - s * 1.1;
+    const fl = 0.85 + 0.15 * Math.sin(t * 11 + d.phase) * Math.cos(t * 7 + d.phase);
+    ctx.save();
+    ctx.translate(d.x, y);
+
+    // ground glow
+    ctx.globalCompositeOperation = 'lighter';
+    const gg = ctx.createRadialGradient(0, -s * 0.6, 0, 0, -s * 0.6, s * 4);
+    gg.addColorStop(0, `rgba(255, 160, 60, ${0.35 * fl})`);
+    gg.addColorStop(1, 'rgba(255, 100, 20, 0)');
+    ctx.fillStyle = gg;
+    ctx.beginPath(); ctx.arc(0, -s * 0.6, s * 4, 0, Math.PI * 2); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+
+    // clay bowl
+    ctx.beginPath();
+    ctx.moveTo(-s, -s * 0.2);
+    ctx.quadraticCurveTo(-s * 0.9, s * 0.55, 0, s * 0.55);
+    ctx.quadraticCurveTo(s * 0.9, s * 0.55, s * 1.25, -s * 0.35);
+    ctx.quadraticCurveTo(s * 0.2, -s * 0.05, -s, -s * 0.2);
+    const bowl = ctx.createLinearGradient(0, -s * 0.3, 0, s * 0.55);
+    bowl.addColorStop(0, '#d9772b'); bowl.addColorStop(1, '#6b2a0c');
+    ctx.fillStyle = bowl; ctx.fill();
+    // rim dots
+    ctx.fillStyle = '#ffd27a';
+    for (let k = -0.6; k <= 0.7; k += 0.32) {
+      ctx.beginPath(); ctx.arc(k * s, s * 0.18, s * 0.06, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // flame
+    const fx = s * 0.95, fy = -s * 0.45;
+    const sway = Math.sin(t * 6 + d.phase) * s * 0.08;
+    const fh = s * (1.0 + 0.25 * fl);
+    ctx.globalCompositeOperation = 'lighter';
+    const halo = ctx.createRadialGradient(fx, fy - fh * 0.4, 0, fx, fy - fh * 0.4, s * 1.4);
+    halo.addColorStop(0, `rgba(255, 220, 120, ${0.6 * fl})`);
+    halo.addColorStop(1, 'rgba(255, 140, 30, 0)');
+    ctx.fillStyle = halo;
+    ctx.beginPath(); ctx.arc(fx, fy - fh * 0.4, s * 1.4, 0, Math.PI * 2); ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(fx - s * 0.18, fy);
+    ctx.quadraticCurveTo(fx - s * 0.22, fy - fh * 0.5, fx + sway, fy - fh);
+    ctx.quadraticCurveTo(fx + s * 0.22, fy - fh * 0.5, fx + s * 0.18, fy);
+    ctx.quadraticCurveTo(fx, fy + s * 0.12, fx - s * 0.18, fy);
+    const fg = ctx.createLinearGradient(fx, fy, fx, fy - fh);
+    fg.addColorStop(0, 'rgba(255,255,240,1)');
+    fg.addColorStop(0.35, 'rgba(255,210,90,0.95)');
+    fg.addColorStop(1, 'rgba(255,90,20,0.6)');
+    ctx.fillStyle = fg; ctx.fill();
+    ctx.restore();
+  }
+
+  // ---------- Fireworks ----------
+  const rockets = [], sparks = [];
+  let nextFirework = 3;
+  function launchRocket(tx, ty) {
+    const x = tx ?? rand(0.15, 0.85) * W;
+    rockets.push({
+      x, y: H, tx: x + rand(-40, 40), ty: ty ?? rand(0.12, 0.4) * H,
+      hue: [45, 330, 200, 120, 15, 280][Math.floor(Math.random() * 6)],
+      t: 0, dur: rand(1.1, 1.6),
+    });
+  }
+  function explode(x, y, hue) {
+    const n = 90 + Math.floor(Math.random() * 60);
+    const speed = rand(110, 190);
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + rand(-0.05, 0.05);
+      const v = speed * rand(0.6, 1);
+      sparks.push({
+        x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v,
+        life: rand(1.4, 2.2), age: 0, hue: hue + rand(-12, 12),
+        px: x, py: y,
+      });
+    }
+  }
+  function updateFireworks(dt) {
+    for (let i = rockets.length - 1; i >= 0; i--) {
+      const r = rockets[i];
+      r.t += dt;
+      const p = Math.min(1, r.t / r.dur), e = 1 - Math.pow(1 - p, 3);
+      r.px = r.x2 ?? r.x; r.py = r.y2 ?? H;
+      r.x2 = r.x + (r.tx - r.x) * e; r.y2 = H + (r.ty - H) * e;
+      if (p >= 1) { explode(r.tx, r.ty, r.hue); rockets.splice(i, 1); }
+    }
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const s = sparks[i];
+      s.age += dt;
+      if (s.age > s.life) { sparks.splice(i, 1); continue; }
+      s.px = s.x; s.py = s.y;
+      s.vx *= Math.pow(0.35, dt); s.vy = s.vy * Math.pow(0.35, dt) + 60 * dt;
+      s.x += s.vx * dt; s.y += s.vy * dt;
+    }
+  }
+  function drawFireworks() {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    for (const r of rockets) {
+      if (r.x2 == null) continue;
+      ctx.strokeStyle = 'rgba(255, 220, 160, 0.9)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(r.x2, r.y2 + 14); ctx.lineTo(r.x2, r.y2); ctx.stroke();
+    }
+    for (const s of sparks) {
+      const k = 1 - s.age / s.life;
+      const tw = k < 0.3 ? (Math.random() < 0.5 ? 1 : 0.2) : 1;
+      ctx.strokeStyle = `hsla(${s.hue.toFixed(0)}, 100%, ${(60 + k * 25).toFixed(1)}%, ${Math.max(0, k * tw).toFixed(3)})`;
+      ctx.lineWidth = 1.2 + k * 1.6;
+      ctx.beginPath(); ctx.moveTo(s.px, s.py); ctx.lineTo(s.x, s.y); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // ---------- Greeting ----------
+  function drawGreeting(t) {
+    const cycle = 16, p = (t % cycle) / cycle;
+    let a = 0;
+    if (p > 0.15 && p < 0.25) a = (p - 0.15) / 0.1;
+    else if (p >= 0.25 && p < 0.6) a = 1;
+    else if (p >= 0.6 && p < 0.7) a = 1 - (p - 0.6) / 0.1;
+    if (a <= 0) return;
+    const size = Math.min(W / 9, H / 6);
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `600 ${size}px Georgia, "Times New Roman", serif`;
+    ctx.shadowColor = 'rgba(255, 170, 60, 0.9)'; ctx.shadowBlur = size * 0.4;
+    const g = ctx.createLinearGradient(0, H * 0.38 - size / 2, 0, H * 0.38 + size / 2);
+    g.addColorStop(0, '#fff3c4'); g.addColorStop(1, '#ffae3c');
+    ctx.fillStyle = g;
+    ctx.fillText('Happy Diwali', W / 2, H * 0.38);
+    ctx.font = `400 ${size * 0.32}px Georgia, serif`;
+    ctx.shadowBlur = size * 0.2;
+    ctx.fillStyle = '#ffe2b0';
+    ctx.fillText('शुभ दीपावली', W / 2, H * 0.38 + size * 0.75);
+    ctx.restore();
+  }
+
+  // ---------- Sky ----------
+  function drawSky(t) {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#05030f');
+    g.addColorStop(0.55, '#140a2e');
+    g.addColorStop(0.85, '#3a1530');
+    g.addColorStop(1, '#5a2312');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+    // moon
+    const mx = W * 0.82, my = H * 0.16, mr = Math.min(W, H) * 0.045;
+    const mg = ctx.createRadialGradient(mx, my, mr * 0.5, mx, my, mr * 5);
+    mg.addColorStop(0, 'rgba(255, 240, 210, 0.25)'); mg.addColorStop(1, 'rgba(255,240,210,0)');
+    ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(mx, my, mr * 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff4dc'; ctx.beginPath(); ctx.arc(mx, my, mr, 0, Math.PI * 2); ctx.fill();
+
+    for (const s of stars) {
+      const a = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * s.speed + s.phase));
+      ctx.fillStyle = `rgba(255, 245, 225, ${a})`;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // ---------- Loop ----------
+  let last = performance.now(), t = 0;
+  const errBox = document.getElementById('err');
+  let errShown = false;
+  function frame(now) {
+    requestAnimationFrame(frame);
+    try { step(now); } catch (e) {
+      if (!errShown) { errShown = true; errBox.hidden = false; errBox.textContent = 'Animation error: ' + (e && e.message || e); }
+    }
+  }
+  function step(now) {
+    // some in-app browsers size the page after load without a resize event
+    if (canvas.clientWidth && (canvas.clientWidth !== W || canvas.clientHeight !== H)) {
+      const first = !W || !H; resize(); if (first) seedLanterns();
+    }
+    if (!W || !H) return;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (!state.paused) {
+      t += dt;
+      for (const l of lanterns) {
+        l.y -= l.vy * dt;
+        if (l.y < -l.size * 4) Object.assign(l, makeLantern(), { depth: l.depth, size: l.size, vy: l.vy });
+      }
+      while (lanterns.length > Math.max(14, Math.round(W / 55)) + 25) lanterns.shift();
+      if (state.fireworks) {
+        nextFirework -= dt;
+        if (nextFirework <= 0) { launchRocket(); nextFirework = rand(1.5, 4); }
+      }
+      updateFireworks(dt);
+    }
+
+    drawSky(t);
+    const far = lanterns.filter(l => l.depth < 0.5), near = lanterns.filter(l => l.depth >= 0.5);
+    for (const l of far) drawLantern(l, t);
+    drawFireworks();
+    if (state.text) drawGreeting(t);
+    for (const l of near) drawLantern(l, t);
+    for (const d of diyas) drawDiya(d, t);
+  }
+
+  // ---------- Interaction ----------
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.clientY > H * 0.6) {
+      const l = makeLantern(e.clientX, e.clientY);
+      l.depth = rand(0.6, 1); l.size = 10 + l.depth * l.depth * 38; l.vy = 10 + l.depth * 28;
+      lanterns.push(l); lanterns.sort((a, b) => a.depth - b.depth);
+    } else {
+      launchRocket(e.clientX, e.clientY);
+    }
+    showUI();
+  });
+
+  const ui = document.getElementById('ui'), hint = document.getElementById('hint');
+  let hideTimer;
+  function showUI() {
+    ui.classList.remove('hidden'); document.body.classList.remove('hide-cursor');
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => {
+      ui.classList.add('hidden'); hint.classList.add('hidden');
+      document.body.classList.add('hide-cursor');
+    }, 4000);
+  }
+  window.addEventListener('pointermove', showUI);
+
+  const btnFull = document.getElementById('btnFull');
+  async function toggleFullscreen() {
+    try {
+      const el = document.documentElement;
+      const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+      if (!fsEl) await (el.requestFullscreen ? el.requestFullscreen() : el.webkitRequestFullscreen());
+      else await (document.exitFullscreen ? document.exitFullscreen() : document.webkitExitFullscreen());
+    } catch (_) { /* fullscreen not allowed here */ }
+  }
+  btnFull.onclick = toggleFullscreen;
+  if (!document.documentElement.requestFullscreen && !document.documentElement.webkitRequestFullscreen) btnFull.style.display = 'none';
+
+  const btnPlay = document.getElementById('btnPlay');
+  function togglePause() { state.paused = !state.paused; btnPlay.textContent = state.paused ? '▶ Play' : '⏸ Pause'; }
+  btnPlay.onclick = togglePause;
+
+  function toggle(btn, key) {
+    btn.onclick = () => { state[key] = !state[key]; btn.setAttribute('aria-pressed', state[key]); };
+  }
+  toggle(document.getElementById('btnFireworks'), 'fireworks');
+  toggle(document.getElementById('btnText'), 'text');
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+    else if (e.key === ' ') { e.preventDefault(); togglePause(); }
+    else if (e.key === 'Enter') launchRocket();
+  });
+
+  // Record a video (webm/mp4) to play on a TV/projector from USB or any player
+  const btnRec = document.getElementById('btnRec');
+  if (!canvas.captureStream || !window.MediaRecorder) btnRec.style.display = 'none';
+  btnRec.onclick = () => {
+    if (btnRec.dataset.busy) return;
+    const types = ['video/mp4;codecs=avc1', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+    const mimeType = types.find(m => MediaRecorder.isTypeSupported(m)) || '';
+    const rec = new MediaRecorder(canvas.captureStream(30), mimeType ? { mimeType, videoBitsPerSecond: 8e6 } : {});
+    const chunks = [];
+    rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+    rec.onstop = () => {
+      const type = rec.mimeType || 'video/webm';
+      const blob = new Blob(chunks, { type });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `diwali-lanterns.${type.includes('mp4') ? 'mp4' : 'webm'}`;
+      a.click();
+      btnRec.textContent = '⏺ Record 30s video'; btnRec.classList.remove('rec'); delete btnRec.dataset.busy;
+    };
+    rec.start(1000);
+    btnRec.dataset.busy = '1'; btnRec.classList.add('rec');
+    let left = 30;
+    btnRec.textContent = `● Recording… ${left}s`;
+    const iv = setInterval(() => {
+      left--; btnRec.textContent = `● Recording… ${left}s`;
+      if (left <= 0) { clearInterval(iv); rec.stop(); }
+    }, 1000);
+  };
+
+  // Keep the screen awake while casting
+  async function wake() {
+    try { if ('wakeLock' in navigator) await navigator.wakeLock.request('screen'); } catch (_) {}
+  }
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && wake());
+  wake();
+
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', () => setTimeout(resize, 300));
+  if (window.ResizeObserver) new ResizeObserver(() => resize()).observe(canvas);
+  resize(); seedLanterns(); showUI();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
