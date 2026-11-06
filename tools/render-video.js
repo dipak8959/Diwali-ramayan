@@ -1,6 +1,6 @@
 const { chromium } = require('playwright');
 const { spawn } = require('child_process');
-// Usage: node tools/render-video.js <page.html> <out.mp4> [seconds=120] [fps=30] [cssWidth=1024] [cssHeight=768]
+// Usage: node tools/render-video.js <page.html[?query][#layout=...]> <out.mp4> [seconds=120] [fps=30] [cssWidth=1024] [cssHeight=768]
 // Renders at 2x, so the defaults give a 2048x1536 (iPad 4:3) H.264 MP4. Needs ffmpeg and playwright.
 const [,, page, out, secs = '120', fps = '30', w = '1024', h = '768'] = process.argv;
 (async () => {
@@ -12,8 +12,9 @@ const [,, page, out, secs = '120', fps = '30', w = '1024', h = '768'] = process.
     window.requestAnimationFrame = (cb) => { q.push(cb); return q.length; };
     window.__step = () => { now += 1000 / fps; const c = q; q = []; c.forEach(f => f(now)); };
   }, +fps);
-  await p.goto('file://' + require('path').resolve(page));
-  await p.addStyleTag({ content: '#ui,#hint,#err{display:none!important}' });
+  const [, pagePath, pageExtra] = page.match(/^([^?#]*)(.*)$/);   // the page may carry ?query or #layout=... after the path
+  await p.goto('file://' + require('path').resolve(pagePath) + pageExtra);
+  await p.addStyleTag({ content: '#ui,#hint,#err,#panel{display:none!important}' });
   const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', fps, '-i', '-',
     '-c:v', 'libx264', '-preset', 'medium', '-crf', '19', '-pix_fmt', 'yuv420p', '-profile:v', 'high',
     '-level', '5.1', '-movflags', '+faststart', '-tag:v', 'avc1', out], { stdio: ['pipe', 'inherit', 'inherit'] });
