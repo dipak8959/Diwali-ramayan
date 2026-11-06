@@ -97,11 +97,11 @@
   // Surfaces are four-corner shapes in the projector picture, as fractions of its width and height.
   // The default layout is a first guess from the room video: left door, the wall between, right door.
   const DEFAULT_SURFACES = () => [
-    { name: 'Left door',  pts: [[.09, .17], [.31, .17], [.31, .99], [.09, .99]] },
-    { name: 'Wall',       pts: [[.35, .04], [.65, .04], [.65, .99], [.35, .99]] },
-    { name: 'Right door', pts: [[.70, .17], [.90, .17], [.90, .99], [.70, .99]] },
+    { name: 'Left door',  pts: [[.081, .214], [.308, .219], [.308, .99], [.081, .99]] },
+    { name: 'Wall',       pts: [[.337, .02], [.685, .02], [.685, .98], [.337, .98]] },
+    { name: 'Right door', pts: [[.702, .223], [.885, .227], [.885, .99], [.702, .99]] },
   ];
-  const cfg = { surfaces: DEFAULT_SURFACES(), win: 1400, ground: .92, vstretch: 1.9, inset: 2, captions: false };
+  const cfg = { surfaces: DEFAULT_SURFACES(), win: 1400, ground: .92, vstretch: 2, inset: 2, captions: false };
   const validLayout = (o) => o && Array.isArray(o.surfaces) && o.surfaces.length > 0 && o.surfaces.every(s =>
     s && Array.isArray(s.pts) && s.pts.length === 4 && s.pts.every(p => Array.isArray(p) && isFinite(p[0]) && isFinite(p[1])));
   const applyLayout = (o) => {
@@ -795,7 +795,7 @@
   $('bIn0').onclick = () => setInset(-1); $('bIn1').onclick = () => setInset(1);
   $('bPrev').onclick = () => jump(curScene() - 1); $('bNext').onclick = () => jump(curScene() + 1);
   bPlay.onclick = togglePause;
-  $('bReset').onclick = () => { cfg.surfaces = DEFAULT_SURFACES(); cfg.win = 1400; cfg.ground = .92; cfg.vstretch = 1.9; cfg.inset = 2; sel = 0; saveCfg(); };
+  $('bReset').onclick = () => { cfg.surfaces = DEFAULT_SURFACES(); cfg.win = 1400; cfg.ground = .92; cfg.vstretch = 2; cfg.inset = 2; sel = 0; saveCfg(); };
   const bFull = $('bFull'); bFull.onclick = toggleFullscreen;
   if (!document.documentElement.requestFullscreen && !document.documentElement.webkitRequestFullscreen) bFull.style.display = 'none';
 
