@@ -39,6 +39,7 @@ The story is one continuous world, so a character or an arrow leaves one surface
 3. **Test** mode shows bright panels. Drag the corner dots until each panel sits on its door or wall.
    **+ Surface** / **− Surface** add or remove shapes. **Edge +** pulls the edges inward to avoid light spill.
 4. **Art ▲ ▼** moves the ground line the characters stand on. **Art − +** changes the size of the picture.
+   **Tall − +** stretches the story vertically. Use it if the projector squashes the picture, until the circle in Test mode looks round on the wall.
 5. **Play** shows the journey. **Record video** saves one full loop. Or open **Layout…**, copy the text, and render a clean MP4 with
    `node tools/render-video.js "wall/index.html?play#layout=<BASE64>" wall.mp4 68 30 960 540`
    (the base64 is the layout text, base64-encoded and URL-encoded). Play the MP4 from a USB stick. Do not move the projector afterwards.

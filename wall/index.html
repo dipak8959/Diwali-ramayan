@@ -59,6 +59,8 @@
   <span class="lbl">Art / ground</span>
   <button id="bSmall" title="Smaller picture">−</button><button id="bBig" title="Bigger picture">+</button>
   <button id="bUp" title="Raise the ground line the characters stand on">▲</button><button id="bDown" title="Lower the ground line">▼</button>
+  <span class="lbl">Tall</span>
+  <button id="bTall0" title="Characters less tall">−</button><button id="bTall1" title="Characters taller: use when the projector squashes the picture">+</button>
   <span class="lbl">Edge</span>
   <button id="bIn0" title="Smaller inset">−</button><button id="bIn1" title="Pull edges inward to avoid light spill">+</button>
   <span class="sep"></span>
@@ -95,20 +97,20 @@
   // Surfaces are four-corner shapes in the projector picture, as fractions of its width and height.
   // The default layout is a first guess from the room video: left door, the wall between, right door.
   const DEFAULT_SURFACES = () => [
-    { name: 'Left door',  pts: [[.04, .05], [.26, .05], [.26, .97], [.04, .97]] },
-    { name: 'Wall',       pts: [[.31, .05], [.70, .05], [.70, .62], [.31, .62]] },
-    { name: 'Right door', pts: [[.75, .05], [.96, .05], [.96, .97], [.75, .97]] },
+    { name: 'Left door',  pts: [[.09, .17], [.31, .17], [.31, .99], [.09, .99]] },
+    { name: 'Wall',       pts: [[.35, .04], [.65, .04], [.65, .99], [.35, .99]] },
+    { name: 'Right door', pts: [[.70, .17], [.90, .17], [.90, .99], [.70, .99]] },
   ];
-  const cfg = { surfaces: DEFAULT_SURFACES(), win: 900, ground: .62, inset: 2, captions: false };
+  const cfg = { surfaces: DEFAULT_SURFACES(), win: 900, ground: .62, vstretch: 1, inset: 2, captions: false };
   const validLayout = (o) => o && Array.isArray(o.surfaces) && o.surfaces.length > 0 && o.surfaces.every(s =>
     s && Array.isArray(s.pts) && s.pts.length === 4 && s.pts.every(p => Array.isArray(p) && isFinite(p[0]) && isFinite(p[1])));
   const applyLayout = (o) => {
     if (!validLayout(o)) return false;
     cfg.surfaces = o.surfaces.map((s, i) => ({ name: String(s.name || 'Surface ' + (i + 1)).slice(0, 30), pts: s.pts.map(p => [+p[0], +p[1]]) }));
-    for (const k of ['win', 'ground', 'inset']) if (isFinite(o[k])) cfg[k] = +o[k];
+    for (const k of ['win', 'ground', 'vstretch', 'inset']) if (isFinite(o[k])) cfg[k] = +o[k];
     return true;
   };
-  const layoutJSON = () => JSON.stringify({ surfaces: cfg.surfaces, win: Math.round(cfg.win), ground: Math.round(cfg.ground * 1000) / 1000, inset: cfg.inset });
+  const layoutJSON = () => JSON.stringify({ surfaces: cfg.surfaces, win: Math.round(cfg.win), ground: Math.round(cfg.ground * 1000) / 1000, vstretch: Math.round(cfg.vstretch * 100) / 100, inset: cfg.inset });
   try { applyLayout(JSON.parse(localStorage.getItem('wall-map-v1') || 'null')); } catch (_) {}
   const saveCfg = () => { try { localStorage.setItem('wall-map-v1', layoutJSON()); } catch (_) {} };
   try { const h = location.hash.match(/layout=([^&]+)/); if (h) applyLayout(JSON.parse(atob(decodeURIComponent(h[1])))); } catch (_) {}
@@ -631,7 +633,7 @@
   const hint = document.getElementById('hint'), ui = document.getElementById('ui');
   const HINTS = {
     edit: 'Edit: drag a corner dot onto the corner of a door or wall. Drag inside a shape to move it. Use + Surface for anything else you want to light.',
-    test: 'Test: bright panels. Line each one up with the real door or wall, then press Play.',
+    test: 'Test: bright panels. Line each one up with the real door or wall. The circle in each panel should look round on the wall. If it looks wide, press Tall +. Then press Play.',
     play: '',
   };
   function setMode(m) {
@@ -665,7 +667,7 @@
     const k = W / cfg.win, c = camCenter(), x0 = c - cfg.win / 2, x1 = c + cfg.win / 2;
     ctx.save(); clipTo(P);
     ctx.save();
-    ctx.translate(0, cfg.ground * H); ctx.scale(k, k); ctx.translate(-x0, -GY);   // the ground line of the scene sits at cfg.ground of the picture height
+    ctx.translate(0, cfg.ground * H); ctx.scale(k, k * cfg.vstretch); ctx.translate(-x0, -GY);   // the ground line of the scene sits at cfg.ground of the picture height
     drawBackground(x0, x1); drawStars(x0, x1, T);
     for (let i = 0; i < NP; i++) if (i * PW + PW > x0 && i * PW < x1) drawPanel(i);
     drawParts();
@@ -688,6 +690,9 @@
       ctx.stroke();
       ctx.fillStyle = '#000'; ctx.font = `600 ${Math.max(14, Math.min(40, (x1 - x0) / 7))}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(cfg.surfaces[n].name, (x0 + x1) / 2, (y0 + y1) / 2);
+      // a circle drawn with the same stretch as the story: it should look round on the real wall
+      const rr = Math.min(x1 - x0, (y1 - y0) / cfg.vstretch) * .32;
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse((x0 + x1) / 2, y0 + (y1 - y0) * .25, rr, rr * cfg.vstretch, 0, 0, 6.283); ctx.stroke();
       ctx.restore();
     });
   }
@@ -772,6 +777,7 @@
   const togglePause = () => { paused = !paused; bPlay.textContent = paused ? '▶ Play' : '⏸ Pause'; };
   const setWin = (f) => { cfg.win = clamp(cfg.win * f, 300, 2400); saveCfg(); };
   const setGround = (d) => { cfg.ground = clamp(cfg.ground + d / H, .1, 1.2); saveCfg(); };
+  const setTall = (f) => { cfg.vstretch = clamp(cfg.vstretch * f, .5, 4); saveCfg(); };
   const setInset = (d) => { cfg.inset = clamp(cfg.inset + d, 0, 30); saveCfg(); };
   async function toggleFullscreen() {
     try {
@@ -785,10 +791,11 @@
   $('bDel').onclick = () => { if (cfg.surfaces.length > 1) { cfg.surfaces.splice(sel, 1); sel = Math.max(0, sel - 1); saveCfg(); } };
   $('bSmall').onclick = () => setWin(1.05); $('bBig').onclick = () => setWin(1 / 1.05);
   $('bUp').onclick = () => setGround(-14); $('bDown').onclick = () => setGround(14);
+  $('bTall0').onclick = () => setTall(1 / 1.06); $('bTall1').onclick = () => setTall(1.06);
   $('bIn0').onclick = () => setInset(-1); $('bIn1').onclick = () => setInset(1);
   $('bPrev').onclick = () => jump(curScene() - 1); $('bNext').onclick = () => jump(curScene() + 1);
   bPlay.onclick = togglePause;
-  $('bReset').onclick = () => { cfg.surfaces = DEFAULT_SURFACES(); cfg.win = 900; cfg.ground = .62; cfg.inset = 2; sel = 0; saveCfg(); };
+  $('bReset').onclick = () => { cfg.surfaces = DEFAULT_SURFACES(); cfg.win = 900; cfg.ground = .62; cfg.vstretch = 1; cfg.inset = 2; sel = 0; saveCfg(); };
   const bFull = $('bFull'); bFull.onclick = toggleFullscreen;
   if (!document.documentElement.requestFullscreen && !document.documentElement.webkitRequestFullscreen) bFull.style.display = 'none';
 
