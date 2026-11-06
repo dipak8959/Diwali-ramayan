@@ -33,6 +33,7 @@ Video for a projector or USB stick: `node tools/render-video.js ramayan/index.ht
 ## Wall mapper (the frieze above the doors, or the doors and wall)
 `wall/index.html` lights only the shapes you outline and keeps everything else dark.
 The default **View: Frieze** is one long band in the gap between the ceiling and the tops of the doors: the five scenes sit side by side from left to right, and only the scene in progress is lit. The others stay dark, so the light moves along the wall as the story moves on.
+**Look: Night** (the default) draws no sky at all: figures are lit gold shapes on black, so only light reaches the wall. **Look: Day** paints a sky with dark silhouettes, for a screen.
 **View: Doors** switches to separate windows on the left door, the wall and the right door.
 The story is one continuous world, so a character or an arrow leaves one surface, crosses the dark gap and arrives on the next.
 

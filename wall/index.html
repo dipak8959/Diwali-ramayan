@@ -69,6 +69,7 @@
   <button id="bJson">Layout…</button>
   <button id="bRec">⏺ Record video</button>
   <button id="bFull">⛶ Fullscreen</button>
+  <button id="bLook" title="Night: only light is shown, for the wall. Day: painted sky, for a screen.">Look: Night</button>
   <button id="bView" title="Switch between the band above the doors and separate door windows">View: Frieze</button>
   <button id="bReset">Reset</button>
 </div>
@@ -79,7 +80,14 @@
 
   // ---------- constants ----------
   const PW = 1200, PH = 400, GY = 345;        // one scene is 1200 x 400 (3:1); ground line at y = 345
-  const INK = '#0a0409';
+  // Night look (default): a projector can only add light, so figures are drawn as lit gold shapes on black and the sky is not drawn at all.
+  // Day look: dark silhouettes against a painted sky (for a screen, not a wall).
+  let INK = '#0a0409', DIM = INK, MID = INK, RAV = INK, NIGHT = false;
+  function setLook(night) {
+    NIGHT = night;
+    if (night) { INK = '#ffd48a'; DIM = '#5e3412'; MID = '#a8652a'; RAV = '#ff6a3a'; }
+    else { INK = '#0a0409'; DIM = MID = RAV = INK; }
+  }
   const HOLD = 11, PAN = 2.5, SEG = HOLD + PAN, NP = 5;
   const LOOP = (NP - 1) * SEG + HOLD + PAN;   // 67.5 s
   const GOLD = '#ffcf70';
@@ -111,7 +119,7 @@
     frieze: { win: 6320, ground: .122, vstretch: 2, inset: 1 },
     doors:  { win: 1400, ground: .92,  vstretch: 2, inset: 2 },
   };
-  const cfg = { view: 'frieze', surfaces: SURFACES.frieze(), ...PRESET.frieze, captions: false };
+  const cfg = { view: 'frieze', look: 'night', surfaces: SURFACES.frieze(), ...PRESET.frieze, captions: false };
   const applyPreset = (v) => { cfg.view = v; cfg.surfaces = SURFACES[v](); Object.assign(cfg, PRESET[v]); };
   const validLayout = (o) => o && Array.isArray(o.surfaces) && o.surfaces.length > 0 && o.surfaces.every(s =>
     s && Array.isArray(s.pts) && s.pts.length === 4 && s.pts.every(p => Array.isArray(p) && isFinite(p[0]) && isFinite(p[1])));
@@ -119,10 +127,11 @@
     if (!validLayout(o)) return false;
     cfg.surfaces = o.surfaces.map((s, i) => ({ name: String(s.name || 'Surface ' + (i + 1)).slice(0, 30), pts: s.pts.map(p => [+p[0], +p[1]]) }));
     cfg.view = o.view in SURFACES ? o.view : 'doors';
+    cfg.look = o.look === 'day' ? 'day' : 'night';
     for (const k of ['win', 'ground', 'vstretch', 'inset']) if (isFinite(o[k])) cfg[k] = +o[k];
     return true;
   };
-  const layoutJSON = () => JSON.stringify({ view: cfg.view, surfaces: cfg.surfaces, win: Math.round(cfg.win), ground: Math.round(cfg.ground * 1000) / 1000, vstretch: Math.round(cfg.vstretch * 100) / 100, inset: cfg.inset });
+  const layoutJSON = () => JSON.stringify({ view: cfg.view, look: cfg.look, surfaces: cfg.surfaces, win: Math.round(cfg.win), ground: Math.round(cfg.ground * 1000) / 1000, vstretch: Math.round(cfg.vstretch * 100) / 100, inset: cfg.inset });
   try { applyLayout(JSON.parse(localStorage.getItem('wall-map-v1') || 'null')); } catch (_) {}
   const saveCfg = () => { try { localStorage.setItem('wall-map-v1', layoutJSON()); } catch (_) {} };
   try { const h = location.hash.match(/layout=([^&]+)/); if (h) applyLayout(JSON.parse(atob(decodeURIComponent(h[1])))); } catch (_) {}
@@ -141,6 +150,7 @@
   const mixc = (a, b, t) => `rgb(${Math.round(lerp(a[0], b[0], t))},${Math.round(lerp(a[1], b[1], t))},${Math.round(lerp(a[2], b[2], t))})`;
 
   function drawBackground(x0, x1) {
+    if (NIGHT) return;   // no sky: nothing is projected where there is no light
     const step = Math.max(12, Math.round((x1 - x0) / 180));
     for (let x = x0 - (x0 % step) - step; x < x1 + step; x += step) {
       const u = clamp((x + step / 2) / PW - 0.5, 0, NP - 1);
@@ -164,6 +174,7 @@
     ph: Math.random() * 6.28, sp: rand(.6, 2),
   }));
   function drawStars(x0, x1, t) {
+    if (NIGHT) return;
     for (const s of stars) {
       if (s.x < x0 - 5 || s.x > x1 + 5) continue;
       const u = clamp(s.x / PW - 0.5, 0, NP - 1), j = Math.min(NP - 2, Math.floor(u));
@@ -184,10 +195,16 @@
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill(); ctx.restore();
   }
   function celestial(x, y, r, fill, gcol) {
-    glow(x, y, r * 4.5, gcol, 0.45);
+    if (NIGHT) r *= .6;
+    glow(x, y, r * 4.5, gcol, NIGHT ? .3 : .45);
     ctx.fillStyle = fill; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill();
   }
   function ground() {
+    if (NIGHT) {   // only a thin glowing line, so the characters have something to stand on
+      const g = ctx.createLinearGradient(0, GY, 0, GY + 14);
+      g.addColorStop(0, 'rgba(255,170,70,.75)'); g.addColorStop(1, 'rgba(255,170,70,0)');
+      ctx.fillStyle = g; ctx.fillRect(-2, GY, PW + 4, 14); return;
+    }
     ctx.fillStyle = INK;
     ctx.fillRect(-2, GY, PW + 4, 900);
   }
@@ -253,7 +270,7 @@
   }
 
   function seated(x, y, s, crown) {
-    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.fillStyle = INK;
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.fillStyle = MID;
     ctx.beginPath(); ctx.moveTo(-16, 0); ctx.lineTo(16, 0); ctx.lineTo(7, -32); ctx.lineTo(-7, -32); ctx.closePath(); ctx.fill();
     ctx.beginPath(); ctx.arc(0, -40, 8, 0, 6.283); ctx.fill();
     if (crown) { ctx.beginPath(); ctx.moveTo(-6, -46); ctx.lineTo(-4, -58); ctx.lineTo(0, -50); ctx.lineTo(4, -58); ctx.lineTo(6, -46); ctx.fill(); }
@@ -262,7 +279,7 @@
 
   function ravan(x, y, s, t, alpha, squash) {
     ctx.save(); ctx.translate(x, y); ctx.scale(s, s * squash); ctx.globalAlpha = alpha;
-    ctx.fillStyle = INK; ctx.strokeStyle = INK; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.fillStyle = RAV; ctx.strokeStyle = RAV; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.lineWidth = 14; for (const g of [1, -1]) { ctx.beginPath(); ctx.moveTo(g * 9, -72); ctx.lineTo(g * 14, 0); ctx.stroke(); }
     ctx.beginPath(); ctx.moveTo(-17, -84); ctx.lineTo(17, -84); ctx.lineTo(24, -26); ctx.lineTo(-24, -26); ctx.closePath(); ctx.fill();
     ctx.beginPath(); ctx.moveTo(-30, -122); ctx.lineTo(30, -122); ctx.lineTo(15, -80); ctx.lineTo(-15, -80); ctx.closePath(); ctx.fill();
@@ -286,14 +303,14 @@
       ctx.beginPath(); ctx.arc(hx + sway, hy, r, 0, 6.283); ctx.fill();
       ctx.beginPath(); ctx.moveTo(hx + sway - r, hy - r * .6); ctx.lineTo(hx + sway - r * .5, hy - r * 1.9); ctx.lineTo(hx + sway, hy - r * 1.2);
       ctx.lineTo(hx + sway + r * .5, hy - r * 1.9); ctx.lineTo(hx + sway + r, hy - r * .6); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = GOLD; ctx.lineWidth = 1; ctx.stroke(); ctx.strokeStyle = INK;
+      ctx.strokeStyle = GOLD; ctx.lineWidth = 1; ctx.stroke(); ctx.strokeStyle = RAV;
       glow(hx + sway - r * .35, hy, 4, '255,60,30', 0.9); glow(hx + sway + r * .35, hy, 4, '255,60,30', 0.9);
     }
     ctx.restore();
   }
 
   function palace(x, y, s, lit, t) {
-    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.fillStyle = INK;
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.fillStyle = DIM;
     ctx.fillRect(0, -84, 360, 84);
     for (let k = 0; k < 18; k++) ctx.fillRect(k * 20 + 2, -92, 12, 8);
     for (const tx of [26, 300]) {
@@ -312,7 +329,7 @@
   }
 
   function tree(x, h, a, w) {
-    ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = INK;
+    ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = DIM;
     ctx.beginPath(); ctx.moveTo(x - w * .09, GY); ctx.lineTo(x - w * .05, GY - h); ctx.lineTo(x + w * .05, GY - h); ctx.lineTo(x + w * .09, GY); ctx.fill();
     for (const [dx, dy, r] of [[0, 0, .42], [-.34, .08, .32], [.34, .06, .34], [-.16, -.16, .3], [.2, -.18, .3]]) {
       ctx.beginPath(); ctx.arc(x + dx * w, GY - h + dy * w, r * w, 0, 6.283); ctx.fill();
@@ -537,7 +554,7 @@
     else if (i === 1) {
       celestial(180, 120, 40, '#ffe3b0', '255,170,90');
       // pillared court
-      ctx.save(); ctx.globalAlpha = .42; ctx.fillStyle = INK; ctx.strokeStyle = INK; ctx.lineWidth = 16;
+      ctx.save(); ctx.globalAlpha = .42; ctx.fillStyle = DIM; ctx.strokeStyle = DIM; ctx.lineWidth = 16;
       for (let k = 0; k < 6; k++) { ctx.fillRect(110 + k * 220 - 10, GY - 230, 20, 230); }
       for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.arc(110 + k * 220 + 110, GY - 230, 100, Math.PI, 0); ctx.stroke(); }
       ctx.fillRect(0, GY - 252, PW, 16); ctx.restore();
@@ -546,7 +563,7 @@
       for (let k = 0; k < 5; k++) seated(1020 + k * 34, GY, .62 + (k % 2) * .06, k % 2 === 1);
       // the bow of Shiva
       const lifted = lt >= 3.4;
-      ctx.fillStyle = INK; ctx.fillRect(572, GY - 26, 6, 26); ctx.fillRect(662, GY - 26, 6, 26); ctx.fillRect(566, GY - 32, 106, 8);
+      ctx.fillStyle = DIM; ctx.fillRect(572, GY - 26, 6, 26); ctx.fillRect(662, GY - 26, 6, 26); ctx.fillRect(566, GY - 32, 106, 8);
       if (!lifted) {
         glow(620, GY - 60, 80, '255,210,110', .35 + .15 * Math.sin(t * 3));
         ctx.strokeStyle = INK; ctx.lineWidth = 8; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(520, GY - 46); ctx.quadraticCurveTo(620, GY - 88, 720, GY - 46); ctx.stroke();
@@ -595,7 +612,7 @@
     else if (i === 3) {
       celestial(250, 110, 44, '#ff6a4a', '255,70,50');
       // burning Lanka skyline
-      ctx.save(); ctx.globalAlpha = .55; ctx.fillStyle = INK;
+      ctx.save(); ctx.globalAlpha = .55; ctx.fillStyle = DIM;
       for (let k = 0; k < 14; k++) { const bx = 560 + k * 48, bh = 70 + ((k * 53) % 90); ctx.fillRect(bx, GY - bh, 38, bh); if (k % 3 === 0) { ctx.beginPath(); ctx.arc(bx + 19, GY - bh, 19, Math.PI, 0); ctx.fill(); } }
       ctx.restore();
       glow(900, GY - 20, 330, '255,90,30', .25 + .08 * Math.sin(t * 5));
@@ -699,12 +716,12 @@
     ctx.save();
     ctx.translate(0, cfg.ground * H); ctx.scale(k, k * cfg.vstretch); ctx.translate(-x0, -GY);   // the ground line of the scene sits at cfg.ground of the picture height
     drawBackground(x0, x1); drawStars(x0, x1, T);
-    if (fr) { ctx.fillStyle = INK; ctx.fillRect(x0, GY, x1 - x0, 900); }
+    if (fr && !NIGHT) { ctx.fillStyle = INK; ctx.fillRect(x0, GY, x1 - x0, 900); }
     for (let i = 0; i < NP; i++) if (i * PW + PW > x0 && i * PW < x1) drawPanel(i);
     drawParts();
     if (fr) sceneShade(x0, x1);
     ctx.restore();
-    if (flash > 0) { ctx.fillStyle = `rgba(255,236,200,${(flash * .55).toFixed(3)})`; ctx.fillRect(0, 0, W, H); }
+    if (flash > 0) { ctx.fillStyle = `rgba(255,236,200,${(flash * (NIGHT ? .2 : .55)).toFixed(3)})`; ctx.fillRect(0, 0, W, H); }
     const fade = T < 1 ? 1 - T : (T > LOOP - 1.5 ? (T - (LOOP - 1.5)) / 1.5 : 0);
     if (fade > 0) { ctx.fillStyle = `rgba(0,0,0,${clamp(fade).toFixed(3)})`; ctx.fillRect(0, 0, W, H); }
     ctx.restore();
@@ -745,6 +762,7 @@
   }
 
   function render() {
+    setLook(cfg.look !== 'day');
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
     const P = polys();
@@ -831,7 +849,10 @@
   const viewLabel = () => { bView.textContent = 'View: ' + (cfg.view === 'frieze' ? 'Frieze' : 'Doors'); };
   bView.onclick = () => { applyPreset(cfg.view === 'frieze' ? 'doors' : 'frieze'); sel = 0; saveCfg(); viewLabel(); };
   $('bReset').onclick = () => { applyPreset(cfg.view); sel = 0; saveCfg(); };
-  viewLabel();
+  const bLook = $('bLook');
+  const lookLabel = () => { bLook.textContent = 'Look: ' + (cfg.look === 'day' ? 'Day' : 'Night'); };
+  bLook.onclick = () => { cfg.look = cfg.look === 'day' ? 'night' : 'day'; saveCfg(); lookLabel(); };
+  viewLabel(); lookLabel();
   const bFull = $('bFull'); bFull.onclick = toggleFullscreen;
   if (!document.documentElement.requestFullscreen && !document.documentElement.webkitRequestFullscreen) bFull.style.display = 'none';
 
