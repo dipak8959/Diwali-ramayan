@@ -1116,6 +1116,7 @@ window.R3 = (function () {
   const ease = (t) => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   const rnd = (a, b) => a + Math.random() * (b - a);
   const LOOP = 225, WORLD = 6000, YAW = 1.12;
+  const SLOW = 1.6, SPDN = 60 * SLOW;   // everything lasts 1.6 times longer; walking speed is measured against that
 
   // ---------- renderer, camera, post-processing ----------
   const canvas = document.createElement('canvas');
@@ -1191,6 +1192,19 @@ window.R3 = (function () {
     surpanakha: { skin: 0x9a6ad0, hair: 0x120508, dress: [0xd02a7a, 0x701040], sash: 0xffc94a, female: true, evil: true },
     hermit:   { skin: 0xb88a60, hair: 0xcccccc, dress: [0x8a4a1a, 0x3a1c08], sash: 0x6a3a14, beard: true },
     agni:     { skin: 0xff8a2a, hair: 0xff4a10, dress: [0xff7a10, 0xc01800], sash: 0xffe060, crown: true },
+    brahma:   { skin: 0xf0c890, hair: 0xffffff, dress: [0xfff0b0, 0xffc050], sash: 0xffd23a, crown: true, beard: true },
+    vishnu:   { skin: 0x4f9be0, hair: 0x1c2470, dress: [0xffe066, 0xff9d1c], sash: 0xe8503a, crown: true },
+    youngdash: { skin: 0xd9a077, hair: 0x2a1a10, dress: [0xc03a3a, 0x701818], sash: 0xffd23a, crown: true },
+    shravan:  { skin: 0xc89060, hair: 0x2a1a10, dress: [0xd8c090, 0x8a6a40], sash: 0x8a6a40 },
+    blinda:   { skin: 0xc89868, hair: 0xeeeeee, dress: [0xd8c8a0, 0x8a7a50], sash: 0x8a7a50, beard: true },
+    blindb:   { skin: 0xd0a078, hair: 0xeeeeee, dress: [0xe0d0a8, 0x8a7a50], sash: 0x8a7a50, female: true },
+    rishya:   { skin: 0xd8a070, hair: 0x3a2a1a, dress: [0xffffff, 0xe0b070], sash: 0xff9d1c, horns: true },
+    kausalya: { skin: 0xf0b58c, hair: 0x2c170e, dress: [0xf5f0e0, 0xd8b870], sash: 0xffd23a, female: true, tiara: true },
+    sumitra:  { skin: 0xf0b58c, hair: 0x2c170e, dress: [0x3a9a6a, 0x105a3a], sash: 0xffd23a, female: true, tiara: true },
+    vasishtha: { skin: 0xd9a077, hair: 0xf8f8f8, dress: [0xffffff, 0xd0c0a0], sash: 0xff9d1c, beard: true },
+    parashurama: { skin: 0xb88060, hair: 0x1a100a, dress: [0xc07030, 0x603010], sash: 0x8a3a14, beard: true },
+    mandodari: { skin: 0xf0b58c, hair: 0x2c170e, dress: [0xe8e0f8, 0xa080d0], sash: 0xffd23a, female: true, tiara: true },
+    matali:   { skin: 0xe0a878, hair: 0x3a2a1a, dress: [0x6a8aff, 0x2a3aa0], sash: 0xffd23a },
     janaka:   { skin: 0xd9a077, hair: 0x5a5a5a, dress: [0x2a9a74, 0x104a3a], sash: 0xffd23a, crown: true, beard: true },
     ahalya:   { skin: 0xe8b08a, hair: 0x2a1a10, dress: [0xd06ac0, 0x701a70], sash: 0xffd23a, female: true },
     angada:   { skin: 0xe8b04a, hair: 0x7a4a1a, dress: [0xffe060, 0xc08a00], sash: 0x35e0ff, crown: true, monkey: true },
@@ -1392,12 +1406,13 @@ window.R3 = (function () {
       torso.add(h); heads.push(h);
     }
     H.heads = heads;
-    // four extra arms with swords
-    for (const [s, y, rz] of [[1, 28, -.5], [-1, 28, .5], [1, 18, -.9], [-1, 18, .9]]) {
-      const a = makeArm(sp, s, true); a.position.set(s * 14, y, 0); a.rotation.z = rz; a.rotation.x = -.3; torso.add(a);
-      const sw = mesh(new THREE.BoxGeometry(2.4, 40, .8), std(0xe8eef5, { metalness: .9, roughness: .2, emissive: 0x334455 }), 0, -26, 4, a.userData.el); sw.position.y = -34;
-      mesh(new THREE.BoxGeometry(8, 1.6, 2), GOLD, 0, -26, 4, a.userData.el);
+    // twenty arms in all (the two ordinary ones plus nine more on each side), some of them holding swords
+    H.xarms = [];
+    for (const s of [1, -1]) for (let i = 0; i < 9; i++) {
+      const a = makeArm(sp, s, true); a.position.set(s * 14, 22 + (i % 3) * 6, -i * 1.1); a.rotation.z = s * (.28 + i * .3); a.rotation.x = -.15; torso.add(a); H.xarms.push(a);
+      if (i % 3 === 0) { const sw = mesh(new THREE.BoxGeometry(2.4, 38, .8), std(0xe8eef5, { metalness: .9, roughness: .2, emissive: 0x334455 }), 0, -26, 4, a.userData.el); sw.position.y = -34; mesh(new THREE.BoxGeometry(8, 1.6, 2), GOLD, 0, -26, 4, a.userData.el); }
     }
+    heads.forEach(h => { h.userData.base = h.position.clone(); h.userData.bs = h.scale.x; h.userData.bz = h.rotation.z; });
     H.root.userData.eyeLights = []; return H;
   }
 
@@ -1669,6 +1684,42 @@ window.R3 = (function () {
   const heart = mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: heartTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), 0, 0, 0, scene); heart.visible = false;
   [[ram, 0x5aa0ff], [sita, 0xffd070], [lak, 0xffe0a0], [han, 0xff9a40]].forEach(([h, c]) => { const a = mesh(G.sph, glowMat(c), 0, 100, -14, h.root); a.scale.set(30, 66, 8); a.material.opacity = .09; });   // a soft divine aura
 
+  // ---------- the fifth wave: the family and the gods before Ram, and the great war ----------
+  const brahma = addNew('brahma', 1.05, { headScale: 1.25 }), vishnu = addNew('vishnu', 1.1, { headScale: 1.2 }), youngd = addNew('youngdash', 1), shravan = addNew('shravan', .8);
+  const blindA = addNew('blinda', .95, { headScale: 1.2 }), blindB = addNew('blindb', .95), rishya = addNew('rishya', 1), kausalya = addNew('kausalya', 1), sumitra = addNew('sumitra', 1);
+  const vasishtha = addNew('vasishtha', 1, { headScale: 1.25 }), parashu = addNew('parashurama', 1.05, { headScale: 1.2 }), mandodari = addNew('mandodari', 1), matali = addNew('matali', 1);
+  // Vishnu has four arms, holding a discus and a conch
+  for (const s of [1, -1]) { const a = makeArm(SPEC.vishnu, s); a.position.set(s * 13, 40, -3); a.rotation.z = s * .95; a.rotation.x = -.2; vishnu.torso.add(a);
+    if (s === 1) { const ch = mesh(new THREE.TorusGeometry(9, 1.4, 6, 24), glowMat(0xffe070), 0, -26, 0, a.userData.el); ch.rotation.y = Math.PI / 2; } else { mesh(G.sph, std(0xfff4e0, { emissive: 0x806040 }), 0, -27, 0, a.userData.el).scale.set(5, 4, 4); } }
+  // Parashurama's axe
+  { const axe = new THREE.Group(); mesh(new THREE.CylinderGeometry(1.5, 1.5, 62, 8), std(0x5a3a1a, { roughness: .8 }), 0, -6, 0, axe); const bl = mesh(new THREE.BoxGeometry(2, 16, 22), std(0xd8e0ea, { metalness: .9, roughness: .2, emissive: 0x334455 }), 0, 22, 9, axe); axe.position.set(0, -24, 3); parashu.arms[0].userData.el.add(axe); }
+  const river = mesh(G.sph, glowMat(0x4a90ff), 0, 2, 12, scene); river.visible = false;
+  const pot = new THREE.Group(); mesh(new THREE.CylinderGeometry(5, 4, 9, 12), std(0x9a5a2a, { roughness: .8 }), 0, 0, 0, pot); pot.visible = false; scene.add(pot);
+  // a second bow, for the other archers
+  function makeBowObj() { const g = new THREE.Group(); g.add(new THREE.Mesh(new THREE.TubeGeometry(bowCurve(38, 13), 20, 1.5, 8), bowMat));
+    const string = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: 0xfff0c0 })); g.add(string); g.visible = false; scene.add(g); return { g, string }; }
+  const bowL = makeBowObj();
+  function aimBow(bo, H, draw, sc) {
+    H.root.updateMatrixWorld(true); const f = H.arms[0].userData.hand, b = H.arms[1].userData.hand, fp = new THREE.Vector3(), bp = new THREE.Vector3(); f.getWorldPosition(fp); b.getWorldPosition(bp);
+    bo.g.visible = true; bo.g.position.copy(fp); bo.g.rotation.set(0, 0, 0); bo.g.scale.setScalar(sc || 1.3); bo.g.updateMatrixWorld(true);
+    const bl = bo.g.worldToLocal(bp.clone()), sp = bo.string.geometry.attributes.position; sp.setXYZ(0, 0, 38, 0); sp.setXYZ(1, bl.x, bl.y, bl.z); sp.setXYZ(2, 0, -38, 0); sp.needsUpdate = true;
+  }
+  // Indra's chariot, which carries Ram in the last duel
+  const indraCh = makeChariot(); indraCh.userData.mat.color.setHex(0xf4f0ff); indraCh.userData.mat.emissive.setHex(0x40508a); scene.add(indraCh);
+  // four lights for the four sons, a feast, and a glowing Brahma weapon
+  const birthOrbs = [0x5aa0ff, 0xffd070, 0xff9a60, 0x9aff9a].map(c => { const o = mesh(G.sph, glowMat(c), 0, 0, 0, scene); o.scale.setScalar(6); o.visible = false; return o; });
+  const feast = new THREE.Group(); for (let k = 0; k < 10; k++) mesh(G.sphLow, std([0xd02a5a, 0xffc94a, 0x9ad04a, 0xff8a3a][k % 4], { emissive: 0x402010, emissiveIntensity: .6 }), Math.cos(k * 2.4) * 16, 4 + (k % 3) * 3, Math.sin(k * 2.4) * 10, feast).scale.setScalar(4.5); feast.visible = false; scene.add(feast);
+  const astra = mesh(G.sph, glowMat(0xffd8a0), 0, 0, 0, scene); astra.scale.setScalar(9); astra.visible = false;
+  // a head or an arm of Ravan is cut off at time tc, flies away, and a new one grows at time tr
+  function cutPart(h, tc, tr, u, away) {
+    const b = h.userData.base, bs = h.userData.bs, bz = h.userData.bz || 0;
+    if (!b) { const k = u < tc ? 1 : (u < tr ? 0 : ease(sstep(tr, tr + .9, u))); h.scale.setScalar(k + .001); return; }
+    if (u < tc) { h.visible = true; h.position.copy(b); h.scale.setScalar(bs); h.rotation.z = bz; }
+    else if (u < tc + 1) { const p = u - tc; h.visible = true; h.position.set(b.x + away * 46 * p, b.y + 70 * p - 95 * p * p, b.z + 30 * p); h.rotation.z = bz + away * p * 5; h.scale.setScalar(bs); }
+    else if (u < tr) h.visible = false;
+    else { h.visible = true; h.position.copy(b); h.rotation.z = bz; h.scale.setScalar(bs * (.001 + ease(sstep(tr, tr + .9, u)))); }
+  }
+
   // ---------- particles ----------
   const MAXP = 3200, pGeo = new THREE.SphereGeometry(1, 6, 4);
   const pMat = new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
@@ -1761,51 +1812,72 @@ window.R3 = (function () {
   // ---------- extra scenes, inserted into the story ----------
   // Each insert freezes the main story at story time s0 and plays for n seconds, so the long walk is never rushed.
   const INS = [
-    { id: 'tataka', s0: 14.5, n: 12, fx: 1020, cap: 'On the road, the yakshini Tataka attacks. Urged by the sage, Ram shoots her to protect the forest and its hermits. The sage then gives him divine weapons', moral: 'Duty can mean doing a hard thing to protect the innocent' },
-    { id: 'ahalya', s0: 22, n: 11, fx: 1480, cap: 'Near Mithila, Ram and Lakshman bow at the feet of Ahalya, who was cursed to live unseen in penance. Ram\'s arrival frees her', moral: 'Compassion can free anyone from the weight of the past' },
-    { id: 'boons', s0: 53, n: 12, fx: 2400, cap: 'Manthara poisons Queen Kaikeyi\'s mind. She claims two old boons: Bharata crowned, and Ram exiled for 14 years. The king faints, but Ram calmly accepts to keep his father\'s word', moral: 'Keeping a promise matters more than a crown' },
-    { id: 'sandals', s0: 60, n: 10, fx: 2200, cap: 'Later, at Chitrakoot hill, Bharata begs Ram to return and rule. Ram will not break his father\'s word, so he gives Bharata his sandals to rule in his name', moral: 'Real leaders serve with humility, and love does not cling to power' },
-    { id: 'surp', s0: 70, n: 12, fx: 3120, cap: "Ravan's sister Surpanakha tries to win Ram, then Lakshman. When she rushes at Sita, Lakshman wounds her. Her brothers Khara and Dushana attack with 14,000 demons, but Ram defeats them alone. Furious, she goes to Ravan", moral: 'Anger and desire without wisdom lead to ruin' },
-    { id: 'rekha', s0: 81, n: 12, fx: 3230, cap: "Dying, Maricha cries out in Ram's voice: 'Ha Sita! Ha Lakshmana!' Afraid for Ram, Sita sharply urges Lakshman to go. Reluctantly he leaves her. Ravan arrives disguised as a hermit, asking for alms", moral: 'Words spoken in fear can lead to harm' },
-    { id: 'sabari', s0: 98, n: 10, fx: 3780, cap: 'The demon Kabandha tells them to seek Sugriva. On the way, the ascetic Sabari honours Ram with wild fruits, as her teachers had foretold', moral: 'Devotion matters more than status or perfection' },
-    { id: 'vali', s0: 104.6, n: 14, fx: 4050, cap: 'Ram and Sugriva swear friendship before the sacred fire. Vali, who took Sugriva\'s kingdom and wife, is shot by Ram from behind a tree. Sugriva becomes king', moral: 'Be true to a friend who has been wronged' },
-    { id: 'vib', s0: 119, n: 10, fx: 3950, cap: "Ravan insults his brother Vibhishana for urging him to return Sita. Vibhishana joins Ram, who at once crowns him king of Lanka with sea water", moral: 'Doing right sometimes means standing apart from your own family' },
-    { id: 'angada', s0: 136, n: 12, fx: 5330, cap: 'Ram sends Angada to give Ravan a last chance for peace. Ravan orders him seized, but Angada leaps to the roof with four demons, hurls them down and breaks the palace tower', moral: 'Peace must always be offered first' },
-    { id: 'indra', s0: 137, n: 16, fx: 5100, cap: "The war begins. The invisible Indrajit binds Ram and Lakshman with serpent arrows. The divine eagle Garuda comes and frees them", moral: 'Even heroes need friends and help' },
-    { id: 'agni', s0: 176, n: 11, fx: 5420, cap: 'Ram asks Sita to prove her purity to the world. She enters the fire, and the fire god Agni brings her out unharmed and vouches for her', moral: 'Truth shines brightest when it is tested' },
-    { id: 'darbar', s0: 213, n: 12, fx: 760, cap: 'Sage Vasishtha crowns Ram king of Ayodhya, with Sita beside him. Ram Rajya, a rule of justice and peace, lasts for many years', moral: 'A good ruler cares for every person' },
+    // ---- before Ram's birth: the dots that explain everything that follows ----
+    { id: 'ravan_boon', s0: 0, n: 14, fx: 430, cap: "Long ago, Ravan, king of the demons of Lanka, offered his ten heads in fire to the god Brahma, who restored them and granted a boon: no god, demon or spirit could ever kill him. Proud, Ravan did not ask for protection from men.", moral: 'Pride makes us blind to our own weakness' },
+    { id: 'gods', s0: 0, n: 12, fx: 520, cap: "With that boon Ravan tormented the gods, the sages and the whole world. They begged Brahma and the god Vishnu for help. Vishnu promised to be born as a man, the son of King Dasharatha of Ayodhya, to end Ravan.", moral: '' },
+    { id: 'curse', s0: 0, n: 14, fx: 560, cap: "Long before, young Prince Dasharatha, hunting at night, shot at a sound by the river. It was Shravana, a boy fetching water for his blind parents. Their grief-stricken curse: 'You too will die longing for your son.'", moral: 'A hasty act can bring a lifetime of sorrow' },
+    { id: 'kboon', s0: 0, n: 12, fx: 480, cap: 'In a war for the gods, Dasharatha was wounded and fell senseless. His young queen Kaikeyi saved his life. In gratitude he promised her two boons. She said she would ask for them later.', moral: 'A promise given in gratitude can shape a future' },
+    { id: 'yajna', s0: 0, n: 16, fx: 440, cap: 'King Dasharatha, who has no sons, begins a great fire ritual led by the young sage Rishyasringa. From the flames rises a radiant being with a golden bowl of sacred pudding. The king shares it among his three queens: Kausalya, Sumitra and Kaikeyi.', moral: 'Faith and patience are rewarded' },
+    // ---- the childhood and the road to Mithila ----
+    { id: 'court', s0: 9, n: 14, fx: 400, cap: "At sixteen, Ram is asked for by the sage Vishwamitra, whose rituals are attacked by demons. Dasharatha fears for his boy, but the wise sage Vasishtha reminds him of his duty. He agrees, and Lakshman goes with Ram.", moral: '' },
+    { id: 'tataka', s0: 14.5, n: 12, fx: 1020, cap: 'On the road, the yakshini Tataka attacks. Ram does not like to strike a woman, but the sage reminds him that a prince must protect the innocent. Ram shoots her, and the sage gives him divine weapons.', moral: 'Duty can mean doing a hard thing to protect the innocent' },
+    { id: 'siddha', s0: 14.5, n: 14, fx: 1050, cap: "At the sage's hermitage, Ram guards the ritual for six nights. At last the demons Subahu and Maricha attack. Ram kills Subahu and hurls Maricha far into the sea. Maricha survives, and will return later as the golden deer.", moral: 'Protecting the good work of others is a service' },
+    { id: 'ahalya', s0: 22, n: 11, fx: 1480, cap: "Near Mithila, Ram and Lakshman bow at the feet of Ahalya, who was cursed to live unseen in penance. Ram's arrival frees her.", moral: 'Compassion can free anyone from the weight of the past' },
+    { id: 'parashu', s0: 41, n: 12, fx: 1720, cap: "On the way home, the fiery sage Parashurama, angry that the bow broke, challenges Ram to string Vishnu's own bow. Ram does so with ease and humbles him.", moral: 'True power is calm, not proud' },
+    // ---- exile ----
+    { id: 'boons', s0: 53, n: 12, fx: 2400, cap: "Manthara poisons Queen Kaikeyi's mind. She claims her two old boons: Bharata crowned, and Ram exiled for 14 years. The king faints, but Ram calmly accepts to keep his father's word.", moral: 'Keeping a promise matters more than a crown' },
+    { id: 'sandals', s0: 60, n: 12, fx: 2200, cap: "Bharata, away at his uncle's, returns to find his father dead. He refuses the throne and begs Ram at Chitrakoot hill to return. Ram will not break his father's word, so he gives Bharata his sandals to rule in his name.", moral: 'Real leaders serve with humility, and love does not cling to power' },
+    { id: 'surp', s0: 70, n: 12, fx: 3120, cap: "Ravan's sister Surpanakha tries to win Ram, then Lakshman. When she rushes at Sita, Lakshman wounds her. Her brothers Khara and Dushana attack with 14,000 demons, but Ram defeats them alone. Furious, she goes to Ravan.", moral: 'Anger and desire without wisdom lead to ruin' },
+    { id: 'rekha', s0: 81, n: 12, fx: 3230, cap: "Maricha's dying cry in Ram's voice, 'Ha Sita! Ha Lakshmana!', reaches the hut. Afraid for Ram, Sita sharply urges Lakshman to go. Reluctantly he leaves her. Ravan arrives disguised as a hermit, asking for alms.", moral: 'Words spoken in fear can lead to harm' },
+    { id: 'sabari', s0: 98, n: 10, fx: 3780, cap: 'The demon Kabandha tells them to seek Sugriva. On the way, the ascetic Sabari honours Ram with wild fruits, as her teachers had foretold.', moral: 'Devotion matters more than status or perfection' },
+    { id: 'vali', s0: 104.6, n: 14, fx: 4050, cap: "Ram and Sugriva swear friendship before the sacred fire. Vali, who took Sugriva's kingdom and wife, is shot by Ram from behind a tree. Sugriva becomes king.", moral: 'Be true to a friend who has been wronged' },
+    { id: 'vib', s0: 119, n: 10, fx: 3950, cap: "Ravan insults his brother Vibhishana for urging him to return Sita. Vibhishana joins Ram, who at once crowns him king of Lanka with sea water.", moral: 'Doing right sometimes means standing apart from your own family' },
+    // ---- the war ----
+    { id: 'angada', s0: 136, n: 12, fx: 5330, cap: 'Ram sends Angada to give Ravan a last chance for peace. Ravan orders him seized, but Angada leaps to the roof with four demons, hurls them down and breaks the palace tower.', moral: 'Peace must always be offered first' },
+    { id: 'indra', s0: 137, n: 16, fx: 5100, cap: "The war begins. The invisible Indrajit binds Ram and Lakshman with serpent arrows. The divine eagle Garuda comes and frees them.", moral: 'Even heroes need friends and help' },
+    { id: 'crown', s0: 138, n: 12, fx: 5250, cap: "Ravan himself enters the battle. Ram shatters his crown with one arrow and says, 'You are tired. Go home and rest, and come back tomorrow.' Humbled, Ravan retreats.", moral: 'A true warrior shows mercy to the beaten' },
+    { id: 'wake', s0: 139, n: 14, fx: 5330, cap: "Ravan sends for his giant brother Kumbhakarna, who sleeps for months. Drums, shouts and even elephants wake him. He tells Ravan he was wrong to take Sita, but chooses to fight out of loyalty.", moral: 'Loyalty is not enough if it serves a wrong cause' },
+    { id: 'niku', s0: 160, n: 14, fx: 5250, cap: "Indrajit begins a secret fire ritual to become unbeatable. Vibhishana tells Lakshman where to find him. Lakshman interrupts the ritual and kills Indrajit.", moral: 'Righteous effort defeats even the strongest tricks' },
+    { id: 'headcut', s0: 164, n: 18, fx: 5300, cap: "In the last duel, Ram on Indra's chariot, driven by Matali, cuts off Ravan's heads and arms one by one, but each grows back. Matali reminds Ram of the Brahma weapon given by the sage Agastya.", moral: 'Some evils need the right weapon, not more force' },
+    { id: 'mando', s0: 176, n: 14, fx: 5500, cap: "Ravan's wife Mandodari mourns him. Ram tells Vibhishana to perform the funeral rites: 'Enmity ends with death. He is as dear to me as to you.' Vibhishana is crowned king of Lanka.", moral: 'Enmity ends with death: forgive and honour' },
+    { id: 'agni', s0: 176, n: 11, fx: 5420, cap: 'Ram asks Sita to prove her purity to the world. She enters the fire, and the fire god Agni brings her out unharmed and vouches for her.', moral: 'Truth shines brightest when it is tested' },
+    { id: 'darbar', s0: 213, n: 12, fx: 760, cap: 'Sage Vasishtha crowns Ram king of Ayodhya, with Sita beside him. Ram Rajya, a rule of justice and peace, lasts for many years.', moral: 'A good ruler cares for every person' },
   ];
   let accIns = 0; INS.forEach(a => { a.t0 = a.s0 + accIns; accIns += a.n; });
   const TOTAL = 225 + accIns;
   function mapT(Tr) {
-    for (let i = 0; i < INS.length; i++) { const a = INS[i]; if (Tr < a.t0) return { S: Tr - (a.t0 - a.s0), i: -1 }; if (Tr < a.t0 + a.n) return { S: a.s0, i, u: Tr - a.t0 }; }
-    return { S: Tr - accIns, i: -1 };
+    const t = Tr / SLOW;
+    for (let i = 0; i < INS.length; i++) { const a = INS[i]; if (t < a.t0) return { S: t - (a.t0 - a.s0), i: -1 }; if (t < a.t0 + a.n) return { S: a.s0, i, u: t - a.t0 }; }
+    return { S: t - accIns, i: -1 };
   }
   const sToT = (S) => S + INS.reduce((a, b) => a + (b.s0 < S ? b.n : 0), 0);
   const CAP = [   // story time windows [from, to, what is happening and why, (optional) lesson, (optional) when the lesson appears]
-    [0, 9, "From Valmiki's Ramayana: King Dasharatha's sacred fire ritual brings four sons: Ram, Bharata, Lakshman and Shatrughna. Ram is Vishnu born to defeat Ravan"],
-    [9, 14.5, 'Sage Vishwamitra asks the king for Ram\'s help against demons, and the king agrees'],
-    [14.5, 22, 'The sage leads the brothers toward Mithila, where King Janaka\'s great contest awaits'],
+    [0, 9, "From Valmiki's Ramayana. Months later, four sons are born: Ram to Kausalya, Bharata to Kaikeyi, and the twins Lakshman and Shatrughna to Sumitra. Ram is Vishnu himself, born to defeat Ravan"],
+    [9, 14.5, 'Ram and Lakshman bow to their parents and set out with the sage Vishwamitra'],
+    [14.5, 22, "The sage gives Ram divine weapons and leads the brothers toward Mithila, where King Janaka's great contest awaits"],
     [22, 31, "Mithila: King Janaka will give his daughter Sita to whoever can string Shiva's great bow. Ram, with the sage's blessing, lifts it"],
-    [31, 40.5, 'Ram strings the bow and it snaps in two with a thunderous crack! Janaka offers Sita to Ram, and King Dasharatha comes for the wedding', 'Strength joined with humility wins hearts', 36.5],
-    [40.5, 53, 'In Ayodhya, King Dasharatha wants to crown Ram as heir. But Queen Kaikeyi holds an old promise'],
-    [53, 60, 'Ram leaves the palace in bark robes. Sita and Lakshman insist on going with him, out of love'],
-    [60, 70, 'The three live as hermits in the Dandaka forest, and settle at Panchavati by the river Godavari'],
+    [31, 41, 'Ram strings the bow and it snaps in two with a thunderous crack! Janaka offers Sita to Ram, and King Dasharatha comes for the wedding. All four brothers marry', 'Strength joined with humility wins hearts', 37],
+    [41, 53, 'Back in Ayodhya, Ram and Sita live happily for years. Then the old king Dasharatha announces that Ram will be crowned his heir'],
+    [53, 60, 'Ram leaves the palace in bark robes. Sita and Lakshman insist on going with him. Grieving, King Dasharatha soon dies, just as Shravana\'s parents had cursed'],
+    [60, 70, "Ram, Sita and Lakshman live as hermits in the forest, first at Chitrakoot, then in Dandaka. Bharata rules from Nandigrama with Ram's sandals on the throne. In the thirteenth year they settle at Panchavati, by the river Godavari"],
     [70, 77.5, 'The demon Maricha becomes a golden deer. Lakshman warns it is a trick, but Sita begs for it. Ram goes after it and tells Lakshman to guard her'],
+    [77.5, 81, "Ram's arrow ends the illusion. As Lakshman feared, the deer was Maricha in disguise, and he dies crying out in Ram's voice"],
     [81, 92, 'Ravan shows his true form and carries Sita off in his chariot. The old vulture Jatayu fights him until Ravan cuts off his wings'],
     [92, 98, 'Ram and Lakshman find the empty hut and search. The dying Jatayu tells them Ravan took Sita south. Ram performs his funeral rites', 'Do what is right, even when you cannot win', 95],
     [98, 104.6, 'At Rishyamukha hill, Hanuman, disguised as a hermit, meets Ram on behalf of Sugriva, the exiled monkey king. He bows and takes them to him'],
     [104.6, 115, "Sugriva's monkeys search all directions. The vulture Sampati reveals Sita is in Lanka. Hanuman, carrying Ram's ring, leaps across the sea and finds her in the Ashoka grove", 'With devotion and humility, nothing is impossible', 111],
     [115, 124, "Captured by the demons, Hanuman has his tail set alight. He burns Lanka's towers and leaps back to tell Ram where Sita is"],
     [124, 136, 'Ram prays to the Sea for a way across. Nala, son of the divine builder Vishwakarma, leads the monkeys to build a bridge of rocks and trees in five days', 'Working together builds what seems impossible', 131],
-    [137, 150, "Ravan's giant brother Kumbhakarna, woken from sleep, fights the monkey army until Ram's arrow ends him"],
-    [150, 160, "Indrajit's Brahma weapon fells Ram, Lakshman and the army. Hanuman flies to the Himalayas and brings a mountain of healing herbs", 'Loyal friends bring help even when it seems impossible', 155],
-    [160, 168.6, 'At last Ram and Ravan meet in single combat. Whenever a head is cut off, another grows'],
-    [168.6, 176, "Ram's Brahma weapon, given by the sage Agastya, ends Ravan. Good wins over evil", 'Pride and wrongdoing destroy even the mightiest', 171.5],
-    [176, 186, 'Vibhishana is crowned. His gift, the flying chariot Pushpaka, carries Ram, Sita, Lakshman and Hanuman home as the fourteen years end'],
-    [186, 205, 'Ayodhya greets Ram with joy and decorations. By tradition people lit lamps, and this is remembered as Diwali', 'Light always returns after darkness', 198],
-    [205, 213, 'Bharata, who ruled in Ram\'s name with the sandals on the throne, welcomes him home'],
-    [213, 225, 'Diwali, the festival of lights, remembers Ram\'s homecoming: be a light in someone\'s life', 'Be the light', 218],
+    [136, 139, 'The monkey army crosses the bridge and surrounds Lanka. Ram offers peace, and when it is refused, the war begins'],
+    [139, 150, "Kumbhakarna devours monkeys by the hundreds, until Ram's arrow ends him"],
+    [150, 160, "Then Indrajit, fighting unseen from the sky, fells Ram, Lakshman and the army with the Brahma weapon. Hanuman flies to the Himalayas and brings a mountain of healing herbs", 'Loyal friends bring help even when it seems impossible', 155],
+    [160, 164, 'Ravan, wild with grief and rage, comes out for the last battle'],
+    [164, 168.6, 'Ram fits the Brahma weapon, given by the sage Agastya'],
+    [168.6, 176, "The weapon pierces Ravan's chest. Good wins over evil", 'Pride and wrongdoing destroy even the mightiest', 171.5],
+    [176, 186, 'The gods praise Sita\'s purity and Ram joyfully takes her back. The fourteen years are over. Vibhishana gives Ram the flying chariot Pushpaka, and they fly home'],
+    [186, 205, 'On the way, Ram shows Sita the places of their journey. Hanuman flies ahead to tell Bharata. Ayodhya greets them with joy; by tradition people lit lamps, remembered as Diwali', 'Light always returns after darkness', 198],
+    [205, 213, "Bharata, who ruled in Ram's name for fourteen years with the sandals on the throne, welcomes him home"],
+    [213, 225, "Diwali, the festival of lights, remembers Ram's homecoming: be a light in someone's life", 'Be the light', 218],
   ];
   function captionAt(Tr) {
     const m = mapT(Tr);
@@ -1816,20 +1888,28 @@ window.R3 = (function () {
     }
     return null;
   }
-  const chapters = [0, 9, 22, 31, 40.5, 53, 60, 70, 81, 92, 98, 104.6, 115, 124, 137, 150, 160, 168.6, 176, 186, 205, 213].map(sToT).concat(INS.map(a => a.t0)).sort((a, b) => a - b);
+  const chapters = [0, 9, 14.5, 22, 31, 41, 53, 60, 70, 81, 92, 98, 104.6, 115, 124, 139, 150, 160, 164, 168.6, 176, 186, 205, 213].map(sToT).concat(INS.map(a => a.t0)).sort((a, b) => a - b).filter((x, i, v) => !i || x - v[i - 1] > .5).map(x => x * SLOW);
 
   // the aim and the arrow of an inserted scene (the actors themselves are posed later)
-  function insertParams(id, u, rx) {
+  function insertParams(id, u, rx, lx) {
     const out = { aw: null, shot: null }, win = (a0, a1, d0, d1) => ({ aim: sstep(a0, a0 + 1.2, u) * (1 - sstep(a1, a1 + .6, u)), draw: sstep(d0, d1, u) * (u < d1 + .05 ? 1 : 0), big: false });
-    if (id === 'tataka') { if (u >= 3.6 && u < 7.4) out.aw = win(3.6, 6.8, 4.6, 5.9); const p = (u - 5.9) / .8; if (p >= 0 && p < 1) out.shot = { p, x0: rx + 62, y0: 128, x1: 1130, y1: 110 }; }
-    if (id === 'vali') { if (u >= 5.6 && u < 9.2) out.aw = win(5.6, 8.6, 6.2, 7.3); const p = (u - 7.3) / .9; if (p >= 0 && p < 1) out.shot = { p, x0: rx + 62, y0: 128, x1: 4110, y1: 125 }; }
+    const wins = (l) => { for (const [a0, a1, d0, d1] of l) if (u >= a0 && u < a1 + .6) out.aw = win(a0, a1, d0, d1); };
+    const shoot = (t, dur, x0, y0, x1, y1) => { const p = (u - t) / dur; if (p >= 0 && p < 1) out.shot = { p, x0, y0, x1, y1 }; };
+    if (id === 'tataka') { wins([[3.6, 6.8, 4.6, 5.9]]); shoot(5.9, .8, rx + 62, 128, 1130, 110); }
+    if (id === 'vali') { wins([[5.6, 8.6, 6.2, 7.3]]); shoot(7.3, .9, rx + 62, 128, 4110, 125); }
+    if (id === 'siddha') { wins([[2.8, 5.6, 3.4, 4.6], [6, 8.6, 6.5, 7.6]]); shoot(4.6, .8, rx + 62, 128, 1190, 140); shoot(7.6, .8, rx + 62, 128, 1150, 160); }
+    if (id === 'parashu') { wins([[6, 9.4, 7, 8.4]]); shoot(8.4, .9, rx + 62, 128, 1960, 260); }
+    if (id === 'crown') { wins([[2, 7, 3, 4.4]]); shoot(4.4, 1.0, rx + 62, 128, 5530, 215); }
+    if (id === 'headcut') { wins([[1.2, 3.6, 1.8, 2.8], [4, 6.2, 4.4, 5.2], [6.6, 8.8, 7, 7.8], [9.2, 11.4, 9.6, 10.4]]); [[2.8, 215], [5.2, 150], [7.8, 225], [10.4, 220]].forEach(([t, y]) => shoot(t, .8, rx + 62, 128, 5540, y)); }
+    if (id === 'curse') shoot(3.4, .8, 392, 118, 560, 50);
+    if (id === 'niku') shoot(8.2, .8, lx + 62, 128, 5430, 100);
     return out;
   }
   const hide = (...hs) => hs.forEach(h => { h.root.visible = false; });
-  const showAt = (h, x, y, z, ry, sc) => { h.root.visible = true; h.root.position.set(x, y, z); h.root.rotation.set(0, ry, 0); h.root.scale.setScalar(sc); };
-  const pop = (a, b, u, sc) => sc * (.2 + .8 * ease(sstep(a, a + 1.1, u))) * (1 - sstep(b - 1.1, b, u) * .97);   // scale in at a, out at b
+  const showAt = (h, x, y, z, ry, sc) => { h.root.visible = sc > .02; h.root.position.set(x, y, z); h.root.rotation.set(0, ry, 0); h.root.scale.setScalar(sc); };
+  const pop = (a, b, u, sc) => u < a ? 0 : u >= b ? 0 : sc * (.2 + .8 * ease(sstep(a, a + 1.1, u))) * (1 - sstep(b - 1.1, b, u) * .97);   // scale in at a, out at b
   function insertActors(ins, Tr, rx, base) {
-    hide(tataka, dash, kaik, bharat, sugr, vali, indra, sabari, vibh, surp, hermit, agni, ahalya, angada); tower.visible = false; stone.visible = false; heart.visible = false;
+    hide(tataka, dash, kaik, bharat, sugr, vali, indra, sabari, vibh, surp, hermit, agni, ahalya, angada, brahma, vishnu, youngd, shravan, blindA, blindB, rishya, kausalya, sumitra, vasishtha, parashu, mandodari); pot.visible = false; bowL.g.visible = false; feast.visible = false; astra.visible = false; river.visible = false; tower.visible = false; stone.visible = false; heart.visible = false;
     garuda.visible = false; sandals.visible = false; berry.visible = false; throne.visible = false; fireGlow.visible = false; orbs.forEach(o => { o.visible = false; }); serpents.forEach(g => { g.visible = false; }); coils.forEach(g => { g.visible = false; });
     if (ins.i < 0) return;
     const id = INS[ins.i].id, u = ins.u, face = -YAW;
@@ -1867,6 +1947,165 @@ window.R3 = (function () {
       once('i12a', u >= 6.4, () => { flashV = .4; burst(ax, 30, 0, .13, 60, 60); });
       once('i12b', u >= 7.6, () => { flashV = .9; burst(5640, 220, -30, .08, 130, 150); for (let k = 0; k < 20; k++) ember(5640 + rnd(-40, 40), rnd(150, 230), 0, true); });
     }
+    const R = YAW, L = -YAW, spd = (a, b, k) => (u > a && u < b) ? (k || .85) : 0, wk = (a, b, u0, u1) => lerp(a, b, ease(clamp((u - u0) / (u1 - u0))));
+    const act = (h, x, y, z, ry, sc, o) => { showAt(h, x, y, z, ry, sc); pose(h, Object.assign({ ph: x * Math.PI / STEP, s: 0, t: Tr }, o || {})); };
+    const fire = (x, a, b, k) => { if (u > a && u < b) for (let q = 0; q < 2; q++) flame(x + rnd(-14, 14), 4, 8, k || 1.3); };
+    if (id === 'ravan_boon') {   // Ravan offers his heads to the fire; Brahma restores them (Valmiki, Uttara Kanda)
+      fire(400, .2, 12.8, 1.5);
+      const rs = 1.1 * (.2 + .8 * ease(sstep(.2, 1.4, u)));
+      rav.root.visible = true; rav.root.position.set(540, 0, -4); rav.root.scale.set(rs, rs, rs); rav.root.rotation.set(0, -.55, 0);
+      pose(rav, { ph: 0, s: 0, t: Tr, kneel: sstep(.8, 1.8, u) * (1 - sstep(9.8, 10.8, u)), join: sstep(1.4, 2.2, u) * (1 - sstep(9.6, 10.4, u)), sad: .3, talk: u > 11.2 && u < 12.6 });
+      for (let k = 1; k < 10; k++) { const tc = 2.2 + (k - 1) * .85; cutPart(rav.heads[k], tc, 10.2, u, -2.6); once('nb' + k, u >= tc + .85, () => { flashV = .3; burst(412, 60, 12, .08, 22, 70); for (let q = 0; q < 8; q++) flame(400 + rnd(-20, 20), 10, 8, 1.8); }); }
+      act(brahma, 300, 0, 0, R, pop(9.2, 14.2, u, 1.05), { point: sstep(10.6, 11.4, u) * (1 - sstep(12.6, 13.2, u)), talk: u > 10 && u < 12.8 });
+      once('nb_a', u >= 9.2, () => { flashV = 1; burst(300, 120, 0, .13, 140, 140); });
+      once('nb_b', u >= 10.2, () => { flashV = .9; burst(540, 130, 8, .12, 130, 120); });
+    }
+    if (id === 'gods') {   // the gods plead; Vishnu promises to be born as a man
+      rav.root.visible = true; { const s = .62 * (.2 + .8 * ease(sstep(.2, 1.3, u))); rav.root.position.set(790, 0, -10); rav.root.scale.set(s, s, s); rav.root.rotation.set(0, -.8, 0); pose(rav, { ph: 0, s: 0, t: Tr, angry: 1, talk: u < 3 }); rav.heads.forEach((h, i) => { h.rotation.y = Math.sin(Tr * 1.1 + i) * .18; }); }
+      if (u > .4 && u < 11) { if (Math.random() < .6) flame(790 + rnd(-40, 40), 6, 6, 1.4); if (Math.random() < .25) ember(790 + rnd(-30, 30), rnd(20, 120), 0, true); }
+      act(agni, 330, 0, -4, R, pop(.2, 11.8, u, 1.3), { kneel: sstep(1.4, 2.2, u), join: sstep(1.6, 2.4, u), sad: 1 });
+      act(brahma, 410, 0, 2, R, pop(.2, 11.8, u, 1.05), { kneel: sstep(1.4, 2.2, u) * (1 - sstep(6.6, 7.4, u)), join: sstep(1.6, 2.4, u) * (1 - sstep(6.6, 7.4, u)), sad: 1, talk: u > 2.4 && u < 5.4 });
+      act(vishnu, 590, 0, 0, L, pop(2.6, 11.8, u, 1.1), { talk: u > 4.8 && u < 9, point: sstep(9, 9.8, u) * (1 - sstep(10.6, 11.2, u)), look: .1 });
+      once('ng_a', u >= 2.6, () => { flashV = 1; burst(590, 120, 0, .58, 150, 140); burst(590, 120, 0, .12, 80, 100); });
+      const o = birthOrbs[0], a = sstep(9.4, 10, u) * (1 - sstep(11.2, 11.8, u)); o.visible = a > .02; const op = ease(clamp((u - 9.4) / 2)); o.position.set(lerp(560, 330, op), lerp(120, 210, op) + Math.sin(op * 6) * 8, 12); o.scale.setScalar(9 * a + .01);
+    }
+    if (id === 'curse') {   // young Dasharatha and Shravana (Ayodhya Kanda, 63)
+      river.visible = true; river.position.set(560, 2, 12); river.scale.set(120, 4, 14); river.material.opacity = .2 + .06 * Math.sin(Tr * 3);
+      const yx = u < 5.4 ? wk(180, 330, .2, 1.8) : u < 9 ? wk(330, 520, 5.4, 7.4) : wk(520, 690, 9, 11), ws = spd(.2, 1.8) || spd(5.4, 7.4) || spd(9, 11);
+      const aim = sstep(1.8, 3, u) * (1 - sstep(4.4, 5, u)), draw = sstep(2.2, 3.3, u) * (u < 3.4 ? 1 : 0);
+      const sk = sstep(10.4, 11.2, u);
+      act(youngd, yx, 0, 4, R, pop(.1, 99, u, 1), { s: ws, aim: aim > 0 ? aim : undefined, draw, kneel: Math.max(sstep(7.4, 8.2, u) * (1 - sstep(8.8, 9.4, u)) * .8, sk), join: sk, sad: u > 4.4 ? 1 : 0, talk: u > 7.6 && u < 8.8 });
+      if (aim > .02) aimBow(bowL, youngd, draw, 1.3);
+      const fall = sstep(4.2, 5, u);
+      act(shravan, 560, 10 * fall, 6, L, pop(.2, 13.6, u, .8), { kneel: .65 * (1 - fall), talk: u > 5.2 && u < 7.4, sad: fall }); shravan.root.rotation.z = -1.4 * fall;
+      pot.visible = true; if (u < 4.2) pot.position.set(542, 14, 10); else if (u < 9) pot.position.set(536, 8, 10); else pot.position.set(yx + 32, 66, 10);
+      act(blindA, 745, 0, 4, L, pop(6.4, 14.2, u, .95), { look: .15, sad: 1, angry: sstep(10.4, 11, u), talk: u > 9.8 && u < 12.6, point: sstep(10.6, 11.4, u) * (1 - sstep(12.6, 13.2, u)) });
+      act(blindB, 800, 0, 2, L, pop(6.4, 14.2, u, .95), { look: -.1, sad: 1, talk: u > 11 && u < 12.6 });
+      once('nc_a', u >= 3.4, () => { burst(392, 110, 8, .12, 20, 50); });
+      once('nc_b', u >= 4.2, () => { flashV = .6; burst(556, 60, 8, .02, 60, 80); });
+      once('nc_c', u >= 10.6, () => { flashV = .7; burst(745, 100, 8, .0, 80, 90); });
+      if (u > 4.2 && u < 8.8) for (let q = 0; q < 1; q++) parts.push({ x: 560 + rnd(-8, 8), y: 20, z: 10, vx: rnd(-8, 8), vy: rnd(20, 40), vz: 0, life: rnd(1, 1.6), age: 0, hue: .6, r: 1.6, drag: .6, g: -10 });
+    }
+    if (id === 'kboon') {   // Kaikeyi saves the wounded king; two boons
+      const cx = u < 1.6 ? 330 : wk(330, 640, 1.6, 6.6), mv = spd(1.6, 6.6, 1) ? 1 : 0;
+      chariot.visible = true; chariot.position.set(cx, 10, -46); chariot.scale.setScalar(1); chariot.userData.mat.color.setHex(0xe8b830); chariot.userData.mat.emissive.setHex(0x6a4a00); chariot.userData.wheels.forEach(w => { w.rotation.z = -cx * .09; });
+      if (mv && Math.random() < .5) ember(cx - 50, 14, 0, true);
+      act(dash2, cx - 24, 26, 4, R, pop(.2, 11.8, u, 1), { kneel: .55 * (1 - sstep(7.4, 8.4, u)), sad: 1 - sstep(7.4, 8.4, u), join: sstep(8.2, 9, u), talk: u > 8 && u < 9.6 }); dash2.root.rotation.z = -.3 * (1 - sstep(6.6, 7.8, u));
+      act(kaik, cx + 22, 26, 12, R, pop(.2, 11.8, u, 1), { point: sstep(1.4, 2, u), talk: u > 9.4 && u < 10.8, look: .1 });
+      const ks = 1.7 * (.2 + .8 * ease(sstep(0, 1.1, u))) * (1 - sstep(3.4, 4.4, u) * .97);
+      if (u < 4.4) { act(kum, 190, 0, 0, R, ks, { cheer: .5, angry: 1 }); if (u < 3.2 && Math.random() < .5) ember(215, rnd(60, 160), 0, true); if (u < 3.2 && Math.random() < .3) flame(250 + rnd(0, 40), rnd(60, 130), 8, 1); }
+      once('nk_a', u >= 1.5, () => { flashV = .6; burst(300, 100, 8, .02, 60, 90); });
+      birthOrbs.slice(0, 2).forEach((o, i) => { const a = sstep(9.8 + i * .5, 10.6 + i * .5, u) * (1 - sstep(11.2, 11.9, u)); o.visible = a > .02; o.position.set(cx + 22 + (i ? 30 : 4), 100 + 36 * ease(sstep(9.8, 11.4, u)) + Math.sin(Tr * 4 + i) * 3, 12); o.scale.setScalar(7 * a + .01); });
+    }
+    if (id === 'yajna') {   // Dasharatha's putrakameshti (Bala Kanda 14–16)
+      fire(340, .2, 15, 1.7);
+      const turnR = ease(sstep(9.4, 10.2, u));
+      act(rishya, 245, 0, 4, R, pop(.2, 15.8, u, 1), { cheer: .6 * sstep(.8, 1.8, u) * (1 - sstep(9, 10, u)), talk: u > 1 && u < 9 });
+      act(dash2, 440, 0, 6, lerp(L, R, turnR), pop(.2, 15.8, u, 1), { join: sstep(.6, 1.4, u) * (1 - sstep(8.4, 9.2, u)), talk: u > 12 && u < 14 });
+      [[kausalya, 545], [sumitra, 612], [kaik, 680]].forEach(([h, qx], i) => { const a = 2 + i * .5, x = qx + 260 * (1 - ease(sstep(a, a + 2.6, u))); act(h, x, 0, 6 - i, L, pop(a - 1.6, 15.8, u, 1), { s: spd(a, a + 2.6), join: sstep(a + 2.8, a + 3.6, u) * (1 - sstep(9.4 + i, 10.2 + i, u)) }); });
+      const dv = pop(5, 9.8, u, 1.5); act(agni, 340, 36 * (1 - ease(sstep(5, 6.4, u))), -6, R, dv, { cheer: .0, look: .2, point: sstep(6.4, 7.2, u) * (1 - sstep(8.2, 8.8, u)) });
+      if (u > 5 && u < 9) flame(340 + rnd(-10, 10), rnd(10, 100), -6, .8);
+      once('ny_a', u >= 5, () => { flashV = 1; burst(340, 120, 4, .13, 130, 140); });
+      const WP = [[5.8, 352, 110], [8.2, 352, 110], [9.8, 436, 96], [10.4, 436, 96], [11.4, 527, 90], [11.9, 527, 90], [12.9, 594, 88], [13.2, 594, 88], [14.2, 662, 88]], vis = u > 5.8 && u < 14.8;
+      let bx = 352, by = 110; for (let i = 0; i < WP.length - 1; i++) if (u >= WP[i][0] && u < WP[i + 1][0]) { const p = ease((u - WP[i][0]) / (WP[i + 1][0] - WP[i][0])); bx = lerp(WP[i][1], WP[i + 1][1], p); by = lerp(WP[i][2], WP[i + 1][2], p) + 8 * Math.sin(p * Math.PI) * (WP[i][1] !== WP[i + 1][1] ? 1 : 0); } if (u >= WP[WP.length - 1][0]) { bx = 662; by = 88; }
+      bowl.visible = vis; bowl.position.set(bx, by + Math.sin(Tr * 3) * 1.5, 12); bowl.scale.setScalar(1.15); babyLight.position.set(bx, by + 20, 40); babyLight.intensity = vis ? 1.3 : 0;
+      [[10.9, 545, 0], [12.4, 612, 1], [13.7, 680, 2]].forEach(([t, x, i]) => { once('ny_b' + i, u >= t, () => { flashV = .6; burst(x, 90, 8, .12, 50, 70); }); const o = birthOrbs[i], a = sstep(t, t + .8, u) * (1 - sstep(15.2, 15.9, u)); o.visible = a > .02; o.position.set(x + 4, 62 + 8 * Math.sin(Tr * 3 + i), 16); o.scale.setScalar(5 * a + .01); });
+    }
+    if (id === 'court') {   // Vishwamitra asks for Ram (Bala Kanda 18–20)
+      const sx = wk(760, 320, .3, 3.4), st = spd(.3, 3.4);
+      act(dash2, 215, 0, 6, R, 1, { talk: u > 4.4 && u < 6.4, sad: sstep(4.6, 5.4, u) * (1 - sstep(9, 10, u)), join: sstep(10, 10.8, u) });
+      act(vasishtha, 150, 0, 4, R, pop(.2, 13.8, u, 1), { talk: u > 7 && u < 10, point: sstep(7.4, 8.2, u) * (1 - sstep(9.4, 10, u)) });
+      act(sage, sx, 0, 4, u < 4.2 || u > 6.6 ? L : R, pop(.1, 13.8, u, 1), { s: st, talk: u > 3.6 && u < 6.6, point: sstep(4.6, 5.4, u) * (1 - sstep(6.4, 7, u)), cheer: sstep(11, 11.8, u) * (1 - sstep(13, 13.8, u)) * .5 });
+      ram.root.rotation.y = lerp(R, L, ease(sstep(9.2, 10, u))) + (u > 12.4 ? (R - L) * ease(sstep(12.4, 13.2, u)) : 0); lak.root.rotation.y = ram.root.rotation.y;
+      base.ram.kneel = sstep(10.4, 11.2, u) * (1 - sstep(12, 12.8, u)); base.ram.join = base.ram.kneel; base.lak.kneel = base.ram.kneel; base.lak.join = base.ram.kneel;
+      once('nco_a', u >= 11.2, () => { flashV = .5; burst(300, 120, 8, .12, 50, 60); petalRain(150, 600, 20, 240); });
+    }
+    if (id === 'siddha') {   // Siddhashrama: Ram guards the sage's ritual (Bala Kanda 29–30)
+      fire(1070, .2, 11.4, 1.7);
+      act(sage, 1010, 0, 4, R, 1, { cheer: .3 * sstep(.6, 1.4, u) * (1 - sstep(10.6, 11.4, u)), talk: u < 10.6 });
+      if (u > .6 && u < 8.2 && Math.random() < .5) parts.push({ x: rnd(1100, 1300), y: 280, z: rnd(0, 20), vx: rnd(-6, 6), vy: -rnd(60, 110), vz: 0, life: 1.8, age: 0, hue: 0, r: 2.2, drag: .9, g: 20 });   // the demons rain blood from the sky; glowing red embers here
+      { const sub = u < 5.2; if (u > 1.4 && u < 6) { const f = sstep(1.4, 2.6, u), fl = sstep(4.6, 5.8, u); act(kum, lerp(1320, 1190, ease(sstep(1.4, 3, u))) + 60 * fl, lerp(200, 105, f) * (1 - fl) + 8 * fl, -4, L, 1.35 * (1 - .6 * sstep(5.2, 6, u)), { fly: 1 - fl, angry: 1, cheer: 0 }); kum.root.rotation.z = -1.5 * fl; if (u > 5.2) ember(1250, rnd(10, 60), 0, true); } }
+      if (u > 2.2 && u < 9.6) { const f = sstep(2.2, 3.4, u), th = sstep(7.8, 8.4, u); const mx = u < 7.7 ? lerp(1360, 1150, ease(sstep(2.2, 4, u))) : 1150 + 600 * ease(sstep(7.7, 9.4, u)), my = u < 7.7 ? lerp(210, 120, f) : 120 + 120 * ease(sstep(7.7, 9.4, u)); act(indra, mx, my, -2, L, 1.1, { fly: 1, angry: 1 }); indra.root.rotation.z = th * u * 3; if (u > 7.7 && Math.random() < .8) ember(mx, my, 0, true); }
+      once('ns_a', u >= 5.2, () => { flashV = .8; burst(1230, 110, 0, .02, 110, 130); });
+      once('ns_b', u >= 7.9, () => { flashV = .8; burst(1150, 160, 0, .55, 100, 110); });
+      once('ns_c', u >= 11.4, () => { flashV = .6; burst(1070, 130, 0, .13, 90, 90); petalRain(900, 1300, 25, 250); });
+      base.ram.look = .2;
+    }
+    if (id === 'parashu') {   // Parashurama challenges Ram with Vishnu's bow (Bala Kanda 74–76)
+      const px = wk(2250, 1860, .3, 3.2), humble = sstep(9.8, 10.8, u);
+      act(parashu, px, 0, 4, L, pop(.1, 11.8, u, 1.05), { s: spd(.3, 3.2), angry: 1 - humble, sad: humble, talk: u > 3.4 && u < 6.4, point: sstep(3.8, 4.6, u) * (1 - sstep(5.8, 6.4, u)), kneel: humble * .6, join: humble });
+      if (u < 6.2) aimBow(bowL, parashu, 0, 1.6);
+      once('np_a', u >= 6.2, () => { flashV = .8; burst(1700, 120, 8, .12, 90, 100); });
+      once('np_b', u >= 9.3, () => { flashV = 1; burst(1960, 250, 0, .13, 140, 150); });
+      base.ram.look = -.0; base.ram.talk = u > 6.4 && u < 7;
+    }
+    if (id === 'crown') {   // Ram shatters Ravan's crown and shows mercy (Yuddha Kanda 59)
+      const cr = rav.heads[0].userData.crownParts; if (cr) cr.forEach(m => { m.visible = u < 5.4; });
+      const rx2 = 5560 + 100 * ease(sstep(9.4, 11.8, u)), flip = ease(sstep(8.6, 9.6, u));
+      rav.root.visible = true; rav.root.position.set(rx2 + (u > 5.4 && u < 6.4 ? Math.sin(u * 40) * 2 : 0), 0, -10); rav.root.scale.set(1.1, 1.1, 1.1); rav.root.rotation.y = lerp(-(YAW - .1), YAW - .1, flip);
+      pose(rav, { ph: 0, s: flip * 0, t: Tr, angry: 1 - sstep(5.4, 6, u), sad: sstep(5.6, 6.4, u), talk: u < 2 }); rav.heads.forEach((h, i) => { h.rotation.y = Math.sin(Tr * 1.1 + i) * .18 + (u > 5.4 ? .25 * sstep(5.4, 6.4, u) : 0); });
+      once('ncr_a', u >= 5.4, () => { flashV = 1; burst(5530, 220, 14, .12, 150, 150); for (let q = 0; q < 24; q++) parts.push({ x: 5530 + rnd(-14, 14), y: 215 + rnd(-8, 8), z: 14, vx: rnd(-90, 90), vy: rnd(10, 90), vz: rnd(-10, 10), life: rnd(1, 1.8), age: 0, hue: .12, r: rnd(1.5, 3), drag: .5, g: 80 }); });
+      if (u < 4.4 && Math.random() < .5) flame(5560 + rnd(-40, 40), rnd(10, 100), -8, 1.4);
+      base.ram.talk = u > 6.6 && u < 9.2; base.ram.look = .1;
+    }
+    if (id === 'wake') {   // Kumbhakarna is woken and goes out to fight (Yuddha Kanda 61–62)
+      const sl = 1 - ease(sstep(5.4, 7.4, u));
+      act(kum, 5320 - 90 * sl, 14 * sl, -10, R - .1, 1.9, { talk: u > 10 && u < 13, sad: u > 10 ? .5 : 0 }); kum.root.rotation.z = -1.5 * sl;
+      const ey = kum.head.userData.eyes; if (ey) ey.forEach(e => { e.scale.y = e.userData.by * lerp(1, .06, 1 - sstep(5.6, 6.6, u)); });
+      if (u < 5.4 && Math.random() < .05) parts.push({ x: 5370, y: 40, z: 10, vx: 6, vy: 20, vz: 0, life: 1.8, age: 0, hue: .58, r: 2.4, drag: .9, g: -4 });
+      act(tataka, 5200, 0, 8, R, pop(.6, 12.2, u, 1.3), { cheer: .7 * sstep(1, 1.6, u) * (1 - sstep(5.2, 6, u)), angry: 1, talk: u > 1 && u < 5.4 });
+      act(surp, 5445, 0, 8, L, pop(.6, 12.2, u, 1.1), { cheer: .7 * sstep(1.2, 1.8, u) * (1 - sstep(5.2, 6, u)), angry: 1, talk: u > 1 && u < 5.4 });
+      for (let k = 0; k < 5; k++) once('nw' + k, u >= 1.2 + k * 1.0, () => { flashV = .3; burst(5320, 40, 20, .09, 26, 90); });
+      feast.visible = u > 7.6 && u < 10; feast.position.set(5320 + 74, 104 + Math.sin(Tr * 6) * 3, 14); feast.scale.setScalar(1.3 * sstep(7.6, 8.2, u) * (1 - sstep(9.4, 10, u)) + .01);
+      once('nw_a', u >= 6.4, () => { flashV = .7; burst(5320, 130, 0, .06, 70, 90); });
+      base.hold = false;
+    }
+    if (id === 'niku') {   // Lakshman kills Indrajit at his fire ritual (Yuddha Kanda 85–90)
+      const lx2 = 5110, dead = sstep(9, 10, u);
+      fireGlow.visible = u < 9.4; fireGlow.position.set(5420, 60, 0); fireGlow.material.opacity = .22 * sstep(0, 1, u) * (1 - sstep(8.8, 9.4, u));
+      if (u < 9) { for (let q = 0; q < 2; q++) flame(5420 + rnd(-30, 30), 4, rnd(-6, 20), 1.8); }
+      const rise = ease(sstep(5.4, 7, u));
+      act(indra, 5470, 10 * dead, 0, L, pop(.1, 13.2, u, 1.1), { kneel: (1 - rise) * .85 * (1 - dead), join: (1 - rise) * (1 - dead), angry: rise, talk: u > 7 && u < 8.4, sad: dead }); indra.root.rotation.z = -1.5 * dead;
+      act(vibh, 4985, 0, 4, R, pop(2, 13.2, u, 1), { point: sstep(2.4, 3.2, u) * (1 - sstep(5, 5.8, u)), talk: u > 2.4 && u < 5, cheer: sstep(10.6, 11.4, u) * (1 - sstep(12.6, 13.2, u)) });
+      base.lak.aim = sstep(5, 6.2, u) * (1 - sstep(9.8, 10.4, u)); base.lak.draw = sstep(6, 8, u) * (u < 8.2 ? 1 : 0); base.lak.bow = true; base.lak.angry = 1; base.lak.talk = u > 4.2 && u < 5.2;
+      base.lak.cheer = sstep(10.8, 11.6, u) * (1 - sstep(13, 13.8, u));
+      once('nn_a', u >= 9, () => { flashV = 1; burst(5430, 120, 8, .02, 150, 150); for (let q = 0; q < 20; q++) ember(5430 + rnd(-30, 30), rnd(20, 100), 0, true); });
+      if (u > 9.6 && u < 12.6) ember(5470 + rnd(-14, 14), rnd(10, 70), 0, true);
+    }
+    if (id === 'headcut') {   // the duel: heads and arms cut off, and grow again (Yuddha Kanda 102–108)
+      const ds = 1 - ease(sstep(0, 1.6, u));
+      indraCh.visible = true; indraCh.position.set(rx - 6, 10 + 190 * ds, -46); indraCh.scale.setScalar(1); indraCh.userData.wheels.forEach(w => { w.rotation.z = Tr * 3; });
+      ram.root.position.y = 26 + 190 * ds; matali.root.position.y = 26 + 190 * ds;
+      matali.root.visible = true; pose(matali, { ph: 0, s: 0, t: Tr, point: .6, talk: u > 12.8 && u < 15.4 });
+      rav.root.visible = true; rav.root.position.set(5560, 0, -10); rav.root.scale.set(1.1, 1.1, 1.1); rav.root.rotation.y = -(YAW - .1);
+      const cuts = [[3.6, 5.8, [1, 2, 3], []], [6.0, 8.2, [], [0, 1, 2, 3, 4, 5, 6, 7, 8]], [8.6, 10.8, [4, 5, 6, 7, 8, 9], [9, 10, 11, 12, 13, 14, 15, 16, 17]], [11.2, 13.6, [0], []]];
+      const lastCut = u > 3.6;
+      pose(rav, { ph: 0, s: 0, t: Tr, angry: 1, talk: (u > 3.6 && u < 4.4) || (u > 6 && u < 6.8) || (u > 8.6 && u < 9.4) || (u > 11.2 && u < 12) });
+      rav.heads.forEach((h, i) => { h.rotation.y = Math.sin(Tr * 1.1 + i) * .18; });
+      rav.xarms.forEach((a, i) => { a.rotation.x = -.15 - (Math.sin(Tr * 2.2 + i) * .5 + .5) * .5; });
+      cuts.forEach(([tc, tr, hs, as]) => {
+        hs.forEach(k => cutPart(rav.heads[k], tc, tr, u, (k % 2 ? 1 : -1) * (1.2 + (k % 3) * .5)));
+        as.forEach(k => cutPart(rav.xarms[k], tc, tr, u, 0));
+        once('nh_c' + tc, u >= tc, () => { flashV = .8; burst(5545, 190, 14, .02, 100, 130); for (let q = 0; q < 14; q++) ember(5530 + rnd(-50, 50), rnd(90, 230), 8, true); });
+        once('nh_r' + tr, u >= tr, () => { flashV = .6; burst(5560, 150, 10, .12, 70, 90); });
+      });
+      const gl = sstep(14.2, 15.2, u) * (1 - sstep(17, 17.8, u)); astra.visible = gl > .02;
+      if (astra.visible) { ram.root.updateMatrixWorld(true); const hh = ram.arms[0].userData.hand; hh.getWorldPosition(wp); astra.position.set(wp.x + 28, wp.y + 4, 14); astra.scale.setScalar(5 + 9 * gl + 2 * Math.sin(Tr * 12)); if (Math.random() < .8) ember(astra.position.x, astra.position.y, 12, false); }
+      once('nh_d', u >= 14.2, () => { flashV = 1; burst(5120, 170, 14, .12, 90, 100); });
+      base.ram.look = 0;
+    }
+    if (id === 'mando') {   // Ravan's funeral and Vibhishana's coronation (Yuddha Kanda 109–112)
+      const fade = 1 - sstep(9.4, 12.2, u);
+      rav.root.visible = fade > .02; rav.root.position.set(5560, 12, -10); rav.root.scale.set(1.1 * (.4 + .6 * fade), 1.1 * fade + .01, 1.1); rav.root.rotation.set(0, -(YAW - .1), -1.45); pose(rav, { ph: 0, s: 0, t: Tr, sad: 1 });
+      if (u < 12.2) { if (Math.random() < .5) ember(5560 + rnd(-60, 60), rnd(5, 60), 0, true); if (u > 9.4 && Math.random() < .4) flame(5560 + rnd(-60, 60), rnd(5, 40), 0, 1.2); }
+      const mx = wk(5800, 5660, .3, 3.6);
+      base.sitaOverride = { x: 5870, y: 0, face: L, ph: 0, s: 0, join: 0, look: 0 };
+      act(mandodari, mx, 0, 4, L, pop(.1, 13.8, u, 1), { s: spd(.3, 3.6, .7), kneel: sstep(3.8, 4.6, u) * .8, sad: 1, talk: u > 5 && u < 8.4, look: .15 });
+      const vx = wk(5210, 5470, 2, 5);
+      act(vibh, vx, 0, 4, R, pop(1.8, 13.8, u, 1), { s: spd(2, 5, .8), kneel: sstep(5.4, 6.2, u) * (1 - sstep(8.6, 9.4, u)) * .7, sad: 1 - sstep(10.6, 11.4, u), talk: u > 9.2 && u < 10.6, join: sstep(9.8, 10.8, u) * (1 - sstep(12, 12.6, u)) });
+      base.ram.talk = u > 6.4 && u < 9; base.ram.look = .2; base.ram.point = sstep(8.8, 9.4, u) * (1 - sstep(10.4, 11, u));
+      once('nm_a', u >= 10.8, () => { flashV = .7; burst(5470, 170, 0, .12, 110, 110); petalRain(5300, 5700, 30, 260); });
+    }
     if (id === 'boons') {   // Kaikeyi's boons
       if (u > .2 && u < 10.9) { const kf = sstep(.2, 1.4, u) * (1 - sstep(9.8, 10.9, u));
         showAt(dash, 2450, 10 * sstep(5.6, 6.8, u), 0, face, kf + .001); pose(dash, { ph: 0, s: 0, t: Tr, kneel: sstep(4.2, 5.4, u), talk: u > 2.2 && u < 4.4, sad: 1 }); dash.root.rotation.z = -1.4 * sstep(5.6, 6.8, u);
@@ -1886,7 +2125,7 @@ window.R3 = (function () {
       const sx = u < 3 ? lerp(3560, 3250, ease(u / 3)) : (u < 6 ? 3250 : lerp(3250, 3900, ease(sstep(6, 8.6, u))));
       if (u > .2 && u < 8.8) { showAt(surp, sx, 0, 6, u < 6 ? face : YAW, pop(.2, 8.8, u, 1.1)); pose(surp, { ph: sx * Math.PI / STEP, s: (u < 3 || u > 6) ? .9 : 0, t: Tr, talk: u > 3 && u < 6, angry: sstep(4.4, 5, u), look: -.15 }); if (u > 6) ember(sx + 20, 90, 0, true); }
       base.ram.look = -.35; base.ram.talk = u > 3.4 && u < 4.4; base.lak.point = sstep(5, 5.8, u) * (1 - sstep(8, 9, u)); base.lak.angry = sstep(5, 5.8, u);
-      once('i3a', u >= 6, () => { flashV = .5; burst(3250, 100, 0, .85, 80, 90); });
+      once('v3a', u >= 6, () => { flashV = .5; burst(3250, 100, 0, .85, 80, 90); });
     }
     if (id === 'rekha') {   // the hermit at the hut: Ravan in disguise
       const hx = u < 3.5 ? lerp(3020, 3150, ease(u / 3.5)) : 3150, rv = sstep(7.6, 8.2, u);
@@ -1911,9 +2150,9 @@ window.R3 = (function () {
         showAt(sugr, sx, 0, 6, YAW, f + .001); pose(sugr, { ph: sx * Math.PI / STEP, s: 0, t: Tr, kneel: sstep(9.8, 10.8, u) * (1 - sstep(10.8, 11.6, u)), angry: u < 8.2 ? 1 : 0 });
         if (u < 8.2) { sugr.arms[0].rotation.x = -1.5 + Math.sin(u * 7) * .6; sugr.arms[1].rotation.x = -1.2 + Math.sin(u * 7 + 2) * .6; sugr.torso.rotation.y = Math.sin(u * 7) * .25; } }
       if (u > .3 && u < 12.9) { showAt(vali, vx, 10 * vf, -4, face, vf2 * (.2 + .8 * ease(sstep(.3, 1.4, u))) + .001); pose(vali, { ph: 0, s: 0, t: Tr, talk: u > 9.4 && u < 11.6, angry: u < 8.2 ? 1 : 0, sad: u > 8.4 ? 1 : 0 }); if (u < 8.2) { vali.arms[0].rotation.x = -1.5 + Math.sin(u * 7 + 1) * .6; vali.arms[1].rotation.x = -1.2 + Math.sin(u * 7 + 3) * .6; vali.torso.rotation.y = -Math.sin(u * 7 + 1) * .25; } vali.root.rotation.z = -1.4 * vf; }
-      once('i3a', u >= .3, () => { flashV = .5; burst(4090, 90, 0, .02, 80, 90); });
-      once('i3b', u >= 8.2, () => { flashV = .8; burst(4125, 120, 0, .02, 120, 130); });
-      once('i3c', u >= 11, () => { flashV = .7; burst(4030, 150, 0, .12, 100, 110); });
+      once('v3a', u >= .3, () => { flashV = .5; burst(4090, 90, 0, .02, 80, 90); });
+      once('v3b', u >= 8.2, () => { flashV = .8; burst(4125, 120, 0, .02, 120, 130); });
+      once('v3c', u >= 11, () => { flashV = .7; burst(4030, 150, 0, .12, 100, 110); });
     }
     if (id === 'vib') {   // Vibhishana joins Ram
       const bx = u < 4 ? lerp(4330, 3990, ease(u / 4)) : 3990;
@@ -1933,12 +2172,12 @@ window.R3 = (function () {
       coils[1].visible = cf(3.6) > .02; coils[1].position.set(rx - 95, 0, 2); coils[1].scale.set(1, .05 + .95 * cf(3.6), 1); coils[1].rotation.y = -u * .4;
       const rf = sstep(4.2, 5.2, u) * (1 - sstep(11, 12.6, u));
       base.ram.fall = rf; base.lak.fall = rf; base.ram.sad = rf; base.lak.sad = rf;
-      once('i4a', u >= 4.2, () => { flashV = .7; burst(rx, 110, 0, .38, 90, 100); burst(rx - 95, 110, 0, .38, 90, 100); });
+      once('g4a', u >= 4.2, () => { flashV = .7; burst(rx, 110, 0, .38, 90, 100); burst(rx - 95, 110, 0, .38, 90, 100); });
       const gv = u > 8 && u < 15.6; garuda.visible = gv;
       if (gv) { const gx = u < 10.5 ? lerp(5950, 5050, ease((u - 8) / 2.5)) : (u < 13 ? 5050 : lerp(5050, 4250, ease((u - 13) / 2.6))), gy = u < 10.5 ? lerp(320, 200, ease((u - 8) / 2.5)) : (u < 13 ? 200 + Math.sin(u * 3) * 6 : lerp(200, 360, ease((u - 13) / 2.6)));
         garuda.position.set(gx, gy, -30); garuda.rotation.y = Math.PI - .45; const fl = Math.sin(u * 11) * .6; garuda.userData.wings.forEach((w, i) => { w.rotation.x = (i ? -1 : 1) * fl; }); if (Math.random() < .7) ember(gx + rnd(-30, 30), gy - 10, -30, true); }
-      once('i4b', u >= 10.4, () => { flashV = 1; burst(5050, 190, 0, .12, 130, 150); });
-      once('i4c', u >= 12.6, () => { flashV = .6; burst(5330, 150, 0, .78, 90, 100); });
+      once('g4b', u >= 10.4, () => { flashV = 1; burst(5050, 190, 0, .12, 130, 150); });
+      once('g4c', u >= 12.6, () => { flashV = .6; burst(5330, 150, 0, .78, 90, 100); });
     }
     if (id === 'agni') {   // Sita's trial by fire
       const sx = u < 4.4 ? lerp(5700, 5445, ease(u / 4.4)) : (u < 5.6 ? 5445 : (u < 6.6 ? lerp(5445, 5400, u - 5.6) : 5400)), inFire = sstep(5.6, 6.6, u) * (1 - sstep(8.4, 9, u)), g = sstep(8.6, 9.4, u);
@@ -2009,7 +2248,8 @@ window.R3 = (function () {
     if (false) { const u = sstep(3, 6, T); baby.position.set(330, 34 + u * 70 + Math.sin(T * 3) * 2, 10); baby.scale.setScalar(1 + sstep(5.4, 6.4, T) * 3); babyLight.position.copy(baby.position); babyLight.intensity = 1.6 * sstep(3, 4, T); } else babyLight.intensity = 0;
     // King Dasharatha's sacred fire ritual: a divine being rises from the flames with a golden bowl of sacred pudding
     if (T < 7.6 && !frozen) { for (let k = 0; k < 2; k++) flame(330 + rnd(-16, 16), 4, 8, 1.5); }
-    bowl.visible = T > 2.2 && T < 6.2; if (bowl.visible) { const bu = ease(sstep(2.2, 5.6, T)); bowl.position.set(330, lerp(24, 118, bu) + Math.sin(Tr * 3) * 1.5, 10); bowl.scale.setScalar(.4 + .6 * sstep(2.2, 3.4, T) + .6 * sstep(5.4, 6.2, T)); babyLight.position.set(330, 118, 40); babyLight.intensity = 1.5 * sstep(3, 4, T) * (1 - sstep(5.6, 6.4, T)); } else babyLight.intensity = 0;
+    bowl.visible = false; babyLight.position.set(330, 118, 40); babyLight.intensity = 1.4 * sstep(3, 4, T) * (1 - sstep(5.6, 6.4, T)) * (frozen ? 0 : 1);
+    birthOrbs.forEach((o, k) => { const a = sstep(2.2 + k * .25, 3.4 + k * .25, T) * (1 - sstep(5.8, 6.4, T)) * (frozen ? 0 : 1), an = Tr * 2.2 + k * 1.57; o.visible = a > .02; o.position.set(330 + Math.cos(an) * 20 + (k - 1.5) * 16 * sstep(3.6, 6, T), lerp(30, 150, ease(sstep(2.2, 6, T))) + Math.sin(an) * 7, 10 + Math.sin(an) * 14); o.scale.setScalar(12 * a + .01); });
     dash2.root.visible = T < 10 && !frozen; if (dash2.root.visible) { dash2.root.position.set(215, 0, 6); dash2.root.rotation.y = YAW; dash2.root.scale.setScalar(.2 + .8 * ease(sstep(0, 1.2, T)) * (1 - sstep(8.4, 10, T) * .97)); pose(dash2, { ph: 0, s: 0, t: Tr, join: sstep(1, 2, T) * (1 - sstep(7, 8, T)), talk: false }); }
     once('birth', T >= 6.0, () => { flashV = 1; burst(380, 100, 10, .12, 150, 150); burst(330, 118, 10, .1, 90, 120); petalRain(60, 900, 40, 260); });
     ram.root.visible = T >= 6.0; ram.root.scale.setScalar(.2 + .8 * ease(sstep(6.0, 7.2, T)));
@@ -2019,26 +2259,29 @@ window.R3 = (function () {
     let aw = null;
     for (const [a0, a1, d0, d1] of WIN) if (T >= a0 && T < a1 + .6) aw = { aim: sstep(a0, a0 + 1.2, T) * (1 - sstep(a1, a1 + .6, T)), draw: sstep(d0, d1, T) * (T < d1 + .05 ? 1 : 0), big: a0 < 30 };
     let insShot = null; const base = { ram: {}, lak: {}, sita: {} };
-    if (frozen) { const r = insertParams(INS[ins.i].id, ins.u, rx); if (!aw) aw = r.aw; insShot = r.shot; }
+    if (frozen) { const r = insertParams(INS[ins.i].id, ins.u, rx, lakX(T)); if (!aw) aw = r.aw; insShot = r.shot; }
     const rider = T >= 185.5 && T < 205;
     ram.root.position.set(rx, rider ? chY(T) + 16 : 0, 6);
-    const po = { ph: rx * Math.PI / STEP, s: rider ? 0 : clamp(Math.abs(vR) / 85), t: Tr };
+    const po = { ph: rx * Math.PI / STEP, s: rider ? 0 : clamp(Math.abs(vR) / SPDN), t: Tr };
     if (aw) { po.aim = aw.aim; po.draw = aw.draw; }
     if (T >= 31 && T < 34) po.victory = sstep(31.1, 31.8, T) * (1 - sstep(33, 34, T));
     if (T >= 168.8 && T < 172) po.victory = sstep(168.9, 169.6, T) * (1 - sstep(171, 172, T));
     pose(ram, po); const chV = fz * vel(chX, T); if (!frozen) turn(ram, rider ? chV : vR, dt);
 
     // Lakshman
-    const lx = lakX(T), vL = fz * vel(lakX, T), lfall = sstep(155.5, 156.4, T) * (1 - sstep(164.5, 166, T));
+    const lx = lakX(T), vL = fz * vel(lakX, T), lfall = sstep(155.5, 156.4, T) * (1 - sstep(158.8, 159.8, T));
     lak.root.position.set(lx, T >= 185.5 && T < 205 ? chY(T) + 16 : 12 * lfall, 2);
-    pose(lak, { ph: lx * Math.PI / STEP + 2.6, s: (T >= 185.5 && T < 205) ? 0 : clamp(Math.abs(vL) / 85), t: Tr });
-    lak.root.rotation.z = -1.45 * lfall; ram.root.rotation.z = -1.45 * lfall; ram.root.position.y = 12 * lfall; if (!frozen) turn(lak, (T >= 185.5 && T < 205) ? chV : vL, dt);
+    pose(lak, { ph: lx * Math.PI / STEP + 2.6, s: (T >= 185.5 && T < 205) ? 0 : clamp(Math.abs(vL) / SPDN), t: Tr });
+    lak.root.rotation.z = -1.45 * lfall; ram.root.rotation.z = -1.45 * lfall; ram.root.position.y = 12 * lfall;
+    { const onCh = T >= 164 && T < 176; indraCh.visible = onCh; matali.root.visible = onCh;
+      if (onCh) { ram.root.position.y = 26; indraCh.position.set(rx - 6, 10, -46); indraCh.scale.setScalar(1); indraCh.userData.wheels.forEach(w => { w.rotation.z = Tr * 3; }); matali.root.position.set(rx - 46, 26, 4); matali.root.rotation.y = YAW; matali.root.scale.setScalar(1); pose(matali, { ph: 0, s: 0, t: Tr, point: .6 }); } }
+    if (!frozen) turn(lak, (T >= 185.5 && T < 205) ? chV : vL, dt);
 
     // Sita
     const sx = sitaX(T), vS = fz * vel(sitaX, T), captive = T >= 91 && T < 176, sRide = (T >= 82.5 && T < 91) || (T >= 185 && T < 205);
     sita.root.visible = T >= 25.5; sita.root.scale.setScalar(.2 + .8 * ease(sstep(25.5, 26.7, T)));
     sita.root.position.set(sx, sRide ? chY(T) + 16 : 0, 22);
-    pose(sita, { ph: sx * Math.PI / STEP + 1.4, s: sRide ? 0 : clamp(Math.abs(vS) / 85), t: Tr, kneel: captive ? .85 * sstep(91.5, 92.5, T) * (1 - sstep(174.5, 176, T)) : 0 });
+    pose(sita, { ph: sx * Math.PI / STEP + 1.4, s: sRide ? 0 : clamp(Math.abs(vS) / SPDN), t: Tr, kneel: captive ? .85 * sstep(91.5, 92.5, T) * (1 - sstep(174.5, 176, T)) : 0 });
     if (!frozen) turn(sita, sRide ? chV : vS, dt, YAW, (T < 32 || captive) ? .55 : 0);
 
     // Hanuman and the vanaras
@@ -2046,7 +2289,7 @@ window.R3 = (function () {
     if (hp.vis) {
       han.root.position.set(hp.x, hp.y, 10); const hv = fz * (hanPos(T + .06).x - hanPos(T - .06).x) / .12;
       if (!frozen) turn(han, (T >= 185.5 && T < 205) ? chV : hv, dt, hp.fly ? 1.4 : YAW);
-      pose(han, { ph: hp.x * Math.PI / STEP, s: hp.fly ? 0 : clamp(Math.abs(hv) / 85), t: Tr, kneel: hp.kneel, fly: hp.fly, cheer: sstep(176, 177, T) * (1 - sstep(182, 183, T)) });
+      pose(han, { ph: hp.x * Math.PI / STEP, s: hp.fly ? 0 : clamp(Math.abs(hv) / SPDN), t: Tr, kneel: hp.kneel, fly: hp.fly, cheer: sstep(176, 177, T) * (1 - sstep(182, 183, T)) });
       han.tailTip.visible = hp.tail > 0;
       if (hp.tail) { han.tailTip.getWorldPosition(wp); for (let i = 0; i < 4; i++) ember(wp.x, wp.y, wp.z, true); }
     }
@@ -2054,7 +2297,7 @@ window.R3 = (function () {
     vanaras.forEach((v, i) => {
       const vis = T >= 119 && T < 185; v.root.visible = vis; if (!vis) return;
       const f = (t) => (t < 152 ? ramX(t) : ramX(152)) - 130 - i * 44, x = f(T), vv = fz * (f(T + .06) - f(T - .06)) / .12;
-      v.root.position.set(x, 0, 14 + (i % 2) * 14); pose(v, { ph: x * Math.PI / STEP + i, s: clamp(Math.abs(vv) / 85), t: Tr, cheer: sstep(176, 177, T) * (1 - sstep(182, 183, T)) }); if (!frozen) turn(v, vv, dt);
+      v.root.position.set(x, 0, 14 + (i % 2) * 14); pose(v, { ph: x * Math.PI / STEP + i, s: clamp(Math.abs(vv) / SPDN), t: Tr, cheer: sstep(176, 177, T) * (1 - sstep(182, 183, T)) }); if (!frozen) turn(v, vv, dt);
     });
 
     // 3. Shiva's bow: lifted, bent, snapped; then Sita's garland
@@ -2076,7 +2319,7 @@ window.R3 = (function () {
 
     // Ram's bow: slung on the back, in hand to shoot
     const bowOn = aw && !aw.big;
-    bow.visible = T >= 43;
+    bow.visible = T >= 43 || !!bowOn;
     if (bowOn) {
       const f = ram.arms[0].userData.hand, b = ram.arms[1].userData.hand, fp = new THREE.Vector3(), bp = new THREE.Vector3(); f.getWorldPosition(fp); b.getWorldPosition(bp);
       bow.position.copy(fp); bow.rotation.set(0, 0, 0); bow.scale.setScalar(1.3); bow.updateMatrixWorld(true);
@@ -2088,9 +2331,10 @@ window.R3 = (function () {
     }
     if (rider) bow.visible = false;
     // arrows in flight
+    arrow.scale.setScalar(1);
     SHOTS.forEach(([t0, dur, tx, ty], i) => {
       const p = (T - t0) / dur; if (p < 0 || p >= 1) return;
-      const x0 = rx + 62, y0 = 128; arrow.visible = true;
+      const x0 = rx + 62, y0 = 128; arrow.visible = true; arrow.scale.setScalar(i === 2 ? 2.4 : 1);
       arrow.position.set(lerp(x0, tx, p), lerp(y0, ty, p) + Math.sin(Math.PI * p) * 8, 10); arrow.rotation.set(0, 0, Math.atan2(ty - y0, tx - x0));
       for (let k = 0; k < 3; k++) ember(arrow.position.x - 18, arrow.position.y, 10, true);
     });
@@ -2105,13 +2349,16 @@ window.R3 = (function () {
 
     // 7. Ravan comes to the hut, takes Sita in his flying chariot; Jatayu fights him and falls
     const rp = T < 81 ? null : T < 82.5 ? { x: 3150, y: 0 } : T < 91 ? { x: chX(T) - 14, y: chY(T) + 18 } : { x: 5560, y: 0 };
-    const burn = sstep(168.6, 177, T), ravS = 1.1 * (1 - .5 * burn);
-    rav.root.visible = rp !== null && burn < .985;
+    const burn = sstep(168.6, 176, T), ravS = 1.1 * (1 - .15 * burn), rfall = sstep(169.4, 171, T);
+    rav.root.visible = rp !== null && T < 176;
     if (rp) {
-      rav.root.scale.set(1.1 * (1 + burn * .1), ravS, 1.1);
-      rav.root.position.set(rp.x + (T > 168.6 && T < 175 ? Math.sin(T * 60) * 2.5 * (1 - burn) : 0), rp.y, -10);
+      rav.root.scale.set(1.1, ravS, 1.1);
+      rav.root.position.set(rp.x + (T >= 138 && T < 139 ? 100 * (1 - sstep(138, 139, T)) : 0) + (T > 168.6 && T < 171 ? Math.sin(T * 60) * 2.5 * (1 - rfall) : 0), rp.y + 12 * rfall, -10);
       pose(rav, { ph: 0, s: 0, t: Tr }); if (!frozen) turn(rav, T < 91 ? chV : -10, dt, YAW - .1); rav.heads.forEach((h, i) => { h.rotation.y = Math.sin(Tr * 1.1 + i) * .18; });
     }
+    rav.root.rotation.z = -1.45 * rfall;
+    rav.heads.forEach(h => { const d = h.userData; h.visible = true; h.position.copy(d.base); h.scale.setScalar(d.bs); h.rotation.z = d.bz; }); rav.xarms.forEach(a => { a.visible = true; a.scale.setScalar(1); if (!(frozen && INS[ins.i].id === 'headcut')) a.rotation.x = -.15 + Math.sin(Tr * 1.6 + a.id) * .05; });
+    { const cp = rav.heads[0].userData.crownParts; if (cp) cp.forEach(m => { m.visible = T < 138; }); }
     once('abduct', T >= 81, () => { flashV = 1; burst(3150, 110, 10, .78, 120, 130); });
     const cv = (T >= 82.5 && T < 92) || (T >= 182 && T < 213);
     chariot.visible = cv;
@@ -2144,8 +2391,8 @@ window.R3 = (function () {
     const sp = seaGeo.attributes.position; for (let i = 0; i < sp.count; i++) { const x = seaBase[i * 3], y = seaBase[i * 3 + 1]; sp.setY(i, y + Math.sin(x * .045 + Tr * 2.2) * 2.6 + Math.sin(x * .11 - Tr * 3) * 1.1); } sp.needsUpdate = true;
 
     // 11. Kumbhakarna, Lakshman struck down, the healing mountain
-    kum.root.visible = T >= 138 && T < 155.5;
-    if (kum.root.visible) { const f = sstep(148, 150.5, T); kum.root.position.set(5320, 14 * f, -10); if (!frozen) turn(kum, -10, dt, YAW - .1); kum.root.rotation.z = -1.5 * f; kum.root.scale.setScalar(1.9 * (1 - .9 * sstep(153, 155.5, T))); pose(kum, { ph: 0, s: 0, t: Tr }); }
+    kum.root.visible = T >= 139 && T < 155.5;
+    if (kum.root.visible) { const f = sstep(148, 150.5, T); kum.root.position.set(5320, 14 * f, -10); kum.root.rotation.z = 0; if (!frozen) turn(kum, -10, dt, YAW - .1); kum.root.rotation.z = -1.5 * f; kum.root.scale.setScalar(1.9 * (1 - .9 * sstep(153, 155.5, T))); pose(kum, { ph: 0, s: 0, t: Tr }); }
     once('khit', T >= 147.6, () => { flashV = .8; burst(5255, 150, 0, .02, 130, 160); });
     once('lakhit', T >= 155.5, () => { flashV = .6; burst(5110, 110, 0, .02, 80, 110); });
     once('mount', T >= 158, () => { flashV = .9; burst(4900, 120, 0, .38, 130, 150); burst(5110, 60, 0, .38, 90, 100); });
@@ -2166,12 +2413,13 @@ window.R3 = (function () {
     { const asc = T >= 53.4 && T < 185.5; setAscetic(ram, asc); setAscetic(lak, asc); setAscetic(sita, asc); }
     // the sage who guides the princes, and the inserted scenes
     const sv = T >= 10 && T < 26; sage.root.visible = sv;
-    if (sv) { const sxx = ramX(T) + 130, vs = fz * vel(ramX, T); sage.root.position.set(sxx, 0, 4); if (!frozen) turn(sage, vs, dt); sage.root.scale.setScalar(.2 + .8 * ease(sstep(10, 11.2, T)) * (1 - sstep(24.4, 26, T) * .97)); pose(sage, { ph: sxx * Math.PI / STEP, s: clamp(Math.abs(vs) / 85), t: Tr }); }
+    if (sv) { const sxx = ramX(T) + 130, vs = fz * vel(ramX, T); sage.root.position.set(sxx, 0, 4); if (!frozen) turn(sage, vs, dt); sage.root.scale.setScalar(.2 + .8 * ease(sstep(10, 11.2, T)) * (1 - sstep(24.4, 26, T) * .97)); pose(sage, { ph: sxx * Math.PI / STEP, s: clamp(Math.abs(vs) / SPDN), t: Tr }); }
     if (!(frozen && INS[ins.i].id === 'rekha')) { const rv = false; rekha.visible = rekhaGlow.visible = rv; if (rv) { const rs = ease(sstep(77.2, 78.8, T)) * (1 - sstep(84.5, 86, T)) + .001; rekha.scale.setScalar(rs); rekhaGlow.scale.setScalar(rs); rekha.material.color.setRGB(1, .63, .19); rekhaGlow.material.opacity = .25; } }
     insertActors(ins, Tr, rx, base);
     if (frozen) {   // re-pose the main cast for the inserted scene (kneeling, pointing, fallen, seated)
       const rp = Object.assign({ ph: rx * Math.PI / STEP, s: 0, t: Tr }, base.ram); if (aw) { rp.aim = aw.aim; rp.draw = aw.draw; }
       pose(ram, rp); pose(lak, Object.assign({ ph: lx * Math.PI / STEP + 2.6, s: 0, t: Tr }, base.lak));
+      if (base.lak.bow && base.lak.aim > .02) aimBow(bowL, lak, base.lak.draw || 0, 1.3);
       if (base.sitaOverride) { const o = base.sitaOverride; sita.root.position.set(o.x, o.y, 22); sita.root.rotation.y = o.face; pose(sita, { ph: o.ph, s: o.s, t: Tr, join: o.join, look: o.look }); }
       else pose(sita, Object.assign({ ph: sx * Math.PI / STEP + 1.4, s: 0, t: Tr }, base.sita));
       if (base.ram.fall !== undefined || base.lak.fall !== undefined || INS[ins.i].id === 'indra') { ram.root.rotation.z = -1.45 * (base.ram.fall || 0); ram.root.position.y = 12 * (base.ram.fall || 0); lak.root.rotation.z = -1.45 * (base.lak.fall || 0); lak.root.position.y = 12 * (base.lak.fall || 0); }
@@ -2180,7 +2428,7 @@ window.R3 = (function () {
     const sqv = false; squirrel.visible = false;
     if (sqv) { const q = sstep(132, 134, T), qx = ramX(T) + 60 + Math.sin(T * 1.7) * 38 * (1 - q) - 22 * q, hop = Math.abs(Math.sin(T * 7)) * 6 * (1 - q); squirrel.position.set(qx, 14 + hop, 22); squirrel.rotation.y = Math.cos(T * 1.7) > 0 ? 0 : Math.PI; if (q > .5) squirrel.rotation.y = Math.PI; squirrel.userData.pebble.visible = q < .5; if (q > .9) once('sq', true, () => { flashV = .3; burst(qx, 40, 0, .12, 50, 40); }); }
     // footsteps raise a little dust
-    for (const [h, x, s2, vis] of [[ram, rx, clamp(Math.abs(vR) / 85), ram.root.visible], [lak, lx, clamp(Math.abs(vL) / 85), lak.root.visible], [sita, sx, clamp(Math.abs(vS) / 85), sita.root.visible]]) {
+    for (const [h, x, s2, vis] of [[ram, rx, clamp(Math.abs(vR) / SPDN), ram.root.visible], [lak, lx, clamp(Math.abs(vL) / SPDN), lak.root.visible], [sita, sx, clamp(Math.abs(vS) / SPDN), sita.root.visible]]) {
       if (!vis || s2 < .25 || frozen) continue; const sg = Math.sin(x * Math.PI / STEP + (h === ram ? 0 : h === lak ? 2.6 : 1.4)) > 0 ? 1 : -1;
       if (h.lastSg !== undefined && sg !== h.lastSg) for (let k = 0; k < 3; k++) parts.push({ x: x + rnd(-8, 8), y: 2, z: rnd(6, 26), vx: rnd(-14, 14), vy: rnd(6, 20), vz: 0, life: rnd(.5, .9), age: 0, hue: .09, r: rnd(1, 1.8), drag: .25, g: 20 });
       h.lastSg = sg;
@@ -2209,7 +2457,7 @@ window.R3 = (function () {
     camera.projectionMatrix.multiply(shear); camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
   }
   function render() { drawParts(); composer.render(); return canvas; }
-  return { canvas, setView, update, render, LOOP: TOTAL, WORLD, ramX, sitaX, lakX, follow: () => camC, caption: captionAt, chapters, bloom };
+  return { canvas, setView, update, render, LOOP: TOTAL * SLOW, WORLD, ramX, sitaX, lakX, follow: () => camC, caption: captionAt, chapters, bloom };
 })();
 
 </script>

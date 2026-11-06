@@ -74,3 +74,10 @@ the birth comes from Dasharatha's fire ritual (not a lotus); Ahalya lives unseen
 Ram, Lakshman and Sita wear bark robes in exile; there is no protective line round the hut; Lakshman wounds Surpanakha; Ravan comes as a hermit;
 the bridge is built by Nala (no squirrel, no Ram-name stones); Angada leaps to the palace roof with four demons (no planted foot);
 Ram is crowned by Vasishtha. The Diwali lamps are marked in the captions as a later tradition.
+
+### Round five: slower, connected, with the story before Ram's birth
+- **Slower:** everything now plays 1.6 times slower (walking pace, scene lengths and captions), so people can read and enjoy. The full loop is about 15 minutes.
+- **Before Ram was born (five new scenes):** Ravan's boon from Brahma (he cuts his ten heads one by one into the fire and Brahma restores them), the gods and Vishnu's promise to be born as a man, young Dasharatha and the boy Shravana with the blind parents' curse, Kaikeyi saving the wounded king (the two boons), and the fire ritual led by Rishyasringa that brings the four sons.
+- **Connected:** captions now link each scene to the next: the curse comes back at Dasharatha's death, the boons return at Ram's exile, Maricha survives to become the golden deer, and so on.
+- **New scenes:** Vishwamitra asks for Ram, the hermitage guard against Subahu and Maricha, Parashurama and Vishnu's bow, Ram breaking Ravan's crown and sending him home to rest, Kumbhakarna being woken, Lakshman killing Indrajit at his fire ritual, the long duel where Ram cuts Ravan's heads and arms and they grow back (Matali reminds Ram of the Brahma weapon), and Mandodari and the funeral.
+- **Ravan:** ten heads and twenty arms (two legs), as Valmiki calls him dashagriva. If you have a source for another count, it is one number to change in `makeRavan`.
