@@ -679,14 +679,17 @@
     ctx.clip();
   }
 
-  // The journey: scenes ahead of the story are dim, the scene in progress is bright, scenes behind it stay softly lit.
-  function journeyShade(x0, x1, c) {
-    const f = (x) => clamp((x - x0) / (x1 - x0));
-    const g = ctx.createLinearGradient(x0, 0, x1, 0);
-    g.addColorStop(0, 'rgba(0,0,0,.45)'); g.addColorStop(f(c - 1500), 'rgba(0,0,0,.45)');
-    g.addColorStop(f(c - 500), 'rgba(0,0,0,0)'); g.addColorStop(f(c + 500), 'rgba(0,0,0,0)');
-    g.addColorStop(f(c + 1500), 'rgba(0,0,0,.82)'); g.addColorStop(1, 'rgba(0,0,0,.82)');
-    ctx.fillStyle = g; ctx.fillRect(x0, -1500, x1 - x0, 2400);
+  // The journey: only the scene in progress is lit. Each scene fades in as the story reaches it and fades out as it moves on;
+  // everything else, including the empty margins, stays dark (no light on the wall).
+  const sceneWeight = (i) => sstep(i * SEG - 2.3, i * SEG - 0.8, T) * (1 - sstep(i * SEG + 10.8, i * SEG + 12.3, T));
+  function sceneShade(x0, x1) {
+    ctx.fillStyle = '#000';
+    if (x0 < 0) ctx.fillRect(x0, -1500, -x0, 2400);
+    if (x1 > NP * PW) ctx.fillRect(NP * PW, -1500, x1 - NP * PW, 2400);
+    for (let i = 0; i < NP; i++) {
+      const a = 1 - sceneWeight(i);
+      if (a > 0.003) { ctx.fillStyle = `rgba(0,0,0,${Math.min(1, a).toFixed(3)})`; ctx.fillRect(i * PW - 1, -1500, PW + 2, 2400); }
+    }
   }
 
   function drawWorld(P) {
@@ -698,8 +701,8 @@
     drawBackground(x0, x1); drawStars(x0, x1, T);
     if (fr) { ctx.fillStyle = INK; ctx.fillRect(x0, GY, x1 - x0, 900); }
     for (let i = 0; i < NP; i++) if (i * PW + PW > x0 && i * PW < x1) drawPanel(i);
-    if (fr) journeyShade(x0, x1, camCenter());
     drawParts();
+    if (fr) sceneShade(x0, x1);
     ctx.restore();
     if (flash > 0) { ctx.fillStyle = `rgba(255,236,200,${(flash * .55).toFixed(3)})`; ctx.fillRect(0, 0, W, H); }
     const fade = T < 1 ? 1 - T : (T > LOOP - 1.5 ? (T - (LOOP - 1.5)) / 1.5 : 0);
