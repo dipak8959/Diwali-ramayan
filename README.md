@@ -33,7 +33,7 @@ Video for a projector or USB stick: `node tools/render-video.js ramayan/index.ht
 ## Wall mapper (the frieze above the doors, or the doors and wall)
 `wall/index.html` lights only the shapes you outline and keeps everything else dark.
 The default **View: Frieze** is one long band in the gap between the ceiling and the tops of the doors: the five scenes sit side by side from left to right, and only the scene in progress is lit. The others stay dark, so the light moves along the wall as the story moves on.
-**Look: 3D** (the default) is a real 3D walk built with Three.js: the whole Ramayan plays as one walk along a ledge across the wall with no scene cuts (about 5 3/4 minutes): the birth of Ram, Shiva's bow and the wedding, exile, the golden deer, Sita's abduction and Jatayu, Hanuman's leap and burning Lanka, the sea bridge, the battle, Ravan's fall, the flying chariot home and Diwali, with teal and orange rim lighting, glow and a film colour grade. Only the part of the wall around the walkers is lit, and the light moves with them. **Look: Night** is the flat 2D version that draws no sky at all: figures are lit gold shapes on black, so only light reaches the wall. **Look: Day** paints a sky with dark silhouettes, for a screen.
+**Look: 3D** (the default) is a real 3D walk built with Three.js: the whole Ramayan plays as one walk along a ledge across the wall with no scene cuts (about 6 minutes): the birth of Ram, Shiva's bow and the wedding, exile, the golden deer, Sita's abduction and Jatayu, Hanuman's leap and burning Lanka, the sea bridge, the battle, Ravan's fall, the flying chariot home and Diwali, with teal and orange rim lighting, glow and a film colour grade. Only the part of the wall around the walkers is lit, and the light moves with them. **Look: Night** is the flat 2D version that draws no sky at all: figures are lit gold shapes on black, so only light reaches the wall. **Look: Day** paints a sky with dark silhouettes, for a screen.
 **View: Doors** switches to separate windows on the left door, the wall and the right door.
 The story is one continuous world, so a character or an arrow leaves one surface, crosses the dark gap and arrives on the next.
 
@@ -62,3 +62,8 @@ Smaller details: a squirrel at the sea bridge, fireflies and falling leaves in t
 ### Round three
 Six more scenes: Surpanakha and Lakshman, Lakshman's protective line and the hermit who is Ravan in disguise, Sabari's berries, Vibhishana joining Ram, Sita's trial by fire with Agni, and the coronation tableau (Ram Darbar) on a golden throne.
 New looks: real flames that change colour as they rise, soft ground mist, a light colour that follows the story (warm in Ayodhya, green in the forest, red at Lanka, gold at the homecoming), angry and sad brows, characters looking at each other, folded hands and sitting.
+
+### Round four
+- Everyone now turns to face the way they walk or fly, including Ram walking back to the hut, Hanuman leaping back, the riders on the flying chariot, and Ravan and Kumbhakarna, who face Ram.
+- Every caption now says what is happening and why Ram goes where he goes and with whom. Key moments also show a cyan **Lesson:** line, the moral of the story.
+- New scenes: Ahalya freed from stone, and Angada's foot in Ravan's court. Hanuman shows Ram and Sita in his heart at the coronation. Soft divine auras behind the heroes.

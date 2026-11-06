@@ -87,6 +87,8 @@ window.R3 = (function () {
     surpanakha: { skin: 0x9a6ad0, hair: 0x120508, dress: [0xd02a7a, 0x701040], sash: 0xffc94a, female: true, evil: true },
     hermit:   { skin: 0xb88a60, hair: 0xcccccc, dress: [0x8a4a1a, 0x3a1c08], sash: 0x6a3a14, beard: true },
     agni:     { skin: 0xff8a2a, hair: 0xff4a10, dress: [0xff7a10, 0xc01800], sash: 0xffe060, crown: true },
+    ahalya:   { skin: 0xe8b08a, hair: 0x2a1a10, dress: [0xd06ac0, 0x701a70], sash: 0xffd23a, female: true },
+    angada:   { skin: 0xe8b04a, hair: 0x7a4a1a, dress: [0xffe060, 0xc08a00], sash: 0x35e0ff, crown: true, monkey: true },
     kumbha:   { skin: 0x5e9a62, hair: 0x120508, dress: [0x8a3a2a, 0x2a120a], sash: 0xc0392b, crown: true, evil: true },
   };
 
@@ -545,6 +547,17 @@ window.R3 = (function () {
   const mists = Array.from({ length: MAXM }, (_, i) => ({ x: i * 155 + rnd(-40, 40), y: rnd(5, 16), z: rnd(10, 50), sx: rnd(70, 130), ph: rnd(0, 10) }));
   { const c = new THREE.Color(); mists.forEach((m, i) => { c.setHex([0x1a5a70, 0x3a2a6a, 0x167a60][i % 3]).multiplyScalar(.5); mistInst.setColorAt(i, c); }); }
 
+  // ---------- the fourth wave ----------
+  const ahalya = addNew('ahalya', 1), angada = addNew('angada', 1, { headScale: 1.2 });
+  const stone = new THREE.Group(); { const sm = std(0x7a7a8a, { roughness: .95, emissive: 0x101018 }); mesh(new THREE.DodecahedronGeometry(1, 0), sm, 0, 22, 0, stone).scale.set(40, 26, 32); mesh(new THREE.DodecahedronGeometry(1, 0), std(0x2a6a4a, { roughness: .9, emissive: 0x0a2a1a }), 12, 40, 6, stone).scale.set(16, 8, 14); }
+  stone.visible = false; scene.add(stone);
+  const heartTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); x.shadowColor = 'rgba(255,120,160,1)'; x.shadowBlur = 14; x.fillStyle = '#ff7aa8';
+    x.beginPath(); x.moveTo(64, 112); x.bezierCurveTo(10, 72, 14, 24, 46, 24); x.bezierCurveTo(58, 24, 64, 34, 64, 40); x.bezierCurveTo(64, 34, 70, 24, 82, 24); x.bezierCurveTo(114, 24, 118, 72, 64, 112); x.fill(); x.shadowBlur = 0;
+    x.fillStyle = '#5aa0ff'; x.beginPath(); x.arc(50, 56, 7, 0, 6.3); x.fill(); x.fillRect(44, 62, 12, 26); x.fillStyle = '#3fe08a'; x.beginPath(); x.arc(78, 56, 7, 0, 6.3); x.fill(); x.fillRect(72, 62, 12, 26);
+    return new THREE.CanvasTexture(c); })();
+  const heart = mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: heartTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), 0, 0, 0, scene); heart.visible = false;
+  [[ram, 0x5aa0ff], [sita, 0xffd070], [lak, 0xffe0a0], [han, 0xff9a40]].forEach(([h, c]) => { const a = mesh(G.sph, glowMat(c), 0, 100, -14, h.root); a.scale.set(30, 66, 8); a.material.opacity = .09; });   // a soft divine aura
+
   // ---------- particles ----------
   const MAXP = 3200, pGeo = new THREE.SphereGeometry(1, 6, 4);
   const pMat = new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
@@ -637,17 +650,19 @@ window.R3 = (function () {
   // ---------- extra scenes, inserted into the story ----------
   // Each insert freezes the main story at story time s0 and plays for n seconds, so the long walk is never rushed.
   const INS = [
-    { id: 'tataka', s0: 14.5, n: 11, fx: 1020, cap: 'The sage Vishwamitra takes Ram and Lakshman into the forest. Ram defeats the demoness Tataka, and the sage gives him divine weapons' },
-    { id: 'boons', s0: 53, n: 11, fx: 2400, cap: 'Queen Kaikeyi asks the king for two boons: Ram must live in the forest, and her son Bharata will be king. Dasharatha collapses in grief, and Ram bows and accepts' },
-    { id: 'sandals', s0: 60, n: 9, fx: 2200, cap: 'Bharata begs Ram to come back. Ram gives him his sandals to rule in his name' },
-    { id: 'surp', s0: 70, n: 9, fx: 3120, cap: "Surpanakha, Ravan's sister, tries to win Ram. When he refuses, she attacks, and Lakshman drives her away. Furious, she goes to Ravan" },
-    { id: 'rekha', s0: 81, n: 10, fx: 3230, cap: "A hermit begs Sita for alms. She reaches across Lakshman's protective line to help him. It is Ravan in disguise!" },
-    { id: 'sabari', s0: 98, n: 9, fx: 3780, cap: 'The old devotee Sabari has waited all her life to meet Ram. She offers him the sweetest berries, and he eats them with love' },
-    { id: 'vali', s0: 104.6, n: 13, fx: 4050, cap: 'The monkey kings Sugriva and Vali fight. Ram shoots Vali, and Sugriva becomes king' },
-    { id: 'vib', s0: 119, n: 9, fx: 3950, cap: "Ravan's brother Vibhishana leaves Lanka to join Ram. Ram promises to make him the next king of Lanka" },
-    { id: 'indra', s0: 137, n: 16, fx: 5100, cap: "Indrajit, Ravan's son, ties Ram and Lakshman with serpent arrows. The divine eagle Garuda comes and frees them" },
-    { id: 'agni', s0: 176, n: 10, fx: 5420, cap: 'Sita proves her purity by walking into fire. The fire god Agni lifts her out unharmed' },
-    { id: 'darbar', s0: 213, n: 12, fx: 760, cap: 'Ram is crowned king of Ayodhya, and a golden age of peace begins' },
+    { id: 'tataka', s0: 14.5, n: 11, fx: 1020, cap: 'The demoness Tataka attacks the sage\'s ritual. Ram shoots her to protect the innocent, and the sage gives him divine weapons', moral: 'Courage means protecting those who cannot protect themselves' },
+    { id: 'ahalya', s0: 22, n: 10, fx: 1480, cap: 'On the way, Ram\'s touch frees Ahalya, a woman cursed to live as stone for many years', moral: 'Compassion can free anyone from the weight of the past' },
+    { id: 'boons', s0: 53, n: 11, fx: 2400, cap: 'Kaikeyi claims two old boons: Bharata will be king, and Ram must go into the forest for 14 years. The king collapses, but Ram accepts to keep his father\'s word', moral: 'Keeping a promise matters more than a crown' },
+    { id: 'sandals', s0: 60, n: 9, fx: 2200, cap: 'Bharata begs Ram to come back and rule. Ram will not break his father\'s word, so he gives Bharata his sandals to rule in his name', moral: 'Real leaders serve with humility, and love does not cling to power' },
+    { id: 'surp', s0: 70, n: 9, fx: 3120, cap: "Ravan's sister Surpanakha tries to win Ram. When he refuses, she attacks, and Lakshman drives her away. Furious, she goes to Ravan", moral: 'Anger and desire without wisdom lead to ruin' },
+    { id: 'rekha', s0: 81, n: 10, fx: 3230, cap: "The 'deer' was a demon who cries out in Ram's voice. Fearing for Ram, Sita sends Lakshman to help. A hermit begs alms, and Sita reaches across Lakshman's protective line. It is Ravan!", moral: 'Ignoring a warning and crossing a boundary invites danger' },
+    { id: 'sabari', s0: 98, n: 9, fx: 3780, cap: 'On his search, Ram visits Sabari, an old devotee who waited her whole life for him. He eats her berries with love, and she points him to Sugriva', moral: 'Devotion matters more than status or perfection' },
+    { id: 'vali', s0: 104.6, n: 13, fx: 4050, cap: 'Vali stole his brother Sugriva\'s kingdom. Ram promises to help Sugriva, in return for help finding Sita, and shoots Vali. Sugriva becomes king', moral: 'Stand by a friend who has been wronged' },
+    { id: 'vib', s0: 119, n: 9, fx: 3950, cap: "Ravan's good brother Vibhishana begged him to return Sita and was thrown out. He joins Ram, who promises to make him the next king of Lanka", moral: 'Doing right sometimes means standing apart from your own family' },
+    { id: 'angada', s0: 136, n: 11, fx: 5330, cap: 'Before the war, Ram sends Angada to give Ravan one last chance for peace. Angada plants his foot, and not even Ravan\'s mightiest warriors can move it', moral: 'Pride will not bend, but peace must always be offered first' },
+    { id: 'indra', s0: 137, n: 16, fx: 5100, cap: "The war begins. Ravan's son Indrajit ties Ram and Lakshman with serpent arrows, and the divine eagle Garuda comes and frees them", moral: 'Even heroes need friends and help' },
+    { id: 'agni', s0: 176, n: 10, fx: 5420, cap: 'To prove her purity to the world, Sita walks into fire. The fire god Agni lifts her out unharmed', moral: 'Truth shines brightest when it is tested' },
+    { id: 'darbar', s0: 213, n: 12, fx: 760, cap: 'Ram is crowned king of Ayodhya, and a golden age of justice, Ram Rajya, begins. Even Hanuman shows Ram and Sita living in his heart', moral: 'A good ruler cares for every person' },
   ];
   let accIns = 0; INS.forEach(a => { a.t0 = a.s0 + accIns; accIns += a.n; });
   const TOTAL = 225 + accIns;
@@ -656,26 +671,41 @@ window.R3 = (function () {
     return { S: Tr - accIns, i: -1 };
   }
   const sToT = (S) => S + INS.reduce((a, b) => a + (b.s0 < S ? b.n : 0), 0);
-  const CAP = [   // story time windows [from, to, text]
-    [0, 6, 'Ayodhya: a lotus blooms and a baby of light appears'], [6, 10, 'Ram and his brother Lakshman are born'],
-    [10, 22, 'Sage Vishwamitra leads the young princes to guard his sacred ritual'],
-    [22, 26, 'Mithila: King Janak holds a contest to win his daughter Sita'], [26, 31, "Ram lifts Shiva's great bow"], [31, 38, 'The bow breaks! Sita walks toward Ram'], [38, 40.5, 'Sita garlands Ram: they are married'],
-    [40.5, 52, 'Back in Ayodhya, a promise forces Ram into exile'], [52, 66, 'Ram, Sita and Lakshman leave the palace for fourteen years in the forest'],
-    [66, 77, 'A golden deer appears. Sita wants it, and Ram goes after it'], [77, 82.5, "The deer was a demon in disguise. It cries out in Ram's voice, and Lakshman draws a protective line around the hut"],
-    [82.5, 92, 'Ravan carries Sita away in his flying chariot. The vulture Jatayu tries to stop him'], [92, 100, 'Ram and Lakshman find the dying Jatayu, who tells them where Ravan went'],
-    [100, 108, 'Hanuman, the monkey hero, bows to Ram and promises to find Sita'], [108, 116, "Hanuman leaps across the sea to Lanka and finds Sita, and gives her Ram's ring"],
-    [116, 124, 'Hanuman sets Lanka on fire with his tail and leaps back'], [124, 138, 'The monkey army builds a bridge of stones across the sea. A little squirrel helps too'],
-    [138, 150, 'The battle of Lanka: the giant Kumbhakarna falls'], [150, 160, 'Lakshman is struck down. Hanuman flies to bring a healing mountain'],
-    [160, 168.6, 'Ram faces the ten-headed Ravan'], [168.6, 177, 'Ravan falls: good wins over evil'], [177, 186, 'Sita is free. They board the flying chariot Pushpak'],
-    [186, 205, 'The fourteen years are over: the chariot flies them home to Ayodhya'], [205, 225, 'Diwali: Ayodhya lights a lamp for every step of their return'],
+  const CAP = [   // story time windows [from, to, what is happening and why, (optional) lesson]
+    [0, 6.5, 'In Ayodhya, the god Vishnu is born on earth as Prince Ram, to protect goodness and justice'],
+    [6.5, 14.5, 'Sage Vishwamitra asks the king to send Ram and Lakshman with him: demons are ruining his sacred rituals. Ram obeys at once'],
+    [14.5, 22, 'The sage gives Ram divine weapons and leads the brothers to Mithila, where a great contest is about to begin'],
+    [22, 31, "Mithila: whoever can string Shiva's mighty bow wins the hand of Princess Sita. Ram steps forward and lifts it"],
+    [31, 40.5, 'The bow snaps with a thunderous crack! Sita garlands Ram, and they are married', 'Strength joined with humility wins hearts'],
+    [40.5, 53, 'Back in Ayodhya, the king wants to crown Ram. But his queen Kaikeyi holds an old promise'],
+    [53, 60, 'Ram leaves the palace at once. Sita and Lakshman insist on going with him, out of love'],
+    [60, 70, 'The three walk deep into the Dandaka forest, to live as hermits for fourteen years'],
+    [70, 77, 'Sita is enchanted by a golden deer and asks Ram to catch it. He goes after it, telling Lakshman to guard her'],
+    [81, 92, 'Ravan seizes Sita and flies away. The old vulture Jatayu fights him to save her'],
+    [92, 98, 'Ram finds the hut empty and follows the trail. The dying Jatayu tells him Ravan took Sita south', 'Do what is right, even when you cannot win'],
+    [98, 104.6, 'At Rishyamukha hill, Ram meets Hanuman, who serves the exiled monkey king Sugriva'],
+    [104.6, 115, 'Ram trusts Hanuman with his ring as proof for Sita. Hanuman leaps across the sea to Lanka and finds her, sad but brave', 'With devotion and humility, nothing is impossible', 111],
+    [115, 124, 'Ravan\'s men set Hanuman\'s tail alight. He turns it into a torch, burns Lanka\'s towers and leaps back to Ram'],
+    [124, 136, 'Ram cannot cross the sea, so the monkey army builds a bridge. Even a little squirrel carries pebbles to help', 'Every small effort counts', 131],
+    [137, 150, "Ravan's giant brother Kumbhakarna charges at Ram's army, but Ram's arrow brings him down"],
+    [150, 160, 'Lakshman is struck down. Hanuman flies to the Himalayas and brings a mountain of healing herbs', 'Loyal friends bring help even when it seems impossible', 155],
+    [160, 168.6, 'At last Ram faces Ravan, the ten-headed king who stole Sita and refused every chance for peace'],
+    [168.6, 176, "Ram's arrow ends Ravan. Good wins over evil", 'Pride and wrongdoing destroy even the mightiest', 171.5],
+    [176, 186, 'Sita is free, and Vibhishana is crowned king of Lanka. The fourteen years are over, and they board the flying chariot Pushpak'],
+    [186, 205, 'The chariot flies them home to Ayodhya, and the people light lamps to guide them: the first Diwali', 'Light always returns after darkness', 198],
+    [205, 213, 'Ayodhya glows with a lamp for every step of their return'],
+    [213, 225, 'Diwali, the festival of lights: be a light in someone\'s life', 'Be the light', 218],
   ];
   function captionAt(Tr) {
     const m = mapT(Tr);
-    if (m.i >= 0) { const a = INS[m.i]; return { en: a.cap, a: sstep(0, .9, m.u) * (1 - sstep(a.n - .9, a.n, m.u)) }; }
-    for (const [a, b, en] of CAP) if (m.S >= a && m.S < b) { let k = sstep(a, a + .9, m.S) * (1 - sstep(b - .9, b, m.S)); for (const q of INS) k *= sstep(0, .8, Math.abs(m.S - q.s0)); return { en, a: k }; }
+    if (m.i >= 0) { const a = INS[m.i], f = sstep(0, .9, m.u) * (1 - sstep(a.n - .9, a.n, m.u)); return { en: a.cap, moral: a.moral || '', a: f, am: a.moral ? sstep(a.n * .55, a.n * .55 + .8, m.u) * (1 - sstep(a.n - .9, a.n, m.u)) : 0 }; }
+    for (const [a, b, en, moral, ms] of CAP) if (m.S >= a && m.S < b) {
+      let k = sstep(a, a + .9, m.S) * (1 - sstep(b - .9, b, m.S)); for (const q of INS) k *= sstep(0, .8, Math.abs(m.S - q.s0));
+      const mm = ms === undefined ? b - 3.6 : ms; return { en, moral: moral || '', a: k, am: moral ? sstep(mm, mm + .8, m.S) * (1 - sstep(b - .9, b, m.S)) * sstep(0, .8, Math.abs(m.S - 0)) : 0 };
+    }
     return null;
   }
-  const chapters = [0, 10, 22, 40.5, 52, 66, 82.5, 100, 108, 124, 138, 160, 186, 205].map(sToT).concat(INS.map(a => a.t0)).sort((a, b) => a - b);
+  const chapters = [0, 6.5, 22, 31, 40.5, 53, 60, 70, 81, 92, 104.6, 115, 124, 137, 150, 160, 168.6, 176, 186, 205, 213].map(sToT).concat(INS.map(a => a.t0)).sort((a, b) => a - b);
 
   // the aim and the arrow of an inserted scene (the actors themselves are posed later)
   function insertParams(id, u, rx) {
@@ -688,7 +718,7 @@ window.R3 = (function () {
   const showAt = (h, x, y, z, ry, sc) => { h.root.visible = true; h.root.position.set(x, y, z); h.root.rotation.set(0, ry, 0); h.root.scale.setScalar(sc); };
   const pop = (a, b, u, sc) => sc * (.2 + .8 * ease(sstep(a, a + 1.1, u))) * (1 - sstep(b - 1.1, b, u) * .97);   // scale in at a, out at b
   function insertActors(ins, Tr, rx, base) {
-    hide(tataka, dash, kaik, bharat, sugr, vali, indra, sabari, vibh, surp, hermit, agni);
+    hide(tataka, dash, kaik, bharat, sugr, vali, indra, sabari, vibh, surp, hermit, agni, ahalya, angada); stone.visible = false; heart.visible = false;
     garuda.visible = false; sandals.visible = false; berry.visible = false; throne.visible = false; fireGlow.visible = false; orbs.forEach(o => { o.visible = false; }); serpents.forEach(g => { g.visible = false; }); coils.forEach(g => { g.visible = false; });
     if (ins.i < 0) return;
     const id = INS[ins.i].id, u = ins.u, face = -YAW;
@@ -700,6 +730,27 @@ window.R3 = (function () {
       once('i0c', u >= 9.3, () => { for (let k = 0; k < 30; k++) ember(1130 + rnd(-20, 20), rnd(20, 100), 0, true); });
       sage.root.rotation.y = YAW; pose(sage, { ph: 0, s: 0, t: Tr, cheer: sstep(8.6, 9.6, u) * (1 - sstep(10.4, 11, u)), talk: u > 8.6 && u < 10.4, look: .3 });
       orbs.forEach((o, i) => { const a = sstep(9, 9.8, u) * (1 - sstep(10.4, 11, u)); o.visible = a > .02; const an = u * 2.6 + i * 2.09; o.position.set(rx + 20 + Math.cos(an) * 34, 130 + Math.sin(an * 1.3) * 18, 10 + Math.sin(an) * 20); o.scale.setScalar(6 * a + .01); });
+    }
+    if (id === 'ahalya') {   // Ahalya, freed from stone
+      const sf = ease(sstep(.2, 1.2, u)) * (1 - sstep(4.6, 6, u));
+      stone.visible = sf > .02; stone.position.set(1475, 0, 4); stone.scale.setScalar(sf + .001);
+      if (u > 4.8 && u < 9.9) { showAt(ahalya, 1475, 0, 4, face, pop(4.8, 9.9, u, 1)); pose(ahalya, { ph: 0, s: 0, t: Tr, kneel: 1 - sstep(7.5, 8.6, u), join: sstep(5.6, 6.4, u) * (1 - sstep(9, 9.8, u)), talk: u > 8.6 && u < 9.8, sad: 1 - sstep(7.5, 8.5, u) }); }
+      sage.root.rotation.y = YAW; pose(sage, { ph: 0, s: 0, t: Tr, point: sstep(.8, 1.6, u) * (1 - sstep(3.6, 4.2, u)), talk: u > .8 && u < 3.6 });
+      base.ram.point = sstep(3.2, 4, u) * (1 - sstep(5.4, 6.2, u));
+      once('i11a', u >= 4.4, () => { flashV = .9; burst(1475, 60, 0, .55, 120, 100); burst(1475, 60, 0, .13, 80, 80); });
+      if (u > 4.4 && u < 6.4) for (let k = 0; k < 3; k++) ember(1475 + rnd(-30, 30), rnd(10, 60), 0, true);
+    }
+    if (id === 'angada') {   // Angada's foot, in Ravan's court
+      const ax = u < 3 ? lerp(5200, 5425, ease(u / 3)) : 5425, st = sstep(3.4, 4.2, u) * (1 - sstep(9.6, 10.4, u)), fall = (a) => sstep(a, a + .8, u);
+      if (u > .2 && u < 10.6) { showAt(angada, ax, 0, 6, YAW, pop(.2, 10.6, u, 1)); pose(angada, { ph: ax * Math.PI / STEP, s: u < 3 ? .8 : 0, t: Tr, point: sstep(3, 3.6, u) * (1 - sstep(4.2, 4.8, u)), talk: (u > 3 && u < 5) || u > 9.4, angry: .4 }); for (let i = 0; i < 2; i++) angada.legs[i].rotation.z = (i ? 1 : -1) * .26 * st; angada.body.position.y -= 5 * st; }
+      const kx = u < 5.6 ? lerp(5560, 5470, ease(sstep(4.6, 5.6, u))) : 5470, kf = fall(6.6) * (1 - sstep(7.8, 8.6, u));
+      if (u > 4.6 && u < 8.7) { showAt(kum, kx, 14 * kf, -6, face, 1.9); pose(kum, { ph: 0, s: 0, t: Tr, kneel: sstep(5.6, 6.2, u) * (1 - sstep(6.6, 6.9, u)), angry: 1 }); kum.root.rotation.z = -1.5 * kf; }
+      const ix = u < 7.2 ? lerp(5560, 5495, ease(sstep(6.4, 7.2, u))) : 5495, ifl = fall(8.2) * (1 - sstep(9.2, 9.9, u));
+      if (u > 6.4 && u < 9.9) { showAt(indra, ix, 12 * ifl, -2, face, 1.1); pose(indra, { ph: 0, s: 0, t: Tr, kneel: sstep(7.2, 7.8, u) * (1 - sstep(8.2, 8.5, u)), angry: 1 }); indra.root.rotation.z = -1.5 * ifl; }
+      const rx2 = u < 9.8 ? lerp(5560, 5505, ease(sstep(8.8, 9.8, u))) : 5505; rav.root.visible = true; rav.root.position.set(rx2, 0, -10);
+      pose(rav, { ph: 0, s: 0, t: Tr, kneel: .6 * sstep(9.2, 9.8, u) * (1 - sstep(10.2, 10.8, u)) });
+      once('i12a', u >= 3.8, () => { flashV = .4; burst(5425, 10, 0, .13, 60, 60); });
+      once('i12b', u >= 6.8, () => { flashV = .5; burst(5470, 80, 0, .08, 70, 80); });
     }
     if (id === 'boons') {   // Kaikeyi's boons
       if (u > .2 && u < 10.9) { const kf = sstep(.2, 1.4, u) * (1 - sstep(9.8, 10.9, u));
@@ -792,7 +843,8 @@ window.R3 = (function () {
       base.ram.sit = 1; base.sita.sit = 1; base.lak.look = -.2; base.ram.fall = undefined; base.lak.fall = undefined;
       seat(lak, 672, 0, .35, 1);
       showAt(bharat, 862, 14, 4, -.35, pop(.3, 11.8, u, 1)); pose(bharat, { ph: 0, s: 0, t: Tr, look: .2, cheer: .0 });
-      seat(han, 706, 0, .3, 1); han.root.position.z = 18; pose(han, { ph: 0, s: 0, t: Tr, kneel: 1, join: 1, look: .25 });
+      seat(han, 706, 0, .3, 1); han.root.position.z = 18; pose(han, { ph: 0, s: 0, t: Tr, kneel: 1, join: 1 - sstep(5.6, 6.4, u) * (1 - sstep(10.2, 10.8, u)) * .6, look: .25 });
+      { const hh = sstep(5.8, 6.8, u) * (1 - sstep(10.2, 11, u)); heart.visible = hh > .02; if (heart.visible) { han.torso.getWorldPosition(wp); heart.position.set(wp.x + 6, wp.y + 30, wp.z + 16); heart.scale.setScalar(30 * hh * (1 + .07 * Math.sin(u * 7))); } }
       if (Math.random() < .12) petalRain(560, 960, 1, 280);
       once('i10', u >= .5, () => { flashV = 1; burst(760, 140, 0, .12, 160, 160); petalRain(560, 960, 50, 260); });
       base.hold = true;
@@ -808,6 +860,12 @@ window.R3 = (function () {
     const a = MOOD[i], b = MOOD[i + 1], f = sstep(a[0], b[0], S);
     _mk.setHex(a[1]).lerp(_c2.setHex(b[1]), f); _ma.setHex(a[2]).lerp(_c2.setHex(b[2]), f); _mr.setHex(a[3]).lerp(_c2.setHex(b[3]), f);
     return moodOut;
+  }
+  // A character faces the way it is walking or flying (right: +1, left: -1), turning smoothly; at rest it keeps its last direction.
+  function turn(H, vx, dt, mag, extra) {
+    if (Math.abs(vx) > 6) H.dir = vx > 0 ? 1 : -1; else if (H.dir === undefined) H.dir = 1;
+    const target = H.dir * ((mag || YAW) + (extra || 0));
+    let d = target - H.root.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); H.root.rotation.y += d * (1 - Math.exp(-dt * 7));
   }
   const fired = {}; let lastTr = -1, flashV = 0, camC = 380;
   const once = (k, c, fn) => { if (c && !fired[k]) { fired[k] = 1; fn(); } };
@@ -843,26 +901,26 @@ window.R3 = (function () {
     if (aw) { po.aim = aw.aim; po.draw = aw.draw; }
     if (T >= 31 && T < 34) po.victory = sstep(31.1, 31.8, T) * (1 - sstep(33, 34, T));
     if (T >= 168.8 && T < 172) po.victory = sstep(168.9, 169.6, T) * (1 - sstep(171, 172, T));
-    pose(ram, po);
+    pose(ram, po); const chV = fz * vel(chX, T); if (!frozen) turn(ram, rider ? chV : vR, dt);
 
     // Lakshman
     const lx = lakX(T), vL = fz * vel(lakX, T), lfall = sstep(155.5, 156.4, T) * (1 - sstep(164.5, 166, T));
     lak.root.position.set(lx, T >= 185.5 && T < 205 ? chY(T) + 16 : 12 * lfall, 2);
     pose(lak, { ph: lx * Math.PI / STEP + 2.6, s: (T >= 185.5 && T < 205) ? 0 : clamp(Math.abs(vL) / 85), t: Tr });
-    lak.root.rotation.z = -1.45 * lfall;
+    lak.root.rotation.z = -1.45 * lfall; if (!frozen) turn(lak, (T >= 185.5 && T < 205) ? chV : vL, dt);
 
     // Sita
     const sx = sitaX(T), vS = fz * vel(sitaX, T), captive = T >= 91 && T < 176, sRide = (T >= 82.5 && T < 91) || (T >= 185 && T < 205);
     sita.root.visible = T >= 25.5; sita.root.scale.setScalar(.2 + .8 * ease(sstep(25.5, 26.7, T)));
     sita.root.position.set(sx, sRide ? chY(T) + 16 : 0, 22);
     pose(sita, { ph: sx * Math.PI / STEP + 1.4, s: sRide ? 0 : clamp(Math.abs(vS) / 85), t: Tr, kneel: captive ? .85 * sstep(91.5, 92.5, T) * (1 - sstep(174.5, 176, T)) : 0 });
-    sita.root.rotation.y = (T < 32 || captive) ? YAW + .55 : YAW;
+    if (!frozen) turn(sita, sRide ? chV : vS, dt, YAW, (T < 32 || captive) ? .55 : 0);
 
     // Hanuman and the vanaras
     const hp = hanPos(T); han.root.visible = hp.vis;
     if (hp.vis) {
       han.root.position.set(hp.x, hp.y, 10); const hv = fz * (hanPos(T + .06).x - hanPos(T - .06).x) / .12;
-      han.root.rotation.y = hp.fly ? (hv >= 0 ? 1.4 : -1.4 + Math.PI) : (hp.tail ? (hv >= 0 ? YAW : YAW + 2.4) : YAW);
+      if (!frozen) turn(han, (T >= 185.5 && T < 205) ? chV : hv, dt, hp.fly ? 1.4 : YAW);
       pose(han, { ph: hp.x * Math.PI / STEP, s: hp.fly ? 0 : clamp(Math.abs(hv) / 85), t: Tr, kneel: hp.kneel, fly: hp.fly, cheer: sstep(176, 177, T) * (1 - sstep(182, 183, T)) });
       han.tailTip.visible = hp.tail > 0;
       if (hp.tail) { han.tailTip.getWorldPosition(wp); for (let i = 0; i < 4; i++) ember(wp.x, wp.y, wp.z, true); }
@@ -871,7 +929,7 @@ window.R3 = (function () {
     vanaras.forEach((v, i) => {
       const vis = T >= 119 && T < 185; v.root.visible = vis; if (!vis) return;
       const f = (t) => (t < 152 ? ramX(t) : ramX(152)) - 130 - i * 44, x = f(T), vv = fz * (f(T + .06) - f(T - .06)) / .12;
-      v.root.position.set(x, 0, 14 + (i % 2) * 14); pose(v, { ph: x * Math.PI / STEP + i, s: clamp(Math.abs(vv) / 85), t: Tr, cheer: sstep(176, 177, T) * (1 - sstep(182, 183, T)) });
+      v.root.position.set(x, 0, 14 + (i % 2) * 14); pose(v, { ph: x * Math.PI / STEP + i, s: clamp(Math.abs(vv) / 85), t: Tr, cheer: sstep(176, 177, T) * (1 - sstep(182, 183, T)) }); if (!frozen) turn(v, vv, dt);
     });
 
     // 3. Shiva's bow: lifted, bent, snapped; then Sita's garland
@@ -925,7 +983,7 @@ window.R3 = (function () {
     if (rp) {
       rav.root.scale.set(1.1 * (1 + burn * .1), ravS, 1.1);
       rav.root.position.set(rp.x + (T > 168.6 && T < 175 ? Math.sin(T * 60) * 2.5 * (1 - burn) : 0), rp.y, -10);
-      pose(rav, { ph: 0, s: 0, t: Tr }); rav.root.rotation.y = YAW - .4; rav.heads.forEach((h, i) => { h.rotation.y = Math.sin(Tr * 1.1 + i) * .18; });
+      pose(rav, { ph: 0, s: 0, t: Tr }); if (!frozen) turn(rav, T < 91 ? chV : -10, dt, YAW - .1); rav.heads.forEach((h, i) => { h.rotation.y = Math.sin(Tr * 1.1 + i) * .18; });
     }
     once('abduct', T >= 81, () => { flashV = 1; burst(3150, 110, 10, .78, 120, 130); });
     const cv = (T >= 82.5 && T < 92) || (T >= 182 && T < 213);
@@ -960,7 +1018,7 @@ window.R3 = (function () {
 
     // 11. Kumbhakarna, Lakshman struck down, the healing mountain
     kum.root.visible = T >= 138 && T < 155.5;
-    if (kum.root.visible) { const f = sstep(148, 150.5, T); kum.root.position.set(5320, 14 * f, -10); kum.root.rotation.y = YAW - .5; kum.root.rotation.z = -1.5 * f; kum.root.scale.setScalar(1.9 * (1 - .9 * sstep(153, 155.5, T))); pose(kum, { ph: 0, s: 0, t: Tr }); }
+    if (kum.root.visible) { const f = sstep(148, 150.5, T); kum.root.position.set(5320, 14 * f, -10); if (!frozen) turn(kum, -10, dt, YAW - .1); kum.root.rotation.z = -1.5 * f; kum.root.scale.setScalar(1.9 * (1 - .9 * sstep(153, 155.5, T))); pose(kum, { ph: 0, s: 0, t: Tr }); }
     once('khit', T >= 147.6, () => { flashV = .8; burst(5255, 150, 0, .02, 130, 160); });
     once('lakhit', T >= 155.5, () => { flashV = .6; burst(5110, 110, 0, .02, 80, 110); });
     once('mount', T >= 158, () => { flashV = .9; burst(4900, 120, 0, .38, 130, 150); burst(5110, 60, 0, .38, 90, 100); });
@@ -980,7 +1038,7 @@ window.R3 = (function () {
     label.material.opacity = sstep(208, 211, T) * (1 - sstep(221, 223.5, T));
     // the sage who guides the princes, and the inserted scenes
     const sv = T >= 10 && T < 26; sage.root.visible = sv;
-    if (sv) { const sxx = ramX(T) + 130, vs = fz * vel(ramX, T); sage.root.position.set(sxx, 0, 4); sage.root.rotation.y = YAW; sage.root.scale.setScalar(.2 + .8 * ease(sstep(10, 11.2, T)) * (1 - sstep(24.4, 26, T) * .97)); pose(sage, { ph: sxx * Math.PI / STEP, s: clamp(Math.abs(vs) / 85), t: Tr }); }
+    if (sv) { const sxx = ramX(T) + 130, vs = fz * vel(ramX, T); sage.root.position.set(sxx, 0, 4); if (!frozen) turn(sage, vs, dt); sage.root.scale.setScalar(.2 + .8 * ease(sstep(10, 11.2, T)) * (1 - sstep(24.4, 26, T) * .97)); pose(sage, { ph: sxx * Math.PI / STEP, s: clamp(Math.abs(vs) / 85), t: Tr }); }
     if (!(frozen && INS[ins.i].id === 'rekha')) { const rv = T >= 77.2 && T < 86; rekha.visible = rekhaGlow.visible = rv; if (rv) { const rs = ease(sstep(77.2, 78.8, T)) * (1 - sstep(84.5, 86, T)) + .001; rekha.scale.setScalar(rs); rekhaGlow.scale.setScalar(rs); rekha.material.color.setRGB(1, .63, .19); rekhaGlow.material.opacity = .25; } }
     insertActors(ins, Tr, rx, base);
     if (frozen) {   // re-pose the main cast for the inserted scene (kneeling, pointing, fallen, seated)
