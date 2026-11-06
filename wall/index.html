@@ -101,7 +101,7 @@
     { name: 'Wall',       pts: [[.35, .04], [.65, .04], [.65, .99], [.35, .99]] },
     { name: 'Right door', pts: [[.70, .17], [.90, .17], [.90, .99], [.70, .99]] },
   ];
-  const cfg = { surfaces: DEFAULT_SURFACES(), win: 900, ground: .62, vstretch: 1, inset: 2, captions: false };
+  const cfg = { surfaces: DEFAULT_SURFACES(), win: 1400, ground: .92, vstretch: 1.9, inset: 2, captions: false };
   const validLayout = (o) => o && Array.isArray(o.surfaces) && o.surfaces.length > 0 && o.surfaces.every(s =>
     s && Array.isArray(s.pts) && s.pts.length === 4 && s.pts.every(p => Array.isArray(p) && isFinite(p[0]) && isFinite(p[1])));
   const applyLayout = (o) => {
@@ -795,7 +795,7 @@
   $('bIn0').onclick = () => setInset(-1); $('bIn1').onclick = () => setInset(1);
   $('bPrev').onclick = () => jump(curScene() - 1); $('bNext').onclick = () => jump(curScene() + 1);
   bPlay.onclick = togglePause;
-  $('bReset').onclick = () => { cfg.surfaces = DEFAULT_SURFACES(); cfg.win = 900; cfg.ground = .62; cfg.vstretch = 1; cfg.inset = 2; sel = 0; saveCfg(); };
+  $('bReset').onclick = () => { cfg.surfaces = DEFAULT_SURFACES(); cfg.win = 1400; cfg.ground = .92; cfg.vstretch = 1.9; cfg.inset = 2; sel = 0; saveCfg(); };
   const bFull = $('bFull'); bFull.onclick = toggleFullscreen;
   if (!document.documentElement.requestFullscreen && !document.documentElement.webkitRequestFullscreen) bFull.style.display = 'none';
 
