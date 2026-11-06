@@ -106,8 +106,8 @@ window.VishnuIntro = (function () {
     cv.ready = !!window.FONTS_READY; return (named[i] = cv);
   }
   // which avatar a flipping panel shows at time t: slow at first, then faster and faster
-  const flipIndex = (t, k) => { const ph = 1.6 * t + 3.2 * Math.max(0, t - 3) ** 1.8; return ((Math.floor(ph + k * 3.7) % 10) + 10) % 10; };
-  const flipPhase = (t, k) => { const ph = 1.6 * t + 3.2 * Math.max(0, t - 3) ** 1.8 + k * 3.7; return ph - Math.floor(ph); };
+  const flipIndex = (t, k) => { const ph = 1.0 * t + .45 * Math.max(0, t - 3) ** 1.6; return ((Math.floor(ph + k * 3.7) % 10) + 10) % 10; };
+  const flipPhase = (t, k) => { const ph = 1.0 * t + .45 * Math.max(0, t - 3) ** 1.6 + k * 3.7; return ph - Math.floor(ph); };
   // ---- the long band above the doors ----
   function drawBand(c, w, h, t, s) {
     c.save(); c.fillStyle = '#000'; c.fillRect(0, 0, w, h); c.scale(1, s); const H = h / s;   // H: the height as seen on the wall
@@ -128,7 +128,7 @@ window.VishnuIntro = (function () {
         if (k === 6) { c.save(); c.globalAlpha = a * ss(12.4, 13.2, t); c.strokeStyle = '#ffd070'; c.shadowColor = '#ffb040'; c.shadowBlur = 30; c.lineWidth = 4; c.strokeRect(cx - P2w / 2, yy, P2w, P2); c.restore(); } }
       const sw = ((t - 9.4) / 2.4) * (w + 400) - 200; c.globalAlpha = .5 * ss(9.4, 9.8, t) * (1 - ss(11.6, 12, t)); const g = c.createLinearGradient(sw - 120, 0, sw + 120, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(.5, 'rgba(255,240,210,.9)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(sw - 120, 0, 240, H);
     }
-    c.globalAlpha = 1; if (flash > 0) { c.fillStyle = `rgba(220,20,30,${(.85 * flash).toFixed(3)})`; c.fillRect(0, 0, w, H); }
+    c.globalAlpha = 1; if (flash > 0) { c.fillStyle = `rgba(200,30,40,${(.5 * flash).toFixed(3)})`; c.fillRect(0, 0, w, H); }
     c.restore();
   }
   // ---- the title, in the story-text area (drawn in the caller's coordinates: never reset the transform here) ----
@@ -138,7 +138,6 @@ window.VishnuIntro = (function () {
       const i = flipIndex(t, 0), f = flipPhase(t, 0), sq = Math.abs(Math.cos(f * Math.PI)) * .6 + .4, ph = h * (.86 + .3 * ss(.6, 8.6, t)), pw = ph * .75, a = ss(.5, 1.3, t);
       for (const side of [-1, 1]) for (let m = 1; m <= 3; m++) { const j = flipIndex(t, side * 2 * m + 5), pw2 = pw * (.78 - m * .1); c.save(); c.globalAlpha = a * (.5 - m * .1); c.drawImage(still(j), cx + side * (pw * .5 + (m - .45) * pw2 * 1.05) - pw2 / 2, cy - pw2 / .75 / 2, pw2, pw2 / .75); c.restore(); }
       c.save(); c.globalAlpha = a; c.translate(cx, cy); c.scale(sq, 1); c.drawImage(still(i), -pw / 2, -ph / 2, pw, ph); c.restore();
-      const cut = f < .08 && t > 3 ? 1 - f / .08 : 0; if (cut > 0) { c.save(); c.fillStyle = `rgba(255,245,225,${(.35 * cut * a).toFixed(3)})`; c.fillRect(0, 0, w, h); c.restore(); }
     }
     if (t >= 8.4 && t < 12.8) {   // the title: a crimson panel framed in gold with VISHNU, a spinning discus, and DASHAVATARA
       const red = ss(8.4, 9, t), logo = ss(8.8, 9.3, t) * (1 - ss(12.2, 12.8, t));

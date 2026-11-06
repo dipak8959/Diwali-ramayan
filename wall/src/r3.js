@@ -731,6 +731,7 @@ window.R3 = (function () {
   function cutPart(h, tc, tr, u, away) {
     const b = h.userData.base, bs = h.userData.bs, bz = h.userData.bz || 0;
     if (!b) { const k = u < tc ? 1 : (u < tr ? 0 : ease(sstep(tr, tr + .9, u))); h.scale.setScalar(k + .001); return; }
+    if (away === 0) { h.visible = u < tc + .5 || u >= tr; h.position.copy(b); h.rotation.z = bz; h.scale.setScalar(bs * (u < tc ? 1 : u < tc + .5 ? 1 - ease((u - tc) / .5) + .001 : .001 + ease(sstep(tr, tr + .9, u)))); return; }   // for children: a soft dissolve into light
     if (u < tc) { h.visible = true; h.position.copy(b); h.scale.setScalar(bs); h.rotation.z = bz; }
     else if (u < tc + 1) { const p = u - tc; h.visible = true; h.position.set(b.x + away * 46 * p, b.y + 70 * p - 95 * p * p, b.z + 30 * p); h.rotation.z = bz + away * p * 5; h.scale.setScalar(bs); }
     else if (u < tr) h.visible = false;
@@ -870,93 +871,106 @@ window.R3 = (function () {
   // Each insert freezes the main story at story time s0 and plays for n seconds, so the long walk is never rushed.
   const INS = [
     // ---- before Ram's birth: the dots that explain everything that follows ----
-    { id: 'ravan_boon', s0: 0, n: 14, fx: 430, cap: "As the sage Valmiki tells it: long ago Ravan, king of the demons of Lanka, offered his ten heads in fire to the god Brahma, who restored them and granted a boon: no god, demon or spirit could ever kill him. Proud, Ravan did not ask for protection from men.", moral: 'Pride makes us blind to our own weakness' },
-    { id: 'gods', s0: 0, n: 12, fx: 520, cap: "With that boon Ravan tormented the gods, the sages and the whole world. They begged Brahma and the god Vishnu for help. Vishnu promised to be born as a man, the son of King Dasharatha of Ayodhya, to end Ravan.", moral: '' },
-    { id: 'curse', s0: 0, n: 14, fx: 560, cap: "Long before, young Prince Dasharatha, hunting at night, shot at a sound by the river. It was Shravana, a boy fetching water for his blind parents. Their grief-stricken curse: 'You too will die longing for your son.'", moral: 'A hasty act can bring a lifetime of sorrow' },
-    { id: 'kboon', s0: 0, n: 12, fx: 480, cap: 'In a war for the gods, Dasharatha was wounded and fell senseless. His young queen Kaikeyi saved his life. In gratitude he promised her two boons. She said she would ask for them later.', moral: 'A promise given in gratitude can shape a future' },
-    { id: 'yajna', s0: 0, n: 16, fx: 440, cap: 'King Dasharatha, who has no sons, begins a great fire ritual led by the young sage Rishyasringa. From the flames rises a radiant being with a golden bowl of sacred pudding. The king shares it among his three queens: Kausalya, Sumitra and Kaikeyi.', moral: 'Faith and patience are rewarded' },
+    { id: 'ravan_boon', s0: 0, n: 14, fx: 430, cap: "Long ago, Ravan, king of Lanka, prayed to the god Brahma for a very long time. Brahma gave him a gift: no god or demon could ever defeat him. But proud Ravan forgot about humans.", moral: 'Being proud can make us careless' },
+    { id: 'gods', s0: 0, n: 12, fx: 520, cap: "Ravan became a bully to the gods, the sages and the whole world. They asked the god Vishnu for help. Vishnu promised to be born on Earth as Ram, son of King Dasharatha.", moral: '' },
+    { id: 'curse', s0: 0, n: 14, fx: 560, cap: "Long before, young Prince Dasharatha went hunting at night. By mistake, his arrow hit Shravana, a boy fetching water for his blind parents. In sorrow they said: 'One day you too will miss your son.'", moral: 'Think before you act' },
+    { id: 'kboon', s0: 0, n: 12, fx: 480, cap: "In a great battle, Dasharatha was hurt. His brave queen Kaikeyi drove him to safety and saved his life. To thank her, he promised her two wishes, whenever she asked.", moral: 'Kindness is never forgotten' },
+    { id: 'yajna', s0: 0, n: 16, fx: 440, cap: "King Dasharatha had no children. He held a great fire prayer. From the fire rose a shining being with a golden bowl of sweet pudding, and the king shared it with his three queens.", moral: 'Patience and faith bring blessings' },
     // ---- the childhood and the road to Mithila ----
-    { id: 'court', s0: 9, n: 14, fx: 400, cap: "At sixteen, Ram is asked for by the sage Vishwamitra, whose rituals are attacked by demons. Dasharatha fears for his boy, but the wise sage Vasishtha reminds him of his duty. He agrees, and Lakshman goes with Ram.", moral: '' },
-    { id: 'tataka', s0: 14.5, n: 12, fx: 1020, cap: 'On the road, the yakshini Tataka attacks. Ram does not like to strike a woman, but the sage reminds him that a prince must protect the innocent. Ram shoots her, and the sage gives him divine weapons.', moral: 'Duty can mean doing a hard thing to protect the innocent' },
-    { id: 'siddha', s0: 14.5, n: 14, fx: 1050, cap: "At the sage's hermitage, Ram guards the ritual for six nights. At last the demons Subahu and Maricha attack. Ram kills Subahu and hurls Maricha far into the sea. Maricha survives, and will return later as the golden deer.", moral: 'Protecting the good work of others is a service' },
-    { id: 'ahalya', s0: 22, n: 11, fx: 1480, cap: "Near Mithila, Ram and Lakshman bow at the feet of Ahalya, who was cursed to live unseen in penance. Ram's arrival frees her.", moral: 'Compassion can free anyone from the weight of the past' },
-    { id: 'parashu', s0: 41, n: 12, fx: 1720, cap: "On the way home, the fiery sage Parashurama, angry that the bow broke, challenges Ram to string Vishnu's own bow. Ram does so with ease and humbles him.", moral: 'True power is calm, not proud' },
+    { id: 'court', s0: 9, n: 14, fx: 400, cap: "When Ram was sixteen, the sage Vishwamitra asked for his help against demons. The king was worried, but the wise sage Vasishtha told him to let Ram go. So Ram and Lakshman went with Vishwamitra.", moral: '' },
+    { id: 'tataka', s0: 14.5, n: 12, fx: 1020, cap: "On the way, the demon Tataka attacked. The sage said a prince must protect people, so Ram stopped her with his arrow. Then the sage taught him special weapons.", moral: 'Be brave to protect others' },
+    { id: 'siddha', s0: 14.5, n: 14, fx: 1050, cap: "At the sage's forest home, Ram guarded the fire prayer for six nights. When the demons Subahu and Maricha attacked, Ram defeated Subahu and blew Maricha far away over the sea.", moral: 'Help protect good work' },
+    { id: 'ahalya', s0: 22, n: 11, fx: 1480, cap: "Near Mithila lived Ahalya, under a curse, hidden in prayer. When Ram arrived, the curse ended, and Ram and Lakshman bowed to her with respect.", moral: 'Kindness can heal the past' },
+    { id: 'parashu', s0: 41, n: 12, fx: 1720, cap: "On the way home, the fiery sage Parashurama came, angry that Shiva's bow had broken. He asked Ram to string Vishnu's bow. Ram did it easily, and Parashurama calmed down.", moral: 'Real strength is calm' },
     // ---- exile ----
-    { id: 'boons', s0: 53, n: 12, fx: 2400, cap: "Manthara poisons Queen Kaikeyi's mind. She claims her two old boons: Bharata crowned, and Ram exiled to the forest for fourteen years. The king faints, but Ram calmly accepts to keep his father's word.", moral: 'Keeping a promise matters more than a crown' },
-    { id: 'guha', s0: 55, n: 13, fx: 2440, cut: true, cap: "At the holy river Ganga, Guha, chief of the boatmen and Ram's friend, welcomes the exiles with food. Ram embraces him as an equal. At dawn Guha's own boat carries Ram, Sita and Lakshman across the river.", moral: 'True friendship sees no difference of birth' },
-    { id: 'death', s0: 57, n: 13, fx: 2390, cut: true, cap: "In Ayodhya, the old king cannot bear his grief. On the sixth night he tells Queen Kausalya of the boy he killed long ago by the river, and of the blind parents' curse. Calling 'Ram! Ram!', Dasharatha dies of a broken heart.", moral: 'Every deed returns to us in time' },
-    { id: 'sandals', s0: 60, n: 12, fx: 2200, cap: "Bharata, away at his uncle's, returns to find his father dead. He refuses the throne and begs Ram at Chitrakoot hill to return. Ram will not break his father's word, so he gives Bharata his sandals to rule in his name.", moral: 'Real leaders serve with humility, and love does not cling to power' },
-    { id: 'agastya', s0: 64, n: 11, fx: 2640, cap: 'Deep in the forest, the great sage Agastya welcomes Ram and gives him divine weapons: the bow of Vishnu, quivers that never empty, and an arrow made by Brahma himself. Ram will need that arrow at the very end.', moral: 'Wisdom prepares us for battles we cannot yet see' },
-    { id: 'surp', s0: 70, n: 12, fx: 3120, cap: "Ravan's sister Surpanakha tries to win Ram, then Lakshman. When she rushes at Sita, Lakshman wounds her. Her brothers Khara and Dushana attack with fourteen thousand demons, but Ram defeats them alone. Furious, she goes to Ravan.", moral: 'Anger and desire without wisdom lead to ruin' },
-    { id: 'rekha', s0: 81, n: 12, fx: 3230, cap: "Maricha's dying cry in Ram's voice, 'Ha Sita! Ha Lakshmana!', reaches the hut. Afraid for Ram, Sita sharply urges Lakshman to go. Reluctantly he leaves her. Ravan arrives disguised as a hermit, asking for alms.", moral: 'Words spoken in fear can lead to harm' },
-    { id: 'sabari', s0: 98, n: 10, fx: 3780, cap: 'The demon Kabandha tells them to seek Sugriva. On the way, the ascetic Sabari honours Ram with wild fruits, as her teachers had foretold.', moral: 'Devotion matters more than status or perfection' },
-    { id: 'vali', s0: 104.6, n: 14, fx: 4050, cap: "Ram and Sugriva swear friendship before the sacred fire. Vali, who took Sugriva's kingdom and wife, is shot by Ram from behind a tree. Sugriva becomes king.", moral: 'Be true to a friend who has been wronged' },
-    { id: 'surasa', s0: 110, n: 13, fx: 4900, cap: "Over the ocean the gods test Hanuman. Surasa, mother of serpents, rises from the waves: 'You must enter my mouth.' Hanuman grows huge, and her mouth grows wider. Then in a flash he shrinks to the size of a thumb, darts in and out, and bows to her. Pleased, she blesses him.", moral: 'Cleverness and humility win where force cannot' },
-    { id: 'ashoka', s0: 112.2, n: 16, fx: 5660, cap: "In the Ashoka grove Ravan threatens Sita: two months to accept him. She will not even look at him, and speaks to him across a blade of grass. When he is gone, Hanuman, hidden in the tree, softly sings Ram's story, comes down and gives her Ram's ring. She gives him her hair jewel for Ram.", moral: 'Courage is staying true even when you are alone' },
+    { id: 'boons', s0: 53, n: 12, fx: 2400, cap: "The maid Manthara made Queen Kaikeyi jealous. Kaikeyi used her two wishes: make Bharata king, and send Ram to the forest for fourteen years. Ram calmly agreed, to keep his father's promise.", moral: 'Always keep your promises' },
+    { id: 'guha', s0: 55, n: 13, fx: 2440, cut: true, cap: "At the river Ganga, Ram's friend Guha, chief of the boatmen, welcomed them. Ram hugged him like a brother. Guha's boat carried Ram, Sita and Lakshman across the river.", moral: 'Friends are equal, whoever they are' },
+    { id: 'death', s0: 57, n: 13, fx: 2390, cut: true, cap: "Back in Ayodhya, King Dasharatha missed Ram very much. He remembered the boy Shravana and the parents' sad words. Calling 'Ram, Ram', the old king passed away.", moral: 'Our actions come back to us' },
+    { id: 'sandals', s0: 60, n: 12, fx: 2200, cap: "Prince Bharata did not want the throne. He went to the forest and begged Ram to come home. Ram kept his promise to stay, and gave Bharata his sandals to place on the throne.", moral: 'Love is greater than power' },
+    { id: 'agastya', s0: 64, n: 11, fx: 2640, cap: "Deep in the forest, the great sage Agastya gave Ram special gifts: the bow of Vishnu, arrows that never run out, and an arrow made by the god Brahma. Ram would need it at the very end.", moral: 'Wise friends prepare us for hard days' },
+    { id: 'surp', s0: 70, n: 12, fx: 3120, cap: "Ravan's sister Surpanakha wanted to marry Ram, then Lakshman. When she rushed at Sita, Lakshman stopped her. Her demon brothers attacked with a huge army, but Ram won alone. Angry, she ran to Ravan.", moral: 'Anger only makes things worse' },
+    { id: 'rekha', s0: 81, n: 12, fx: 3230, cap: "Maricha called out in Ram's voice: 'Oh Sita! Oh Lakshmana!' Worried, Sita sent Lakshman to find Ram. Then Ravan came, dressed as a holy man, asking for food.", moral: 'Stay calm when you are afraid' },
+    { id: 'sabari', s0: 98, n: 10, fx: 3780, cap: "Ram met Sabari, a kind old lady who had waited for him for many years. With love, she offered him fruits from the forest, and Ram happily accepted them.", moral: 'Love matters more than riches' },
+    { id: 'vali', s0: 104.6, n: 14, fx: 4050, cap: "Ram and the monkey prince Sugriva became friends. Sugriva's brother Vali had taken his kingdom. Ram defeated Vali with his arrow, and Sugriva became king.", moral: 'Stand by your friends' },
+    { id: 'surasa', s0: 110, n: 13, fx: 4900, cap: "Flying over the sea, Hanuman met Surasa, a giant sea serpent. 'Come into my mouth!' she said. Hanuman grew bigger, then became tiny, zipped in and out, and bowed. She smiled and blessed him.", moral: 'Being clever is better than fighting' },
+    { id: 'ashoka', s0: 112.2, n: 16, fx: 5660, cap: "In a garden in Lanka, Ravan tried to scare Sita, but she would not even look at him. Then Hanuman, hiding in a tree, sang Ram's story, gave Sita Ram's ring, and took her hair jewel for Ram.", moral: 'Be brave, even when you feel alone' },
     // ---- the war ----
-    { id: 'chudamani', s0: 125.6, n: 11, fx: 4150, cap: "Back across the sea, Hanuman kneels before Ram and places Sita's hair jewel in his hand: 'I have seen Sita.' Ram presses the jewel to his heart and weeps. Then he rises: the army will march to Lanka.", moral: 'Good news carried with love heals the heart' },
-    { id: 'vib', s0: 126.5, n: 10, fx: 4170, cap: "Ravan insults his brother Vibhishana for urging him to return Sita. Vibhishana flies across the sea to Ram's camp. Ram welcomes him and at once crowns him king of Lanka with sea water..", moral: 'Doing right sometimes means standing apart from your own family' },
-    { id: 'samudra', s0: 126.5, n: 13, fx: 4230, cap: "At the shore, Ram prays to the Ocean for three days, but it does not answer. Angry, he raises a fiery arrow and the sea boils. The Ocean god rises with folded hands: 'Nala, son of the divine builder, can build a bridge, and I will hold it up.'", moral: 'Patience first, and firmness when patience is not heard' },
-    { id: 'angada', s0: 136, n: 12, fx: 5330, cap: 'Ram sends Angada to give Ravan a last chance for peace. Ravan orders him seized, but Angada leaps to the roof with four demons, hurls them down and breaks the palace tower.', moral: 'Peace must always be offered first' },
-    { id: 'indra', s0: 137, n: 16, fx: 5100, cap: "The war begins. The invisible Indrajit binds Ram and Lakshman with serpent arrows. The divine eagle Garuda comes and frees them.", moral: 'Even heroes need friends and help' },
-    { id: 'crown', s0: 138, n: 12, fx: 5250, cap: "Ravan himself enters the battle. Ram shatters his crown with one arrow and says, 'You are tired. Go home and rest, and come back tomorrow.' Humbled, Ravan retreats.", moral: 'A true warrior shows mercy to the beaten' },
-    { id: 'wake', s0: 139, n: 14, fx: 5330, cap: "Ravan sends for his giant brother Kumbhakarna, who sleeps for months. Drums, shouts and even elephants wake him. He tells Ravan he was wrong to take Sita, but chooses to fight out of loyalty.", moral: 'Loyalty is not enough if it serves a wrong cause' },
-    { id: 'niku', s0: 160, n: 14, fx: 5250, cap: "Indrajit begins a secret fire ritual to become unbeatable. Vibhishana tells Lakshman where to find him. Lakshman interrupts the ritual and kills Indrajit.", moral: 'Righteous effort defeats even the strongest tricks' },
-    { id: 'shakti', s0: 162, n: 11, fx: 5240, cap: "In the fierce battle Ravan hurls a mighty spear, the Shakti, at Lakshman. It strikes his chest and he falls senseless. Ram pulls out the spear, breaks it, and holds his brother, weeping: 'A brother like Lakshman can never be found again.'", moral: '' },
-    { id: 'sushena', s0: 162, n: 10, fx: 4980, cap: "The wise monkey physician Sushena finds that Lakshman still lives. 'Hurry,' he tells Hanuman, 'bring the healing herbs from the great mountain in the Himalayas.' Hanuman bows and leaps into the sky.", moral: '' },
-    { id: 'himalaya', s0: 162, n: 10, fx: -380, cut: true, cap: 'In moments Hanuman reaches the snowy Himalayas. The mountain glows with herbs, but he cannot tell which ones Sushena needs. So he lifts the whole mountain peak and flies back with it.', moral: '' },
-    { id: 'herbs', s0: 162, n: 12, fx: 4980, cut: true, cap: 'Hanuman lands with the mountain. Sushena crushes the healing herb and holds it to Lakshman, who breathes it in and rises, healed. Ram embraces his brother, and the whole army cheers Hanuman.', moral: 'Loyal friends bring help even when it seems impossible' },
-    { id: 'aditya', s0: 164, n: 12, fx: 5170, cap: "Indra sends his own chariot, driven by Matali. Ram is weary from the long battle. The sage Agastya appears beside him and teaches him the Aditya Hridayam, a hymn to the Sun, the light behind all light. Ram chants it three times and his strength returns.", moral: 'When you are weary, draw strength from faith' },
-    { id: 'headcut', s0: 164, n: 18, fx: 5300, cap: "Now Ram on Indra's chariot cuts off Ravan's heads and arms one by one, but each grows back. Matali reminds Ram of the Brahma weapon given by the sage Agastya.", moral: 'Some evils need the right weapon, not more force' },
-    { id: 'mando', s0: 176, n: 14, fx: 5500, cap: "Ravan's wife Mandodari mourns him. Ram tells Vibhishana to perform the funeral rites: 'Enmity ends with death. He is as dear to me as to you.' Vibhishana is crowned king of Lanka.", moral: 'Enmity ends with death: forgive and honour' },
-    { id: 'agni', s0: 176, n: 11, fx: 5420, cap: 'Ram asks Sita to prove her purity to the world. She enters the fire, and the fire god Agni brings her out unharmed and vouches for her.', moral: 'Truth shines brightest when it is tested' },
-    { id: 'heaven', s0: 176, n: 12, fx: 5200, cap: "The gods gather, and King Dasharatha appears from heaven, shining. He blesses his sons and Sita. Ram asks one thing: 'Forgive Kaikeyi and Bharata.' His father agrees. At Ram's wish, Indra brings the fallen monkeys back to life.", moral: 'Forgiveness frees the one who forgives' },
-    { id: 'bharatmeet', s0: 206, n: 12, fx: 720, cap: "Outside Ayodhya, Bharata comes barefoot, the sandals on his head. He kneels and places them on Ram's feet: 'I return the kingdom you left in my care.' Ram lifts him up and embraces him, then bows to his three mothers, Kaikeyi too.", moral: 'Love and loyalty bring every journey home' },
-    { id: 'darbar', s0: 213, n: 12, fx: 760, cap: 'Sage Vasishtha crowns Ram king of Ayodhya, with Sita beside him. Ram Rajya, a rule of justice and peace, lasts for many years.', moral: 'A good ruler cares for every person' },
+    { id: 'chudamani', s0: 125.6, n: 11, fx: 4150, cap: "Back across the sea, Hanuman gave Sita's jewel to Ram and said, 'I have seen Sita!' Ram held it to his heart and cried. Then he said: now we go to Lanka!", moral: 'Good news brings hope' },
+    { id: 'vib', s0: 126.5, n: 10, fx: 4170, cap: "Ravan's brother Vibhishana told him to give Sita back. Ravan grew angry, so Vibhishana flew across the sea to join Ram. Ram welcomed him as a friend and crowned him king of Lanka.", moral: 'Do what is right, even when it is hard' },
+    { id: 'samudra', s0: 126.5, n: 13, fx: 4230, cap: "At the sea, Ram prayed to the Ocean for three days, but there was no answer. When Ram raised his bow, the Ocean god appeared and said: 'Nala can build a bridge, and I will hold it up.'", moral: 'Be patient first, then be firm' },
+    { id: 'angada', s0: 136, n: 12, fx: 5330, cap: "Before any fighting, Ram sent Angada to ask Ravan for peace. Ravan's guards grabbed him, but Angada jumped up onto the palace roof, and the tower broke.", moral: 'Always try peace first' },
+    { id: 'indra', s0: 137, n: 16, fx: 5100, cap: "The battle began. Ravan's son Indrajit, hiding in the clouds, tied up Ram and Lakshman with magic snake arrows. Then the great eagle Garuda flew in and set them free.", moral: 'Even heroes need help from friends' },
+    { id: 'crown', s0: 138, n: 12, fx: 5250, cap: "Ravan came to fight. Ram's arrow knocked off his crown. Ram said kindly, 'You are tired. Go home, rest, and come back tomorrow.'", moral: 'Be kind, even to an enemy' },
+    { id: 'wake', s0: 139, n: 14, fx: 5330, cap: "Ravan woke his giant brother Kumbhakarna, who sleeps for months. It took drums and lots of noise! Kumbhakarna said Ravan was wrong, but still went to fight for him.", moral: 'Don\'t help anyone do wrong' },
+    { id: 'niku', s0: 160, n: 14, fx: 5250, cap: "Indrajit started a secret fire prayer to become unbeatable. Vibhishana showed Lakshman the place, and Lakshman defeated Indrajit before he could finish.", moral: 'Good effort wins over tricks' },
+    { id: 'shakti', s0: 162, n: 11, fx: 5240, cap: "In the battle, Ravan threw a magic spear at Lakshman, and Lakshman fell down. Ram pulled out the spear and held his brother. 'I can never find another brother like you,' he cried.", moral: '' },
+    { id: 'sushena', s0: 162, n: 10, fx: 4980, cap: "The monkey doctor Sushena checked Lakshman. 'He is still alive!' he said. 'Hanuman, quick, bring the healing herbs from the Himalaya mountains.' Hanuman bowed and flew into the sky.", moral: '' },
+    { id: 'himalaya', s0: 162, n: 10, fx: -380, cut: true, cap: "Hanuman reached the snowy Himalayas. The mountain glowed with herbs, but which one was right? So Hanuman lifted the whole mountaintop and flew back with it!", moral: '' },
+    { id: 'herbs', s0: 162, n: 12, fx: 4980, cut: true, cap: "Hanuman landed with the mountain. Sushena gave Lakshman the healing herb to smell, and Lakshman woke up, well again! Ram hugged his brother, and everyone cheered for Hanuman.", moral: 'True friends help in hard times' },
+    { id: 'aditya', s0: 164, n: 12, fx: 5170, cap: "Indra sent his own chariot for Ram. Ram was tired, so the sage Agastya taught him a prayer to the Sun, the Aditya Hridayam. Ram said it three times and felt strong again.", moral: 'Prayer and faith give us strength' },
+    { id: 'headcut', s0: 164, n: 18, fx: 5300, cap: "Ram's arrows knocked off Ravan's heads, but magic made new ones grow back! Then Matali, the charioteer, reminded Ram of the special arrow of Brahma, the gift from the sage Agastya.", moral: 'Wisdom works better than force' },
+    { id: 'mando', s0: 176, n: 14, fx: 5500, cap: "Ravan's wife Mandodari was very sad. Ram told Vibhishana to give Ravan a proper farewell: 'Our fight is over now.' Then Vibhishana was crowned king of Lanka.", moral: 'Forgive, and let fights end' },
+    { id: 'agni', s0: 176, n: 11, fx: 5420, cap: "To show everyone that she was pure and true, Sita stepped into a fire. The fire god Agni carried her out, safe and shining, and told everyone she was good and true.", moral: 'Truth always shines' },
+    { id: 'heaven', s0: 176, n: 12, fx: 5200, cap: "Then King Dasharatha appeared from heaven, shining with light. He blessed his sons and Sita. Ram asked him to forgive Kaikeyi and Bharata, and he did. The fallen monkeys came back to life!", moral: 'Forgiving makes hearts light' },
+    { id: 'bharatmeet', s0: 206, n: 12, fx: 720, cap: "Near Ayodhya, Bharata came carrying Ram's sandals on his head. He placed them on Ram's feet and gave back the kingdom. The brothers hugged, and Ram bowed to his three mothers.", moral: 'Love brings everyone home' },
+    { id: 'darbar', s0: 213, n: 12, fx: 760, cap: "The sage Vasishtha crowned Ram king of Ayodhya, with Sita beside him. Ram ruled with kindness and fairness, and everyone was happy for many, many years.", moral: 'A good leader cares for everyone' },
   ];
+  const CAP = [   // story time windows [from, to, what is happening, (optional) lesson, (optional) when the lesson appears]; written for children
+    [0, 9, 'Months later, four baby boys were born: Ram, Bharata, and the twins Lakshman and Shatrughna. Ram was Vishnu himself, born on Earth.'],
+    [9, 14.5, 'Ram and Lakshman said goodbye to their parents and left with the sage.'],
+    [14.5, 22, 'The sage led the brothers toward Mithila, where King Janaka had a special contest.'],
+    [22, 31, "In Mithila, whoever could string Shiva's giant bow would marry Princess Sita. Ram lifted it easily!"],
+    [31, 41, 'Crack! The bow broke in two! King Janaka happily gave Sita to Ram, and all four brothers were married.', 'Be strong, and stay humble', 36],
+    [41, 53, 'Back in Ayodhya, Ram and Sita lived happily for twelve years. Then the old king decided to make Ram the next king.'],
+    [53, 55, 'Ram left for the forest with Sita and Lakshman.'],
+    [55, 57, 'The charioteer went back to Ayodhya alone.'],
+    [57, 60, 'Prince Bharata was called home to Ayodhya.'],
+    [60, 64, 'Ram, Sita and Lakshman walked deeper into the forest, helping the sages there.'],
+    [64, 70, 'They built a little hut at Panchavati, by the river Godavari, and lived there happily.'],
+    [70, 77.5, 'A golden deer appeared! It was really the demon Maricha in disguise. Sita wanted it, so Ram went after it and asked Lakshman to guard Sita.'],
+    [77.5, 81, "Ram's arrow found the deer, and it turned back into Maricha."],
+    [81, 92, 'Ravan took Sita away in his flying chariot. The brave old bird Jatayu fought him, but Ravan cut his wings.'],
+    [92, 98, 'Ram and Lakshman searched everywhere. Jatayu told them Ravan went south, and Ram gave the brave bird a loving farewell.', 'Always do what is right', 95],
+    [98, 104.6, 'In the hills, Hanuman met Ram and Lakshman and took them to his king, Sugriva.'],
+    [104.6, 110, "The monkeys searched everywhere for Sita. They learned she was in Lanka, across the sea. Hanuman took Ram's ring and leaped across!"],
+    [110, 112.2, 'Hanuman reached Lanka and searched for Sita.'],
+    [112.2, 115, 'Sita cried with joy to hear about Ram.', 'Never give up hope', 112.8],
+    [115, 121, "Ravan's guards set Hanuman's tail on fire! But Hanuman jumped from roof to roof and set Lanka's towers alight."],
+    [121, 125.6, 'Then he leaped back across the sea with the good news.'],
+    [126.5, 136, 'Nala and the monkeys built a bridge of rocks across the sea in five days!', 'Working together makes anything possible', 131],
+    [136, 139, 'The army crossed to Lanka. Ram offered peace, but Ravan said no.'],
+    [139, 150, "Kumbhakarna fought fiercely, until Ram's arrow stopped him."],
+    [150, 160, 'Indrajit hid in the clouds and shot arrows at the army. Vibhishana knew his secret: a hidden fire prayer that would make him unbeatable.'],
+    [160, 162, 'Ravan came out to fight, angry and sad.'],
+    [162, 164, 'Lakshman, well again, stood with Ram. The last battle began.'],
+    [164, 168.6, 'Ram took aim with the arrow of Brahma, the gift from the sage Agastya.'],
+    [168.6, 176, 'The arrow struck Ravan. Good won over evil!', 'Goodness wins in the end', 171.5],
+    [176, 186, 'The fourteen years were over. Vibhishana gave Ram the flying chariot Pushpaka, and they flew home.'],
+    [186, 206, 'On the way, Ram showed Sita the places of their journey. Ayodhya was full of joy. By tradition, people lit lamps everywhere, and we remember it at Diwali!', 'Light always wins over darkness', 198],
+    [206, 213, 'The whole city danced and sang. The brothers were together again!'],
+    [213, 225, "Happy Diwali! Be a light in someone's life.", 'Be the light', 218],
+  ];
+  // ---------- time to read: every caption stays up long enough for a young child to read it, and to think about it ----------
+  const RATE = 1.7, wc = (t) => (t ? t.split(/\s+/).length : 0), readT = (t) => wc(t) / RATE + 2.2, moralT = (t) => (t ? wc(t) / RATE + 2.6 : 0);   // seconds
+  INS.forEach(a => {   // a scene plays slower (its own animation stretched) when its text needs more time than the scene
+    a.n0 = a.n; a.mAt = Math.max(a.n0 * .55, readT(a.cap) / SLOW + .9);
+    a.n = Math.max(a.n0, readT(a.cap) / SLOW + 1.8, a.moral ? a.mAt + moralT(a.moral) / SLOW + .9 : 0);
+  });
+  for (const [A, B, en, moral, ms] of CAP) {   // the story pauses (everyone stands still) while a long caption is read
+    const cuts = [A, ...INS.map(q => q.s0).filter(x => x > A + .01 && x < B - .01), B].sort((x, y) => x - y); let best = 0, bi = 0;
+    for (let q = 0; q < cuts.length - 1; q++) if (cuts[q + 1] - cuts[q] > best) { best = cuts[q + 1] - cuts[q]; bi = q; }
+    const need = readT(en) / SLOW + 1.8 + (moral ? moralT(moral) / SLOW : 0);
+    if (need > best + .2) INS.push({ id: 'hold', s0: Math.max(cuts[bi] + .95, cuts[bi + 1] - .95), n: need - best, n0: need - best, fx: null, cap: '', moral: '' });
+  }
+  INS.sort((x, y) => x.s0 - y.s0);
   let accIns = 0; INS.forEach(a => { a.t0 = a.s0 + accIns; accIns += a.n; });
   const TOTAL = 225 + accIns;
   function mapT(Tr) {
     const t = Tr / SLOW;
-    for (let i = 0; i < INS.length; i++) { const a = INS[i]; if (t < a.t0) return { S: t - (a.t0 - a.s0), i: -1 }; if (t < a.t0 + a.n) return { S: a.s0, i, u: t - a.t0 }; }
+    for (let i = 0; i < INS.length; i++) { const a = INS[i]; if (t < a.t0) return { S: t - (a.t0 - a.s0), i: -1 }; if (t < a.t0 + a.n) return { S: a.s0, i, u: (t - a.t0) * a.n0 / a.n, ur: t - a.t0 }; }
     return { S: t - accIns, i: -1 };
   }
   const sToT = (S) => S + INS.reduce((a, b) => a + (b.s0 < S ? b.n : 0), 0);
-  const CAP = [   // story time windows [from, to, what is happening and why, (optional) lesson, (optional) when the lesson appears]
-    [0, 9, 'Months later, four sons are born: Ram to Kausalya, Bharata to Kaikeyi, and the twins Lakshman and Shatrughna to Sumitra. Ram is Vishnu himself, born as a man to defeat Ravan'],
-    [9, 14.5, 'Ram and Lakshman bow to their parents and set out with the sage Vishwamitra'],
-    [14.5, 22, "The sage teaches Ram the secrets of divine weapons and leads the brothers toward Mithila, where King Janaka's great contest awaits"],
-    [22, 31, "Mithila: King Janaka will give his daughter Sita to whoever can string Shiva's great bow. Ram, with the sage's blessing, lifts it"],
-    [31, 41, 'Ram strings the bow and it snaps in two with a thunderous crack! Janaka gives Sita to Ram, and King Dasharatha comes for the wedding. All four brothers marry', 'Strength joined with humility wins hearts', 37],
-    [41, 53, 'Back in Ayodhya, Ram and Sita live happily for twelve years. Then the old king Dasharatha announces that Ram will be crowned his heir'],
-    [53, 55, 'Ram leaves for the forest in bark robes, with Sita and Lakshman'],
-    [55, 57, 'The charioteer Sumantra returns to Ayodhya alone'],
-    [57, 60, "Bharata, away at his uncle's home, is called back to Ayodhya"],
-    [60, 64, 'The three go deeper into the forest, from Chitrakoot to the great Dandaka forest, where the sages ask Ram to protect them'],
-    [64, 70, "In the thirteenth year of exile they settle at Panchavati, by the river Godavari. Bharata rules from Nandigrama with Ram's sandals on the throne"],
-    [70, 77.5, 'The demon Maricha becomes a golden deer. Lakshman warns it is a trick, but Sita begs for it. Ram goes after it and tells Lakshman to guard her'],
-    [77.5, 81, "Ram's arrow ends the illusion. As Lakshman feared, the deer was Maricha in disguise, and he dies crying out in Ram's voice"],
-    [81, 92, 'Ravan shows his true form and carries Sita off in his chariot. The old vulture Jatayu fights him until Ravan cuts off his wings'],
-    [92, 98, 'Ram and Lakshman find the empty hut and search. The dying Jatayu tells them Ravan took Sita south. Ram performs his funeral rites', 'Do what is right, even when you cannot win', 95],
-    [98, 104.6, 'At Rishyamukha hill, Hanuman, disguised as a hermit, meets Ram on behalf of Sugriva, the exiled monkey king. He bows and takes them to him'],
-    [104.6, 110, "Sugriva's monkeys search in every direction. The old vulture Sampati sees Sita far away in Lanka. Hanuman, carrying Ram's ring, leaps across the sea"],
-    [110, 112.2, 'Hanuman reaches Lanka and searches the golden city by night'],
-    [112.2, 115, 'Sita weeps with joy to hear of Ram, and begs Hanuman to bring him soon', 'With devotion and humility, nothing is impossible', 112.8],
-    [115, 121, "Hanuman lets himself be captured, to see Ravan. Ravan has his tail set on fire, and Hanuman burns the towers of Lanka with it"],
-    [121, 125.6, 'Then he leaps back across the ocean with the news'],
-    [126.5, 136, 'Nala, son of the divine builder Vishwakarma, leads the monkeys to build a bridge of rocks and trees across the sea in five days', 'Working together builds what seems impossible', 131],
-    [136, 139, 'The army crosses to Lanka. Ram offers peace, and when it is refused, the war begins'],
-    [139, 150, "Kumbhakarna devours monkeys by the hundreds, until Ram's arrow ends him"],
-    [150, 160, "Then Indrajit, hidden in the clouds, rains arrows on the army. No one can see him to strike back. Vibhishana knows his secret: a hidden fire ritual that will make him unbeatable"],
-    [160, 162, "Ravan, wild with grief at his son's death, comes out to fight"],
-    [162, 164, 'Lakshman, healed, stands beside Ram again. The final battle begins'],
-    [164, 168.6, 'Ram fits the arrow of Brahma, the gift of the sage Agastya'],
-    [168.6, 176, "The arrow pierces Ravan's heart. Good wins over evil", 'Pride and wrongdoing destroy even the mightiest', 171.5],
-    [176, 186, 'The fourteen years are over. Vibhishana gives Ram the flying chariot Pushpaka, and they fly home'],
-    [186, 206, 'On the way, Ram shows Sita the places of their journey. Hanuman flies ahead to tell Bharata. Ayodhya greets them with joy; by tradition people lit lamps, remembered as Diwali', 'Light always returns after darkness', 198],
-    [206, 213, 'The whole city rejoices: the brothers are together again'],
-    [213, 225, "Diwali, the festival of lights, remembers Ram's homecoming: be a light in someone's life", 'Be the light', 218],
-  ];
   // the seven books (kandas) of Valmiki's Ramayana, shown as a running heading over the story text
   const KANDA = [['PROLOGUE', 'THE BOON AND THE PROMISE', ''], ['BOOK ONE', 'BALA KANDA', 'CHILDHOOD'], ['BOOK TWO', 'AYODHYA KANDA', 'THE EXILE'], ['BOOK THREE', 'ARANYA KANDA', 'THE FOREST'],
     ['BOOK FOUR', 'KISHKINDHA KANDA', 'THE MONKEY KINGDOM'], ['BOOK FIVE', 'SUNDARA KANDA', "HANUMAN'S JOURNEY"], ['BOOK SIX', 'YUDDHA KANDA', 'THE WAR'], ['EPILOGUE', 'THE FESTIVAL OF LIGHTS', '']];
@@ -972,16 +986,21 @@ window.R3 = (function () {
     const m = mapT(Tr); let out = null;
     const seg = KSEG.find(q => Tr >= q[1] && Tr < q[2]) || KSEG[KSEG.length - 1], K0 = KANDA[seg[0]];
     const kanda = { book: K0[0], name: K0[1], sub: K0[2], age: Tr - seg[1], a: sstep(seg[1], seg[1] + 1.4, Tr) * (1 - sstep(seg[2] - 1.2, seg[2], Tr)) };
-    if (m.i >= 0) { const a = INS[m.i], f = sstep(0, .9, m.u) * (1 - sstep(a.n - .9, a.n, m.u)); out = { en: a.cap, moral: a.moral || '', a: f, age: m.u * SLOW, am: a.moral ? sstep(a.n * .55, a.n * .55 + .8, m.u) * (1 - sstep(a.n - .9, a.n, m.u)) : 0 }; }
+    if (m.i >= 0 && INS[m.i].id === 'hold') {   // a reading pause: the caption of this moment stays, fully shown
+      const h = INS[m.i], c = CAP.find(([a, b]) => h.s0 >= a && h.s0 < b);
+      if (c) { const [a, , en, moral, ms] = c, read = readT(en) / SLOW + .9, sofar = h.s0 - a + m.ur, mm = ms === undefined ? read : Math.min(ms - a, read);
+        out = { en, moral: moral || '', a: 1, age: sofar * SLOW, am: moral ? sstep(mm, mm + .8, sofar) : 0 }; }
+    }
+    else if (m.i >= 0) { const a = INS[m.i], f = sstep(0, .9, m.ur) * (1 - sstep(a.n - .9, a.n, m.ur)); out = { en: a.cap, moral: a.moral || '', a: f, age: m.ur * SLOW, am: a.moral ? sstep(a.mAt, a.mAt + .8, m.ur) * (1 - sstep(a.n - .9, a.n, m.ur)) : 0 }; }
     else for (const [a, b, en, moral, ms] of CAP) if (m.S >= a && m.S < b) {
-      let k = sstep(a, a + .9, m.S) * (1 - sstep(b - .9, b, m.S)); for (const q of INS) k *= sstep(0, .8, Math.abs(m.S - q.s0));
-      { let lo = a, hi = b; for (const q of INS) { if (q.s0 <= m.S && q.s0 > lo) lo = q.s0; if (q.s0 > m.S && q.s0 < hi) hi = q.s0; } if (hi - lo < 1.5) k = 0; }   // no flicker of text in the short gaps between scenes
+      let k = sstep(a, a + .9, m.S) * (1 - sstep(b - .9, b, m.S)); for (const q of INS) if (q.id !== 'hold') k *= sstep(0, .8, Math.abs(m.S - q.s0));
+      { let lo = a, hi = b; for (const q of INS) { if (q.id === 'hold') continue; if (q.s0 <= m.S && q.s0 > lo) lo = q.s0; if (q.s0 > m.S && q.s0 < hi) hi = q.s0; } if (hi - lo < 1.5 && !INS.some(q => q.id === 'hold' && q.s0 > lo && q.s0 < hi)) k = 0; }   // no flicker of text in the short gaps between scenes
       const mm = ms === undefined ? b - 3.6 : ms; out = { en, moral: moral || '', a: k, age: (m.S - a) * SLOW, am: moral ? sstep(mm, mm + .8, m.S) * (1 - sstep(b - .9, b, m.S)) * sstep(0, .8, Math.abs(m.S - 0)) : 0 }; break;
     }
     if (!out) out = { en: '', moral: '', a: 0, am: 0, age: 0 };
     out.kanda = kanda; return out;
   }
-  const chapters = [0, 9, 14.5, 22, 31, 41, 53, 60, 64, 70, 81, 92, 98, 104.6, 110, 115, 121, 126.5, 136, 139, 150, 160, 164, 168.6, 176, 186, 206, 213].map(sToT).concat(INS.map(a => a.t0)).sort((a, b) => a - b).filter((x, i, v) => !i || x - v[i - 1] > .5).map(x => x * SLOW);
+  const chapters = [0, 9, 14.5, 22, 31, 41, 53, 60, 64, 70, 81, 92, 98, 104.6, 110, 115, 121, 126.5, 136, 139, 150, 160, 164, 168.6, 176, 186, 206, 213].map(sToT).concat(INS.filter(a => a.id !== 'hold').map(a => a.t0)).sort((a, b) => a - b).filter((x, i, v) => !i || x - v[i - 1] > .5).map(x => x * SLOW);
 
   // the aim and the arrow of an inserted scene (the actors themselves are posed later)
   function insertParams(id, u, rx, lx) {
@@ -1011,7 +1030,7 @@ window.R3 = (function () {
       const tx = u < 4 ? lerp(1290, 1130, sstep(.4, 4, u)) : 1130, tf = sstep(6.3, 7.6, u), td = sstep(8.2, 9.6, u);
       if (u > .4 && u < 9.7) { showAt(tataka, tx, 12 * tf, -6, face, 1.5 * (1 - .6 * td) + .001); pose(tataka, { ph: tx * Math.PI / STEP, s: u < 4 ? .75 : 0, t: Tr, cheer: sstep(4, 4.6, u) * (1 - sstep(6, 6.4, u)), talk: u > 4 && u < 6.2, angry: 1 }); tataka.root.rotation.z = -1.5 * tf; if (td > 0 && Math.random() < .8) ember(tx + rnd(-30, 30), rnd(10, 130), 0, true); }
       once('i0a', u >= .4, () => { flashV = .5; burst(1290, 80, 0, .3, 70, 80); });
-      once('i0b', u >= 6.7, () => { flashV = .7; burst(1130, 100, 0, .02, 120, 130); });
+      once('i0b', u >= 6.7, () => { flashV = .7; burst(1130, 100, 0, .12, 120, 130); });
       once('i0c', u >= 9.3, () => { for (let k = 0; k < 30; k++) ember(1130 + rnd(-20, 20), rnd(20, 100), 0, true); });
       sage.root.rotation.y = YAW; pose(sage, { ph: 0, s: 0, t: Tr, cheer: sstep(8.6, 9.6, u) * (1 - sstep(10.4, 11, u)), talk: u > 8.6 && u < 10.4, look: .3 });
       orbs.forEach((o, i) => { const a = sstep(9, 9.8, u) * (1 - sstep(10.4, 11, u)); o.visible = a > .02; const an = u * 2.6 + i * 2.09; o.position.set(rx + 20 + Math.cos(an) * 34, 130 + Math.sin(an * 1.3) * 18, 10 + Math.sin(an) * 20); o.scale.setScalar(6 * a + .01); });
@@ -1058,7 +1077,7 @@ window.R3 = (function () {
       else if (stuck) { spear.position.set(5110 - 20, 22, 18); spear.rotation.set(0, 0, Math.PI / 2 + .3); }
       else { const b = ease(sstep(6.9, 7.6, u)); spear.position.set(5040 + 30 * b, 110 + 40 * b, 18); spear.rotation.set(0, 0, Math.PI / 2 + b * 2.4); spear.scale.setScalar(1 - b * .9); }
       if (u < 6.9) spear.scale.setScalar(1);
-      once('nsh_a', u >= 3, () => { flashV = 1; burst(5110, 110, 10, .02, 120, 140); burst(5110, 110, 10, .12, 60, 90); });
+      once('nsh_a', u >= 3, () => { flashV = 1; burst(5110, 110, 10, .12, 120, 140); burst(5110, 110, 10, .12, 60, 90); });
       once('nsh_b', u >= 7.2, () => { flashV = .5; burst(5060, 130, 18, .08, 50, 70); });
       const down = ease(sstep(3, 3.8, u)); LAK_DOWN(lak, down); base.lak.sad = 1; closeEyes(lak, down);
       const rx2 = lerp(rx, 5036, ease(sstep(3.4, 4.4, u))); ram.root.position.x = rx2; ram.root.rotation.y = lerp(YAW, -YAW, ease(sstep(3.6, 4.4, u)));
@@ -1238,7 +1257,7 @@ window.R3 = (function () {
       const rs = 1.1 * (.2 + .8 * ease(sstep(.2, 1.4, u)));
       rav.root.visible = true; rav.root.position.set(540, 0, -4); rav.root.scale.set(rs, rs, rs); rav.root.rotation.set(0, -.55, 0);
       pose(rav, { ph: 0, s: 0, t: Tr, kneel: sstep(.8, 1.8, u) * (1 - sstep(9.8, 10.8, u)), join: sstep(1.4, 2.2, u) * (1 - sstep(9.6, 10.4, u)), sad: .3, talk: u > 11.2 && u < 12.6 });
-      for (let k = 1; k < 10; k++) { const tc = 2.2 + (k - 1) * .85; cutPart(rav.heads[k], tc, 10.2, u, -2.6); once('nb' + k, u >= tc + .85, () => { flashV = .3; burst(412, 60, 12, .08, 22, 70); for (let q = 0; q < 8; q++) flame(400 + rnd(-20, 20), 10, 8, 1.8); }); }
+      for (let k = 1; k < 10; k++) { const tc = 2.2 + (k - 1) * .85; cutPart(rav.heads[k], tc, 10.2, u, 0); once('nb' + k, u >= tc, () => { rav.root.updateMatrixWorld(true); rav.heads[k].getWorldPosition(wp); burst(wp.x, wp.y, wp.z + 10, .12, 26, 50); }); }
       act(brahma, 300, 0, 0, R, pop(9.2, 14.2, u, 1.05), { point: sstep(10.6, 11.4, u) * (1 - sstep(12.6, 13.2, u)), talk: u > 10 && u < 12.8 });
       once('nb_a', u >= 9.2, () => { flashV = 1; burst(300, 120, 0, .13, 140, 140); });
       once('nb_b', u >= 10.2, () => { flashV = .9; burst(540, 130, 8, .12, 130, 120); });
@@ -1265,8 +1284,8 @@ window.R3 = (function () {
       act(blindA, 745, 0, 4, L, pop(6.4, 14.2, u, .95), { look: .15, sad: 1, angry: sstep(10.4, 11, u), talk: u > 9.8 && u < 12.6, point: sstep(10.6, 11.4, u) * (1 - sstep(12.6, 13.2, u)) });
       act(blindB, 800, 0, 2, L, pop(6.4, 14.2, u, .95), { look: -.1, sad: 1, talk: u > 11 && u < 12.6 });
       once('nc_a', u >= 3.4, () => { burst(392, 110, 8, .12, 20, 50); });
-      once('nc_b', u >= 4.2, () => { flashV = .6; burst(556, 60, 8, .02, 60, 80); });
-      once('nc_c', u >= 10.6, () => { flashV = .7; burst(745, 100, 8, .0, 80, 90); });
+      once('nc_b', u >= 4.2, () => { flashV = .6; burst(556, 60, 8, .12, 60, 80); });
+      once('nc_c', u >= 10.6, () => { flashV = .7; burst(745, 100, 8, .6, 60, 70); });
       if (u > 4.2 && u < 8.8) for (let q = 0; q < 1; q++) parts.push({ x: 560 + rnd(-8, 8), y: 20, z: 10, vx: rnd(-8, 8), vy: rnd(20, 40), vz: 0, life: rnd(1, 1.6), age: 0, hue: .6, r: 1.6, drag: .6, g: -10 });
     }
     if (id === 'kboon') {   // Kaikeyi saves the wounded king; two boons
@@ -1277,7 +1296,7 @@ window.R3 = (function () {
       act(kaik, cx + 22, 26, 12, R, pop(.2, 11.8, u, 1), { point: sstep(1.4, 2, u), talk: u > 9.4 && u < 10.8, look: .1 });
       const ks = 1.7 * (.2 + .8 * ease(sstep(0, 1.1, u))) * (1 - sstep(3.4, 4.4, u) * .97);
       if (u < 4.4) { act(kum, 190, 0, 0, R, ks, { cheer: .5, angry: 1 }); if (u < 3.2 && Math.random() < .5) ember(215, rnd(60, 160), 0, true); if (u < 3.2 && Math.random() < .3) flame(250 + rnd(0, 40), rnd(60, 130), 8, 1); }
-      once('nk_a', u >= 1.5, () => { flashV = .6; burst(300, 100, 8, .02, 60, 90); });
+      once('nk_a', u >= 1.5, () => { flashV = .6; burst(300, 100, 8, .12, 60, 90); });
       birthOrbs.slice(0, 2).forEach((o, i) => { const a = sstep(9.8 + i * .5, 10.6 + i * .5, u) * (1 - sstep(11.2, 11.9, u)); o.visible = a > .02; o.position.set(cx + 22 + (i ? 30 : 4), 100 + 36 * ease(sstep(9.8, 11.4, u)) + Math.sin(Tr * 4 + i) * 3, 12); o.scale.setScalar(7 * a + .01); });
     }
     if (id === 'yajna') {   // Dasharatha's putrakameshti (Bala Kanda 14–16)
@@ -1306,10 +1325,10 @@ window.R3 = (function () {
     if (id === 'siddha') {   // Siddhashrama: Ram guards the sage's ritual (Bala Kanda 29–30)
       fire(1070, .2, 11.4, 1.7);
       act(sage, 1010, 0, 4, R, 1, { cheer: .3 * sstep(.6, 1.4, u) * (1 - sstep(10.6, 11.4, u)), talk: u < 10.6 });
-      if (u > .6 && u < 8.2 && Math.random() < .5) parts.push({ x: rnd(1100, 1300), y: 280, z: rnd(0, 20), vx: rnd(-6, 6), vy: -rnd(60, 110), vz: 0, life: 1.8, age: 0, hue: 0, r: 2.2, drag: .9, g: 20 });   // the demons rain blood from the sky; glowing red embers here
+      if (u > .6 && u < 8.2 && Math.random() < .5) parts.push({ x: rnd(1100, 1300), y: 280, z: rnd(0, 20), vx: rnd(-6, 6), vy: -rnd(60, 110), vz: 0, life: 1.8, age: 0, hue: .78, r: 2.2, drag: .9, g: 20 });   // the demons' dark magic falls from the sky as purple sparks
       { const sub = u < 5.2; if (u > 1.4 && u < 6) { const f = sstep(1.4, 2.6, u), fl = sstep(4.6, 5.8, u); act(kum, lerp(1320, 1190, ease(sstep(1.4, 3, u))) + 60 * fl, lerp(200, 105, f) * (1 - fl) + 8 * fl, -4, L, 1.35 * (1 - .6 * sstep(5.2, 6, u)), { fly: 1 - fl, angry: 1, cheer: 0 }); kum.root.rotation.z = -1.5 * fl; if (u > 5.2) ember(1250, rnd(10, 60), 0, true); } }
       if (u > 2.2 && u < 9.6) { const f = sstep(2.2, 3.4, u), th = sstep(7.8, 8.4, u); const mx = u < 7.7 ? lerp(1360, 1150, ease(sstep(2.2, 4, u))) : 1150 + 600 * ease(sstep(7.7, 9.4, u)), my = u < 7.7 ? lerp(210, 120, f) : 120 + 120 * ease(sstep(7.7, 9.4, u)); act(indra, mx, my, -2, L, 1.1, { fly: 1, angry: 1 }); indra.root.rotation.z = th * u * 3; if (u > 7.7 && Math.random() < .8) ember(mx, my, 0, true); }
-      once('ns_a', u >= 5.2, () => { flashV = .8; burst(1230, 110, 0, .02, 110, 130); });
+      once('ns_a', u >= 5.2, () => { flashV = .8; burst(1230, 110, 0, .12, 110, 130); });
       once('ns_b', u >= 7.9, () => { flashV = .8; burst(1150, 160, 0, .55, 100, 110); });
       once('ns_c', u >= 11.4, () => { flashV = .6; burst(1070, 130, 0, .13, 90, 90); petalRain(900, 1300, 25, 250); });
       base.ram.look = .2;
@@ -1352,7 +1371,7 @@ window.R3 = (function () {
       act(vibh, 4985, 0, 4, R, pop(2, 13.2, u, 1), { point: sstep(2.4, 3.2, u) * (1 - sstep(5, 5.8, u)), talk: u > 2.4 && u < 5, cheer: sstep(10.6, 11.4, u) * (1 - sstep(12.6, 13.2, u)) });
       base.lak.aim = sstep(5, 6.2, u) * (1 - sstep(9.8, 10.4, u)); base.lak.draw = sstep(6, 8, u) * (u < 8.2 ? 1 : 0); base.lak.bow = true; base.lak.angry = 1; base.lak.talk = u > 4.2 && u < 5.2;
       base.lak.cheer = sstep(10.8, 11.6, u) * (1 - sstep(13, 13.8, u));
-      once('nn_a', u >= 9, () => { flashV = 1; burst(5430, 120, 8, .02, 150, 150); for (let q = 0; q < 20; q++) ember(5430 + rnd(-30, 30), rnd(20, 100), 0, true); });
+      once('nn_a', u >= 9, () => { flashV = 1; burst(5430, 120, 8, .12, 150, 150); for (let q = 0; q < 20; q++) ember(5430 + rnd(-30, 30), rnd(20, 100), 0, true); });
       if (u > 9.6 && u < 12.6) ember(5470 + rnd(-14, 14), rnd(10, 70), 0, true);
     }
     if (id === 'headcut') {   // the duel: heads and arms cut off, and grow again (Yuddha Kanda 102–108)
@@ -1367,9 +1386,9 @@ window.R3 = (function () {
       rav.heads.forEach((h, i) => { h.rotation.y = Math.sin(Tr * 1.1 + i) * .18; });
       rav.xarms.forEach((a, i) => { a.rotation.x = a.userData.rx - (Math.sin(Tr * 2.2 + i) * .5 + .5) * .4; });
       cuts.forEach(([tc, tr, hs, as]) => {
-        hs.forEach(k => cutPart(rav.heads[k], tc, tr, u, (k % 2 ? 1 : -1) * (1.2 + (k % 3) * .5)));
+        hs.forEach(k => cutPart(rav.heads[k], tc, tr, u, 0));
         as.forEach(k => cutPart(rav.xarms[k], tc, tr, u, 0));
-        once('nh_c' + tc, u >= tc, () => { flashV = .8; burst(5545, 190, 14, .02, 100, 130); for (let q = 0; q < 14; q++) ember(5530 + rnd(-50, 50), rnd(90, 230), 8, true); });
+        once('nh_c' + tc, u >= tc, () => { flashV = .8; burst(5545, 190, 14, .12, 100, 130); for (let q = 0; q < 14; q++) ember(5530 + rnd(-50, 50), rnd(90, 230), 8, true); });
         once('nh_r' + tr, u >= tr, () => { flashV = .6; burst(5560, 150, 10, .12, 70, 90); });
       });
       const gl = sstep(14.2, 15.2, u) * (1 - sstep(17, 17.8, u)); astra.visible = gl > .02;
@@ -1416,7 +1435,7 @@ window.R3 = (function () {
       if (u < 7.9) { rav.root.visible = false; showAt(hermit, hx, 0, 6, YAW, pop(.1, 99, u, 1)); pose(hermit, { ph: hx * Math.PI / STEP, s: u < 3.5 ? .7 : 0, t: Tr, talk: u > 3.6 && u < 7, sad: .7 }); }
       else { rav.root.visible = true; rav.root.position.set(3150, 0, 0); rav.root.scale.set(1.1 * (.5 + .5 * ease(rv)), 1.1 * (.5 + .5 * ease(rv)), 1.1); rav.root.rotation.y = YAW - .4; pose(rav, { ph: 0, s: 0, t: Tr }); }
       base.sita.look = -.2; base.sita.sad = .5; base.sita.talk = u > 4 && u < 7;
-      once('i4a', u >= 6.2, () => { flashV = .6; burst(3178, 40, 0, .02, 80, 90); });
+      once('i4a', u >= 6.2, () => { flashV = .6; burst(3178, 40, 0, .12, 80, 90); });
       once('i4b', u >= 7.8, () => { flashV = 1; burst(3150, 140, 0, .78, 140, 150); });
     }
     if (id === 'sabari') {   // Sabari's berries
@@ -1433,8 +1452,8 @@ window.R3 = (function () {
         showAt(sugr, sx, 0, 6, YAW, f + .001); pose(sugr, { ph: sx * Math.PI / STEP, s: 0, t: Tr, kneel: sstep(9.8, 10.8, u) * (1 - sstep(10.8, 11.6, u)), angry: u < 8.2 ? 1 : 0 });
         if (u < 8.2) { sugr.arms[0].rotation.x = -1.5 + Math.sin(u * 7) * .6; sugr.arms[1].rotation.x = -1.2 + Math.sin(u * 7 + 2) * .6; sugr.torso.rotation.y = Math.sin(u * 7) * .25; } }
       if (u > .3 && u < 12.9) { showAt(vali, vx, 10 * vf, -4, face, vf2 * (.2 + .8 * ease(sstep(.3, 1.4, u))) + .001); pose(vali, { ph: 0, s: 0, t: Tr, talk: u > 9.4 && u < 11.6, angry: u < 8.2 ? 1 : 0, sad: u > 8.4 ? 1 : 0 }); if (u < 8.2) { vali.arms[0].rotation.x = -1.5 + Math.sin(u * 7 + 1) * .6; vali.arms[1].rotation.x = -1.2 + Math.sin(u * 7 + 3) * .6; vali.torso.rotation.y = -Math.sin(u * 7 + 1) * .25; } vali.root.rotation.z = -1.4 * vf; }
-      once('v3a', u >= .3, () => { flashV = .5; burst(4090, 90, 0, .02, 80, 90); });
-      once('v3b', u >= 8.2, () => { flashV = .8; burst(4125, 120, 0, .02, 120, 130); });
+      once('v3a', u >= .3, () => { flashV = .5; burst(4090, 90, 0, .12, 80, 90); });
+      once('v3b', u >= 8.2, () => { flashV = .8; burst(4125, 120, 0, .12, 120, 130); });
       once('v3c', u >= 11, () => { flashV = .7; burst(4030, 150, 0, .12, 100, 110); });
     }
     if (id === 'vib') {   // Vibhishana crosses the sea to join Ram (Yuddha Kanda 17–19)
@@ -1519,11 +1538,11 @@ window.R3 = (function () {
     const ins = mapT(Tr), T = ins.S, frozen = ins.i >= 0, fz = frozen ? 0 : 1;   // T is story time; during an inserted scene it stands still
     if (Tr < lastTr - .0001) resetAll();
     lastTr = Tr; flashV = Math.max(0, flashV - dt * 1.7);
-    camC += ((frozen ? INS[ins.i].fx : follow(T)) - camC) * (1 - Math.exp(-dt * 2.2));
+    camC += ((frozen && INS[ins.i].fx !== null ? INS[ins.i].fx : follow(T)) - camC) * (1 - Math.exp(-dt * 2.2));
     const wide = Math.max(sstep(104, 110, T) * (1 - sstep(124, 128, T)), sstep(134, 140, T) * (1 - sstep(184, 187, T)), sstep(185, 188, T) * (1 - sstep(204, 206, T)));
     spotC = camC + 80; spotH = lerp(950, 1300, wide);
     const rx = ramX(T), vR = fz * vel(ramX, T);
-    { let fd = 1; if (frozen && INS[ins.i].cut) { const n = INS[ins.i].n; fd = sstep(0, .7, ins.u) * (1 - sstep(n - .7, n, ins.u)); } gradePass.uniforms.uFade.value = fd; }
+    { let fd = 1; if (frozen && INS[ins.i].cut) { const n = INS[ins.i].n; fd = sstep(0, .7, ins.ur) * (1 - sstep(n - .7, n, ins.ur)); } gradePass.uniforms.uFade.value = fd; }
 
     // 1. birth: a lotus, and a baby of light who becomes Ram (and his brother Lakshman)
     lotus.visible = false; const open = 0;
@@ -1662,7 +1681,7 @@ window.R3 = (function () {
       else { jx = 3930; jy = 8; rot = 1.3; }
       jat.position.set(jx, jy, -20); jat.rotation.z = rot; const flap = T < 86.4 ? Math.sin(T * 14) * .7 : (T < 89.2 ? Math.sin(T * 6) * .4 : 0); jat.userData.wings.forEach((w, i) => { w.rotation.x = (i ? -1 : 1) * flap; });
     }
-    once('jhit', T >= 86.4, () => { flashV = .5; burst(3720, 150, 0, .02, 90, 120); });
+    once('jhit', T >= 86.4, () => { flashV = .5; burst(3720, 150, 0, .12, 90, 120); });
     once('jspirit', T >= 100, () => { burst(3930, 40, 0, .13, 90, 90); for (let i = 0; i < 20; i++) ember(3930 + rnd(-20, 20), 20, 0, true); });
 
     // 8. Hanuman meets Ram; the sea and the bridge of stones
@@ -1678,14 +1697,14 @@ window.R3 = (function () {
     // 11. Kumbhakarna, Lakshman struck down, the healing mountain
     kum.root.visible = T >= 139 && T < 155.5;
     if (kum.root.visible) { const f = sstep(148, 150.5, T); kum.root.position.set(5320, 14 * f, -10); kum.root.rotation.z = 0; if (!frozen) turn(kum, -10, dt, YAW - .1); kum.root.rotation.z = -1.5 * f; kum.root.scale.setScalar(1.9 * (1 - .9 * sstep(153, 155.5, T))); pose(kum, { ph: 0, s: 0, t: Tr }); }
-    once('khit', T >= 147.6, () => { flashV = .8; burst(5255, 150, 0, .02, 130, 160); });
+    once('khit', T >= 147.6, () => { flashV = .8; burst(5255, 150, 0, .12, 130, 160); });
     // Indrajit, hidden in a storm cloud, rains arrows on the army
     { const rk = sstep(150.2, 151.4, T) * (1 - sstep(158.6, 159.6, T)); cloud.visible = rk > .02;
       if (cloud.visible) { cloud.position.set(4930 + Math.sin(Tr * .4) * 30, 236, -60); cloud.scale.set(rk, .3 + .7 * rk, 1);
         if (!frozen) { for (let q = 0; q < 3; q++) parts.push({ x: 4930 + rnd(-160, 160), y: 220, z: rnd(0, 40), vx: rnd(10, 40), vy: -rnd(220, 300), vz: 0, life: .9, age: 0, hue: .02, r: rnd(.8, 1.4), sy: 6, drag: 1, g: 0, lt: .55 });
-          if (Math.random() < .02) { flashV = .45; burst(4930 + rnd(-120, 120), 210, -40, .7, 30, 90); } } } }
+          if (Math.random() < dt * .25) { flashV = .3; burst(4930 + rnd(-120, 120), 210, -40, .7, 30, 90); } } } }
     // 12. Ravan falls
-    once('hit', T >= 168.6, () => { flashV = 1; burst(5560, 150, 0, .02, 170, 190); });
+    once('hit', T >= 168.6, () => { flashV = 1; burst(5560, 150, 0, .12, 170, 190); });
     for (const [k, t, dx, y, h] of [['r2', 169.2, -60, 250, .12], ['r3', 169.9, 70, 210, .9], ['r4', 170.8, 10, 120, .55], ['r5', 171.8, -300, 230, .12], ['r6', 172.8, 250, 250, .08], ['r7', 174, -120, 260, .8]]) once(k, T >= t, () => burst(5560 + dx, y, 20, h, 125));
     if (T > 168.6 && T < 176) for (let i = 0; i < 6; i++) { ember(rav.root.position.x + rnd(-45, 45), rnd(5, 230) * ravS, rnd(0, 20), true); if (i < 3) flame(rav.root.position.x + rnd(-40, 40), rnd(5, 150) * ravS, rnd(0, 20), 1.2); }
     once('freed', T >= 176, () => { burst(5700, 100, 0, .13, 90, 90); });

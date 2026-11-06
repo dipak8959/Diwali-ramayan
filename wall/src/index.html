@@ -914,7 +914,7 @@
     const d = hh * .09; ctx.fillStyle = '#ffe2a0'; ctx.beginPath(); ctx.moveTo(w / 2, ry - d); ctx.lineTo(w / 2 + d, ry); ctx.lineTo(w / 2, ry + d); ctx.lineTo(w / 2 - d, ry); ctx.closePath(); ctx.fill();
     ctx.restore();
   }
-  const WPS = 4.6;   // words revealed per second (a comfortable reading pace, a little ahead of the reader)
+  const WPS = 3.2;   // words revealed per second (a comfortable reading pace, a little ahead of the reader)
   function drawCaptionIn(q, c) {
     const xs = q.map(p => p[0]), ys = q.map(p => p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
     const vs = cfg.vstretch, w = x1 - x0, h = (y1 - y0) / vs; if (w < 20 || h < 8) return;

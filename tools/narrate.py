@@ -49,7 +49,7 @@ def intro_sfx(sr, dur):
     for i in range(len(wn)): a += (wn[i] - a) * (.02 + .5 * k[i] ** 2); sm[i] = a
     out[w0:w1] += sm * (k ** 2) * .5
     b0 = int(8.85 * sr); L = int(3 * sr); tt = np.arange(L) / sr; f = 30 + 30 * np.exp(-tt * 3)
-    boom = np.sin(2 * np.pi * np.cumsum(f) / sr) * np.exp(-tt * 1.4) * .9 + rng.standard_normal(L) * np.exp(-tt * 18) * .25
+    boom = np.sin(2 * np.pi * np.cumsum(f) / sr) * np.exp(-tt * 1.6) * .45 + rng.standard_normal(L) * np.exp(-tt * 18) * .1   # soft, so it does not startle small children
     out[b0:b0 + L] += boom[: n - b0].astype(np.float32)
     c0 = int(9.1 * sr); L = int(4.6 * sr); tt = np.arange(L) / sr; env = np.minimum(1, tt / 1.2) * np.exp(-np.maximum(0, tt - 2.6) * 1.2)
     chord = sum(np.sin(2 * np.pi * fr * tt) * g for fr, g in [(146.8, .5), (220, .4), (293.7, .35), (370, .25), (440, .2), (587.3, .12)])
@@ -81,7 +81,7 @@ def main():
         if e['type'] != 'kanda' and e['en'] in said: continue
         said.add(e['en'])
         if e['type'] == 'kanda': text, speed, want = heading(e['en']), .82, e['t'] + .15
-        elif e['type'] == 'cap': text, speed, want = speakable(e['en']), .9, e['t'] + .45
+        elif e['type'] == 'cap': text, speed, want = speakable(e['en']), .86, e['t'] + .45
         else: text, speed, want = speakable(e['en']), .84, e['t'] + .3
         nxt = next((c['t'] for c in caps if c['t'] > e['t'] + .01), loop)
         start = max(want, busy + (.35 if e['type'] == 'moral' else .5))
