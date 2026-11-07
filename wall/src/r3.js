@@ -870,7 +870,7 @@ window.R3 = (function () {
     { id: 'gods', s0: 0, n: 12, fx: 520, cap: "Ravan became a bully to the gods, the sages and the whole world. They asked the god Vishnu for help. Vishnu promised to be born on Earth as Ram, son of King Dasharatha.", moral: '' },
     { id: 'curse', s0: 0, n: 14, fx: 560, cap: "Long before, young Prince Dasharatha went hunting at night. By mistake, his arrow hit Shravana, a boy fetching water for his blind parents. In sorrow they said: 'One day you too will miss your son.'", moral: 'Think before you act' },
     { id: 'kboon', s0: 0, n: 12, fx: 480, cap: "In a great battle, Dasharatha was hurt. His brave queen Kaikeyi drove him to safety and saved his life. To thank her, he promised her two wishes, whenever she asked.", moral: 'Kindness is never forgotten' },
-    { id: 'yajna', s0: 0, n: 16, fx: 440, cap: "King Dasharatha had no children. He held a great fire prayer. From the fire rose a shining being with a golden bowl of sweet pudding, and the king shared it with his three queens.", moral: 'Patience and faith bring blessings' },
+    { id: 'yajna', s0: 0, n: 16, fx: 440, cap: "King Dasharatha had no children. He held a great fire prayer. From the fire rose a shining being with a golden bowl of sweet pudding, and the king shared it with his three queens.", moral: '' },
     // ---- the childhood and the road to Mithila ----
     { id: 'court', s0: 9, n: 14, fx: 400, cap: "When Ram was sixteen, the sage Vishwamitra asked for his help against demons. The king was worried, but the wise sage Vasishtha told him to let Ram go. So Ram and Lakshman went with Vishwamitra.", moral: '' },
     { id: 'tataka', s0: 14.5, n: 12, fx: 1020, cap: "On the way, the demon Tataka attacked. The sage said a prince must protect people, so Ram stopped her with his arrow. Then the sage taught him special weapons.", moral: 'Be brave to protect others' },
@@ -919,7 +919,7 @@ window.R3 = (function () {
     [9, 14.5, 'Ram and Lakshman said goodbye to their parents and left with the sage.'],
     [14.5, 22, 'The sage led the brothers toward Mithila, where King Janaka had a special contest.'],
     [22, 31, "In Mithila, whoever could string Shiva's giant bow would marry Princess Sita. Ram lifted it easily!"],
-    [31, 41, 'Crack! The bow broke in two! King Janaka happily gave Sita to Ram, and all four brothers were married.', 'Be strong, and stay humble', 36],
+    [31, 41, 'Crack! The bow broke in two! King Janaka happily gave Sita to Ram, and all four brothers were married.'],
     [41, 53, 'Back in Ayodhya, Ram and Sita lived happily for twelve years. Then the old king decided to make Ram the next king.'],
     [53, 55, 'Ram left for the forest with Sita and Lakshman.'],
     [55, 57, 'The charioteer went back to Ayodhya alone.'],
