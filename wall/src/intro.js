@@ -122,7 +122,7 @@ window.VishnuIntro = (function () {
         if (turn > 0) { c.fillStyle = `rgba(255,236,200,${(.7 * turn).toFixed(3)})`; c.fillRect(pW / 2 - 4, -ph / 2, 4, ph); } c.restore(); }
       c.setTransform(1, 0, 0, 1, 0, 0); c.scale(1, s);
     } else {   // the ten avatars in order, with Rama glowing
-      const nn = 10, q = w / nn, P2 = Math.min(H * .9, q / .75 * .96), P2w = P2 * .75, yy = (H - P2) / 2, out = 1 - ss(14.4, 15.4, t);
+      const nn = 10, q = w / nn, P2 = Math.min(H * .9, q / .75 * .96), P2w = P2 * .75, yy = (H - P2) / 2, out = 1 - ss(DUR - 1.2, DUR - .3, t);   // they stay, with Rama glowing, while the title is read
       for (let k = 0; k < nn; k++) { const a = ss(9 + k * .12, 9.5 + k * .12, t) * out * (k === 6 ? 1 : 1 - .75 * ss(12.6, 13.4, t)), cx = q * (k + .5);
         c.globalAlpha = a; c.drawImage(panel(k), cx - P2w / 2, yy, P2w, P2);
         if (k === 6) { c.save(); c.globalAlpha = a * ss(12.4, 13.2, t); c.strokeStyle = '#ffd070'; c.shadowColor = '#ffb040'; c.shadowBlur = 30; c.lineWidth = 4; c.strokeRect(cx - P2w / 2, yy, P2w, P2); c.restore(); } }
