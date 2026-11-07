@@ -1994,5 +1994,6 @@ window.R3 = (function () {
   const STORY_END = () => INTRO + TOTAL * SLOW;
   function update(Tr, dt) { inIntro = Tr < INTRO; inOutro = !inIntro && OUTRO > 0 && Tr >= STORY_END(); if (inIntro) { introT = Tr; return; } if (inOutro) { outroT = Tr - STORY_END(); return; } updateStory(Tr - INTRO, dt); }
   function caption(Tr) { if (Tr < INTRO) return { en: '', moral: '', a: 0, am: 0, age: 0, intro: Tr, kanda: null }; if (OUTRO > 0 && Tr >= STORY_END()) return VishnuOutro.caption(Tr - STORY_END()); return captionAt(Tr - INTRO); }
-  return { canvas, setView, update, render, LOOP: TOTAL * SLOW + INTRO + OUTRO, INTRO, OUTRO, STORY_END: INTRO + TOTAL * SLOW, WORLD, ramX, sitaX, lakX, hanPos, follow: () => camC, caption, avatarStills, chapters: [0].concat(chapters.map(x => x + INTRO)), bloom };
+  const settle = () => { parts = []; pets = []; flashV = 0; };   // after a jump: clear the sparkles of everything skipped over
+  return { canvas, setView, update, render, settle, LOOP: TOTAL * SLOW + INTRO + OUTRO, INTRO, OUTRO, STORY_END: INTRO + TOTAL * SLOW, WORLD, ramX, sitaX, lakX, hanPos, follow: () => camC, caption, avatarStills, chapters: [0].concat(chapters.map(x => x + INTRO)), bloom };
 })();
