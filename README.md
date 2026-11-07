@@ -21,7 +21,7 @@ Open a link in Safari or Chrome and press **Fullscreen**. Add `?play` to the wal
 
 **Full-screen version** (for a TV, a tablet, or a projector on a plain wall): https://dipak8959.github.io/Diwali-ramayan/wall/?cinema&play — the camera follows the story so the characters fill the screen, and the story text runs along the bottom. The default `.../wall/` view is the wall-mapping version for the strip above the doors.
 
-**Narration on the web page:** tap the screen, or the **🔊 Tap for the story narration** button, to hear the narrator (browsers only play sound after a tap). **S** or the **Sound** button turns it on and off. The voice follows the story when you pause, skip scenes or loop. The soundtrack is `wall/audio/narration.m4a`; after changing the story, remake it with `node tools/caption-schedule.js schedule.json` and `python3 tools/narrate.py schedule.json - wall/audio/narration.m4a --models <model folder>` (the page refuses a soundtrack whose length no longer matches the story).
+**Narration on the web page:** tap the screen, or the **🔊 Tap for the story narration** button, to hear the narrator (browsers only play sound after a tap). **S** or the **Sound** button turns it on and off. The voice is the clock: the pictures and the text follow the narrator, so on a slow tablet the pictures wait for the voice instead of the voice jumping to catch up. Pausing, skipping scenes and looping move the voice with the story. The soundtrack is `wall/audio/narration.m4a`; after changing the story, remake it with `node tools/caption-schedule.js schedule.json` and `python3 tools/narrate.py schedule.json - wall/audio/narration.m4a --models <model folder>` (the page refuses a soundtrack whose length no longer matches the story).
 
 If a link shows a 404, Pages is not switched on yet: open the repository, then **Settings, Pages**, choose **Deploy from a branch**, branch `main`, folder `/ (root)`, and save. It goes live in a minute or two.
 
@@ -104,15 +104,15 @@ Ram is crowned by Vasishtha. The Diwali lamps are marked in the captions as a la
 - **Film touches:** god rays for divine moments, a dip to black when the story moves to another place. The full loop is now about 18 minutes.
 
 ### Voice narration
-The narrated video adds a spoken narrator to the wall video: each caption is read as it appears, then its lesson, and each book heading ("Book Two. Ayodhya Kanda. The Exile.") is announced.
+The narrated video adds a spoken narrator to the wall video: each caption is read as it appears, then its lesson. The narrator takes their time: one calm speed for every line (never sped up to catch up), a pause after every sentence, and at least about a second of quiet before each lesson and each new caption.
 The voice is synthetic, made with the open Kokoro text-to-speech model (Apache-2.0): a deep blend of its Hindi male and American male voices, with a little warmth and room echo. It is not, and does not imitate, any real person.
-Sanskrit names are respelled for the voice (Raam, Seeta, Raavan, Hunoomaan…) in `tools/narrate.py`; edit the `SAY` table to change a pronunciation.
+**Pronunciation:** every name (about 100: Ram, Sita, Dasharatha, Ayodhya, Ahalya, Parashurama, Vibhishana, Narasimha…) is written in Devanagari in `tools/voice.py` and said with Hindi sounds (राम, सीता, दशरथ, अयोध्या…), not guessed as English words; the rest is read as English. To change a pronunciation, edit the `HI` table, and check it with `python3 tools/voice.py "your sentence"`.
 
 To remake it after changing the story or the video:
 ```
 pip install kokoro-onnx soundfile        # and download kokoro-v1.0.onnx and voices-v1.0.bin (links in tools/narrate.py)
 node tools/caption-schedule.js schedule.json
-python3 tools/narrate.py schedule.json wall-video.mp4 wall-video-narrated.mp4 --models <model folder> [--voice am_onyx]
+python3 tools/narrate.py schedule.json wall-video.mp4 wall-video-narrated.mp4 --models <model folder>
 ```
 To use a real narrator instead, record one audio file per caption and replace the generated clips, or send the recording and it can be lined up with the captions.
 
@@ -122,7 +122,7 @@ To use a real narrator instead, record one audio file per caption and replace th
 
 ### Made for children (ages 2 to 8)
 - **Words:** every caption was rewritten in short sentences and simple words, keeping the same Valmiki story. Fighting is told gently ("defeated", "stopped"); there are no words like "kill", "blood" or "devour" on screen.
-- **Picture, words and voice together:** each caption appears as the narrator starts reading it, its words light up as they are spoken, the lesson appears as it is said, and the story moves on shortly after the voice finishes (times measured from the narration by `tools/narration-texts.js` and `tools/narration-times.py` into `wall/src/narration-times.js`). When a caption needs more time than its scene, the scene plays more slowly or the story pauses. The book headings are shown, not read. When a caption needs longer than its scene, the scene plays more slowly; between scenes, the story pauses with everyone standing still until the text has been read. The loop, with the opening and the ending, is about 24 minutes.
+- **Picture, words and voice together:** each caption appears as the narrator starts reading it, its words light up as they are spoken, the lesson appears as it is said, and the story moves on shortly after the voice finishes (times measured from the narration by `tools/narration-texts.js` and `tools/narration-times.py` into `wall/src/narration-times.js`). When a caption needs more time than its scene, the scene plays more slowly or the story pauses. The book headings are shown, not read. When a caption needs longer than its scene, the scene plays more slowly; between scenes, the story pauses with everyone standing still until the text has been read. The loop, with the opening and the ending, is about 28 minutes.
 - **Pictures:** no blood-red bursts (hits make golden sparkles); Ravan's heads melt into golden light and grow back, instead of flying off; the demons' magic in the hermitage is purple sparks.
 - **Light and sound:** no strobing. The opening flip-book turns at most about three pages a second with no white flashes, the red flash is softer, lightning is rare, and the boom in the opening is quieter.
 

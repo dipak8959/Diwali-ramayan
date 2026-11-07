@@ -1,42 +1,22 @@
 #!/usr/bin/env python3
 """Make the voice narration for the wall video and add it to the MP4.
 
-Usage: python3 tools/narrate.py <schedule.json> <video.mp4> <out.mp4> [--voice NAME] [--models DIR] [--wav out.wav]
+Usage: python3 tools/narrate.py <schedule.json> <video.mp4> <out.mp4> [--models DIR] [--wav out.wav] [--report placed.json]
        python3 tools/narrate.py <schedule.json> - wall/audio/narration.m4a   (no video: the soundtrack alone, for the web page)
   schedule.json  from: node tools/caption-schedule.js schedule.json
-  voices: narrator (default: a deep blend of Kokoro's Hindi male 'hm_omega' and 'am_onyx'), or any Kokoro voice name.
+  The narrator (tools/voice.py) is a deep blend of Kokoro's Hindi male 'hm_omega' and 'am_onyx'; names are said with Hindi sounds.
 Needs: pip install kokoro-onnx soundfile; ffmpeg; the Kokoro v1.0 model files (Apache-2.0) in --models:
   https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx
   https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin
 The voice is a synthetic narrator. It is not, and does not imitate, any real person.
 """
-import argparse, hashlib, json, os, re, subprocess, sys
+import argparse, json, os, subprocess, sys
 import numpy as np, soundfile as sf
 
-# Spellings that make an English text-to-speech voice say the Sanskrit names more naturally.
-SAY = {
-    'Ramayana': 'Raamaayan', 'Ram Rajya': 'Raam Raajya', "Ram's": "Raam's", 'Ram': 'Raam', "Ravan's": "Raavan's", 'Ravan': 'Raavan', 'Sita': 'Seeta',
-    'Lakshmana': 'Lukshmuna', 'Lakshman': 'Lukshmun', 'Dasharatha': 'Dusharuth', 'Kaikeyi': 'Kaikayee', 'Kausalya': 'Kowshulya', 'Sumitra': 'Soomitra',
-    'Bharata': 'Bharut', 'Shatrughna': 'Shatrughn', 'Hanuman': 'Hunoomaan', 'Vishwamitra': 'Vishvaamitra', 'Vasishtha': 'Vashisht',
-    'Kumbhakarna': 'Kumbhakarn', 'Vibhishana': 'Vibheeshun', 'Surpanakha': 'Shoorpunakha', 'Jatayu': 'Jutaayu', 'Sugriva': 'Sugreev', 'Vali': 'Vaali',
-    'Valmiki': 'Vaalmeeki', 'Aditya Hridayam': 'Aaditya Hriduyum', 'Matali': 'Maatali', 'Pushpaka': 'Pushpak', 'Rishyasringa': 'Rishyashring',
-    'Shravana': 'Shravun', 'Tataka': 'Taadaka', 'Maricha': 'Maareech', 'Subahu': 'Subaahu', 'Janaka': 'Junuk', 'Parashurama': 'Purushuraam',
-    'Manthara': 'Munthura', 'Dandaka': 'Dundak', 'Nandigrama': 'Nundigraam', 'Kabandha': 'Kubundh', 'Sabari': 'Shubari', 'Rishyamukha': 'Rishyamook',
-    'Angada': 'Ungud', 'Nala': 'Nul', 'Vishwakarma': 'Vishvakarma', 'Garuda': 'Garud', 'Diwali': 'Deewaali', 'Surasa': 'Surusaa', 'Sampati': 'Sumpaati',
-    'Mandodari': 'Mundodari', 'Agastya': 'Ugustya', 'Indrajit': 'Indrajeet', 'Kishkindha': 'Kishkindha', 'Ayodhya': 'Ayodhya', 'Sumantra': 'Sumuntra',
-    'Chitrakoot': 'Chitrakoot', 'Ganga': 'Gunga', 'Guha': 'Guh', 'Ahalya': 'Uhulya', 'Mithila': 'Mithila', 'Lanka': 'Lunka', 'Shiva': 'Shiv',
-    'Brahma': 'Brumha', 'Vishnu': 'Vishnu', 'Agni': 'Ugni', 'Kanda': 'Kaand', 'Bala': 'Baal', 'Aranya': 'Arunya', 'Sundara': 'Sundar', 'Yuddha': 'Yuddh',
-    'yakshini': 'yukshini', 'Prahlada': 'Prahlaad', 'Arjuna': 'Arjun', 'Mahabharata': 'Mahaabhaarat', 'Matsya': 'Matsya', 'Kurma': 'Koorma', 'Varaha': 'Varaaha', 'Narasimha': 'Nurasimha', 'Vamana': 'Vaamana', 'Kalki': 'Kulki', 'Balarama': 'Bulraam', 'Rama': 'Raama', 'Lalla': 'Lulla', 'Mandir': 'Mundir', 'Shri': 'Shree', 'diyas': 'deeyas', 'Panchavati': 'Panchavati', 'Godavari': 'Godaavari', 'Khara': 'Khur', 'Dushana': 'Dooshun', 'Samudra': 'Samudra',
-}
-SPEED = .86   # one speaking speed for every line, so the page can time scenes by it
-
-def speakable(t):
-    t = t.replace('’', "'").replace('—', ', ')
-    for k in sorted(SAY, key=len, reverse=True): t = re.sub(r'(?<![A-Za-z])' + re.escape(k) + r'(?![A-Za-z])', SAY[k], t)
-    return t
-
-def heading(t):   # 'BOOK TWO. AYODHYA KANDA. THE EXILE' -> 'Book Two. Ayodhya Kaand. The Exile.'
-    return speakable(' '.join(w.capitalize() for w in t.split(' ')).replace("'S", "'s")) + '.'
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import voice   # the narrator: names said the Indian way, one calm speed, a pause after every sentence
+SPEED = voice.SPEED
+CAP_IN, MORAL_GAP, LINE_GAP = .45, .9, .8   # the voice starts just after its text appears; it never rushes to catch up
 
 def intro_sfx(sr, dur):
     """Sound for the opening titles: page flips that speed up, a rising whoosh, a deep boom and a shimmering chord."""
@@ -61,23 +41,15 @@ def intro_sfx(sr, dur):
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument('sched'); ap.add_argument('video'); ap.add_argument('out')
-    ap.add_argument('--voice', default='narrator'); ap.add_argument('--models', default='.'); ap.add_argument('--wav'); ap.add_argument('--cache', default='.narration-cache'); ap.add_argument('--report')
+    ap.add_argument('--models', default='.'); ap.add_argument('--wav'); ap.add_argument('--cache', default='.narration-cache'); ap.add_argument('--report')
     a = ap.parse_args()
-    from kokoro_onnx import Kokoro
-    k = Kokoro(os.path.join(a.models, 'kokoro-v1.0.onnx'), os.path.join(a.models, 'voices-v1.0.bin'))
-    voice = .6 * k.get_voice_style('hm_omega') + .4 * k.get_voice_style('am_onyx') if a.voice == 'narrator' else a.voice
-    os.makedirs(a.cache, exist_ok=True)
-    def say(text, speed):
-        key = hashlib.sha1(f'{a.voice}|{speed}|{text}'.encode()).hexdigest()[:16]; f = os.path.join(a.cache, key + '.wav')
-        if not os.path.exists(f):
-            s, sr = k.create(text, voice=voice, speed=speed, lang='en-us'); sf.write(f, s, sr)
-        s, sr = sf.read(f, dtype='float32'); return s, sr
-    d = json.load(open(a.sched)); loop = d['loop']; ev = d['ev']; SR = 24000
+    nar = voice.Narrator(a.models, a.cache); SR = nar.SR
+    d = json.load(open(a.sched)); loop = d['loop']; ev = d['ev']
     track = np.zeros(int((loop + 2) * SR), dtype=np.float32)
     caps = [e for e in ev if e['type'] == 'cap']
     if d.get('intro'):   # the opening titles: sound, and the narrator's first line
         sfx = intro_sfx(SR, d['intro']); track[: len(sfx)] += sfx
-        s, sr = say(speakable('Vishnu presents. The Ramayana, as told by the sage Valmiki.'), SPEED); t_in = min(12.7, d['intro'] - .4 - len(s) / sr); i0 = int(t_in * SR); track[i0:i0 + len(s)] += s[: len(track) - i0]; intro_end = t_in + len(s) / sr   # said before the story begins
+        s = nar.say('Vishnu presents. The Ramayana, as told by the sage Valmiki.'); t_in = min(12.6, d['intro'] - 1.0 - len(s) / SR); i0 = int(t_in * SR); track[i0:i0 + len(s)] += s[: len(track) - i0]; intro_end = t_in + len(s) / SR   # said before the story begins
     else: intro_end = 0.0
     busy = intro_end; report = []; said = set(); placed = []
     for i, e in enumerate(ev):
@@ -85,24 +57,17 @@ def main():
         if e['type'] not in ('kanda', 'final') and e['en'] in said: continue
         said.add(e['en'])
         if e['type'] == 'kanda': continue   # book headings are shown, not read, so every caption's voice starts with its text
-        elif e['type'] == 'cap': text, speed, want = speakable(e['en']), SPEED, e['t'] + .45
-        elif e['type'] == 'final': text, speed, want = speakable('Jai Shri Ram! Happy Diwali!'), .8, e['t'] + .8
-        else: text, speed, want = speakable(e['en']), SPEED, e['t'] + .1
-        nxt = next((c['t'] for c in caps if c['t'] > e['t'] + .01), loop)
-        start = max(want, busy + (.35 if e['type'] == 'moral' else .5))
-        s, sr = say(text, speed); dur = len(s) / sr
-        if e['type'] == 'cap':   # too long for its moment (with its lesson): say it a little faster
-            m = next((x for x in ev if x['type'] == 'moral' and e['t'] <= x['t'] < nxt), None)
-            md = len(say(speakable(m['en']), .84)[0]) / SR + .35 if m else 0
-            for sp in (.95, 1.0, 1.06, 1.12):
-                if start + dur + md <= nxt + (1.6 if m else .8): break
-                s, sr = say(text, sp); dur = len(s) / sr
         if e['type'] == 'moral' and e['en'].startswith('Photo: '): continue   # photo credits are shown, not read
-        if e['type'] == 'moral' and start + dur > nxt + 1.6: report.append(('skipped lesson', round(e['t'], 1), e['en'])); continue
-        if e['type'] == 'kanda' and start + dur > nxt + 2.5: continue
+        if e['type'] == 'cap': text, want, gap = e['en'], e['t'] + CAP_IN, LINE_GAP
+        elif e['type'] == 'final': text, want, gap = 'Jai Shri Ram! Happy Diwali!', e['t'] + .8, LINE_GAP
+        else: text, want, gap = e['en'], e['t'] + .1, MORAL_GAP
+        nxt = next((c['t'] for c in caps if c['t'] > e['t'] + .01), loop)
+        start = max(want, busy + gap)   # never on top of the line before, and never sped up
+        s = nar.say(text); dur = len(s) / SR
         i0 = int(start * SR); seg = s[: max(0, min(len(s), len(track) - i0))]; track[i0:i0 + len(seg)] += seg; busy = start + dur
         placed.append({'type': e['type'], 'shown': round(e['t'], 2), 'until': round(e.get('end', nxt), 2), 'start': round(start, 2), 'end': round(start + dur, 2), 'en': e['en'][:50]})
-        if start - want > 2: report.append(('late', round(want, 1), round(start - want, 1), text[:50]))
+        if start - want > .3: report.append(('late', round(want, 1), round(start - want, 1), text[:50]))
+        if e['type'] == 'cap' and start + dur > nxt: report.append(('runs into the next caption', round(e['t'], 1), round(start + dur - nxt, 1), text[:50]))
     if a.report: json.dump(placed, open(a.report, 'w'), indent=1)
     wav = a.wav or os.path.splitext(a.out)[0] + '-narration.wav'
     sf.write(wav, track[: int(loop * SR)], SR)

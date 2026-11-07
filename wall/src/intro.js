@@ -1,7 +1,7 @@
 // The opening titles: a fast flip-book of Vishnu's ten avatars (the Dashavatara), in the style of a superhero studio intro,
 // ending on a red title box with VISHNU, then "presents The Ramayana". Drawn in 2D, in comic-book style.
 window.VishnuIntro = (function () {
-  const DUR = 16;
+  const DUR = 20;   // long enough for the narrator to say the title calmly
   const AV = [
     ['MATSYA', 'the fish', ['#0a6a9a', '#05223a'], '#7af0ff'], ['KURMA', 'the tortoise', ['#1a8a6a', '#062a22'], '#9affd0'],
     ['VARAHA', 'the boar', ['#3a4ab0', '#0c0f3a'], '#a8b8ff'], ['NARASIMHA', 'the man-lion', ['#e0501a', '#3a0a04'], '#ffd070'],
@@ -157,7 +157,7 @@ window.VishnuIntro = (function () {
       c.restore();
     }
     if (t >= 12.4) {   // Vishnu presents ... THE RAMAYANA
-      const a1 = ss(12.6, 13.2, t) * (1 - ss(15.2, 15.9, t)); c.save(); c.globalAlpha = a1; c.textAlign = 'center'; c.textBaseline = 'middle';
+      const a1 = ss(12.6, 13.2, t) * (1 - ss(DUR - .8, DUR - .1, t)), k = 1 + .05 * ss(13, DUR, t); c.save(); c.translate(cx, h * .5); c.scale(k, k); c.translate(-cx, -h * .5); c.globalAlpha = a1; c.textAlign = 'center'; c.textBaseline = 'middle';   // a slow push-in while the title is read
       c.fillStyle = '#e8c890'; c.font = `italic 600 ${h * .11}px "Cormorant Garamond", Georgia, serif`; c.fillText('Vishnu presents', cx, h * .2);
       const g = c.createLinearGradient(0, h * .32, 0, h * .66); g.addColorStop(0, '#fff6d8'); g.addColorStop(.5, '#ffd27a'); g.addColorStop(1, '#ff9e3a');
       c.fillStyle = g; c.shadowColor = 'rgba(255,170,60,.9)'; c.shadowBlur = h * .06; c.font = `700 ${Math.min(h * .26, w * .085)}px Cinzel, Georgia, serif`;

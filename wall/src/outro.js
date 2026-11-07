@@ -2,7 +2,7 @@
 // the Ram Mandir in Ayodhya and Ram Lalla (real photos, if they are in wall/photos/), and Jai Shri Ram.
 // Each card stays up as long as a slow young reader needs (the same rule as the story's captions).
 window.VishnuOutro = (function () {
-  const NT = window.NARR_TIMES || {}, wc = (t) => (t ? t.split(/\s+/).length : 0), speak = (t) => (t ? NT[t] || wc(t) / 2.3 : 0), readT = (t) => (t ? .6 + speak(t) + 1.2 : 0);   // timed by the narrator's voice
+  const NT = window.NARR_TIMES || {}, wc = (t) => (t ? t.split(/\s+/).length : 0), speak = (t) => (t ? NT[t] || wc(t) / 2.3 : 0), readT = (t) => (t ? .6 + speak(t) + 2.0 : 0);   // timed by the narrator's voice
   const AV = [
     ['Matsya, the fish', 'saved the good king Manu and all living things from a great flood.'],
     ['Kurma, the tortoise', 'held up the mountain on his back when the gods and demons churned the ocean.'],

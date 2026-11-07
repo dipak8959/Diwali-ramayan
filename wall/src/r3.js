@@ -952,8 +952,8 @@ window.R3 = (function () {
   ];
   // ---------- time to read: every caption stays up long enough for a young child to read it, and to think about it ----------
   const NT = window.NARR_TIMES || {}, wc = (t) => (t ? t.split(/\s+/).length : 0), speak = (t) => (t ? NT[t] || wc(t) / 2.3 : 0);   // how long the narrator takes to say a line
-  const VOICE_IN = .6, AFTER = 1.2;   // the voice starts this long after its text appears; a short pause after it finishes
-  const readT = (t) => VOICE_IN + speak(t) + AFTER, moralT = (t) => (t ? .35 + speak(t) + AFTER : 0), moralAt = (t) => (VOICE_IN + speak(t) + .35) / SLOW;   // seconds (moralAt: story time)
+  const VOICE_IN = .6, AFTER = 2.0, MORAL_GAP = .9;   // the voice starts this long after its text appears; an unhurried pause after it finishes, and before a lesson
+  const readT = (t) => VOICE_IN + speak(t) + AFTER, moralT = (t) => (t ? MORAL_GAP + speak(t) + AFTER : 0), moralAt = (t) => (VOICE_IN + speak(t) + MORAL_GAP) / SLOW;   // seconds (moralAt: story time)
   INS.forEach(a => {   // a scene plays slower (its own animation stretched) when its text needs more time than the scene
     a.n0 = a.n; a.mAt = moralAt(a.cap);   // the lesson appears as the narrator finishes the caption
     a.n = Math.max(a.n0, readT(a.cap) / SLOW + .9, a.moral ? a.mAt + moralT(a.moral) / SLOW + .9 : 0);
