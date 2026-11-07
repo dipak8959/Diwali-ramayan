@@ -137,6 +137,9 @@ To use a real narrator instead, record one audio file per caption and replace th
 - **Why Ravan has ten heads (Valmiki, Uttara Kanda 9–10):** a new opening scene: the sage Vishrava's son is born with ten heads, so he is named Dashagriva, "the one with ten heads"; he grows up clever and strong, king of golden Lanka. Then the boon: he prays to Brahma for thousands of years and gives his heads to the holy fire one by one (shown as golden light); before the last one, Brahma appears, gives all his heads back and grants the gift that no god or demon can defeat him.
 - **Two arms:** Ravan now has ten heads and two arms. Valmiki mostly calls him the ten-headed one (in a few places twenty-armed, but when Hanuman sees him asleep, with two arms); two arms are also gentler for small children.
 
+### Lessons only where they belong
+A lesson line appears only when someone in the scene makes a choice that teaches it, and the lesson follows from what was just shown: Dasharatha shooting without looking (think before you act), Ram keeping his father's promise, Guha welcomed as a brother, Bharata refusing the throne, Ravan in disguise at the hut (be careful with strangers, even kind-looking ones), Hanuman outwitting Surasa, Ram sparing the tired Ravan, and so on, 24 in all. Scenes that only tell what happened (a birth, a wedding, a gift, a journey, a farewell) have none, and neither does Sita's trial by fire. The ending still gathers the life lessons of the Ramayana.
+
 ### The ending
 After the story: why we light lamps on Diwali, what the Ramayana teaches us, the ten avatars of Vishnu (each with its picture and one line), the Ram Mandir in Ayodhya and Ram Lalla, and "Jai Shri Ram". The text stays up long enough for young readers, and the narrator reads it.
 
