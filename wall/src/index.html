@@ -17,6 +17,9 @@
         backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
         font: 500 13px/1 system-ui, -apple-system, "Segoe UI", sans-serif; transition: opacity .6s; z-index: 5; }
   #ui.hidden { opacity: 0; pointer-events: none; }
+  body.tv #ui > *:not(#bPlay):not(#bFull) { display: none; }
+  body.tv #ui { gap: 14px; padding: 10px 14px; top: max(14px, env(safe-area-inset-top)); bottom: auto; }   /* over the sky, never over the words */
+  body.tv #ui button { font-size: 22px; padding: 12px 26px; border-radius: 12px; }
   #ui button { font: inherit; color: var(--ui-text); background: rgba(255,255,255,.06); border: 1px solid var(--ui-border);
                border-radius: 9px; padding: 9px 10px; cursor: pointer; white-space: nowrap; }
   #ui button:hover { background: rgba(255,179,71,.2); }
@@ -161,13 +164,14 @@
   // ?cinema: a full-screen version for a TV, a tablet or a plain wall: the camera follows the story, and the picture with its text below it
   // sit together in the middle of the screen, clear of the edges that a TV, a projector or a tablet's toolbar may hide
   const CINEMA = new URLSearchParams(location.search).has('cinema');
+  if (CINEMA) document.body.classList.add('tv');   // for a TV: only Play/Pause and Fullscreen
   function cinemaLayout(w, h) {
     if (!(w > 0 && h > 0)) return;
-    const m = .06 * h, th = h > w ? Math.min(.26 * h, .5 * w) : .21 * h, gap = .01 * h;   // safe margin top and bottom; the text band
-    const ph = Math.min(h - 2 * m - th - gap, w / 2.2), top = (h - (ph + gap + th)) / 2, ty = top + ph + gap;   // the picture: never taller than a wide-screen frame
-    const UP = 330, DOWN = 15;   // the picture always shows this much of the world above and below the ground, so nothing is cut off at the top
-    applyLayout({ view: 'doors', look: '3d', win: w * (UP + DOWN) / ph, ground: (top + ph * UP / (UP + DOWN)) / h, vstretch: 1, inset: 0, surfaces: [
-      { name: 'Screen', pts: [[0, top / h], [1, top / h], [1, (top + ph) / h], [0, (top + ph) / h]] },
+    const m = .06 * h, th = h > w ? Math.min(.26 * h, .5 * w) : .21 * h, gap = .01 * h;   // a safe margin below the text, so a TV's edge never cuts it
+    const ty = h - m - th, pb = ty - gap;   // the text band near the bottom; the picture fills everything above it, up to the top edge of the screen
+    const UP = 330, DOWN = 15, k = Math.min(h - 2 * m - th - gap, w / 2.2) / (UP + DOWN);   // the size of the characters; any extra height becomes more sky above them
+    applyLayout({ view: 'doors', look: '3d', win: w / k, ground: (pb - DOWN * k) / h, vstretch: 1, inset: 0, surfaces: [
+      { name: 'Screen', pts: [[0, 0], [1, 0], [1, pb / h], [0, pb / h]] },
       { name: 'Story text', role: 'text', pts: [[.04, ty / h], [.96, ty / h], [.96, (ty + th) / h], [.04, (ty + th) / h]] }] });
   }
   if (CINEMA) cinemaLayout(window.innerWidth, window.innerHeight);
@@ -1044,7 +1048,6 @@
   let drag = null;
   canvas.addEventListener('pointerdown', (e) => {
     showUI();
-    if (mode === 'play' && !soundOn && !soundHint.hidden) setSound(true);   // the first tap in play mode turns the narration on
     if (mode === 'play') return;
     const x = e.clientX, y = e.clientY;
     let best = null, bd = 34;
@@ -1085,7 +1088,10 @@
   narr.preload = 'auto'; narr.src = location.pathname.includes('/src/') ? '../audio/narration.m4a' : 'audio/narration.m4a';
   let soundOn = false, soundOk = true;
   const soundUsable = () => soundOk && cfg.look === '3d' && !!window.R3;
-  function showSoundHint() { soundHint.hidden = soundOn || !soundUsable() || mode !== 'play' || navigator.webdriver; }
+  function showSoundHint() { soundHint.hidden = soundOn || !soundUsable() || mode !== 'play' || navigator.webdriver || CINEMA; }
+  let soundAuto = true;   // the first press of anything in play mode turns the narration on (browsers only allow sound after a press)
+  const firstPress = (e) => { if (e.target === bSound || (e.key && /^[sS]$/.test(e.key))) return; if (soundAuto && !soundOn && mode === 'play' && soundUsable()) { soundAuto = false; setSound(true); } };
+  document.addEventListener('pointerdown', firstPress, true); document.addEventListener('keydown', firstPress, true);
   narr.addEventListener('error', () => { soundOk = false; soundOn = false; bSound.textContent = 'No sound file'; bSound.disabled = true; showSoundHint(); });
   narr.addEventListener('loadedmetadata', () => { if (window.R3 && Math.abs(narr.duration - R3.LOOP) > 3) { soundOk = false; soundOn = false; narr.pause(); bSound.textContent = 'Sound out of date'; bSound.disabled = true; showSoundHint(); } });
   function setSound(on) {
@@ -1095,17 +1101,21 @@
   }
   // The voice is the clock: the pictures and the text follow it, so the narrator never jumps or hurries.
   // The sound is moved only when the story is moved (a scene button, the start, a new loop) or after a long stall.
-  let lastA = -1, stuck = 0;
+  let lastA = -1, stuck = 0, lastSeekTry = -9;
   const soundLive = () => soundOn && !paused && mode === 'play' && soundUsable() && !document.hidden;
   function soundTo(t) { if (narr.readyState >= 1) narr.currentTime = Math.max(0, Math.min(t, (narr.duration || t) - .05)); else narr.addEventListener('loadedmetadata', () => soundTo(T), { once: true }); }
   function soundStep(real) {   // how far the story moves this frame
-    if (!soundLive() || narr.ended) { stuck = 0; return Math.min(.05, real); }   // no sound (or its end, just before the loop starts again): the plain clock
+    if (!soundLive() || narr.ended) { stuck = 0; narr.muted = false; return Math.min(.05, real); }   // no sound (or its end, just before the loop starts again): the plain clock
     const a = narr.currentTime, moving = !narr.seeking && !narr.paused && a !== lastA; lastA = a;
     stuck = moving ? 0 : stuck + real;
     if (stuck > 3) return Math.min(.05, real);   // the voice is stuck (a slow connection): carry on without it, and bring it back when it plays again
     if (narr.seeking || narr.paused) return 0;   // the voice is getting ready: wait for it
     const d = a - T;
-    if (Math.abs(d) > 2) { soundTo(T); return 0; }   // far apart (after a long stall): bring the voice to the story, once
+    if (Math.abs(d) > 2) {   // far apart: the voice could not jump there yet (still loading). The story plays on, the voice stays quiet, and it tries again every 2 seconds
+      narr.muted = true; const now = performance.now() / 1000; if (now - lastSeekTry > 2) { lastSeekTry = now; soundTo(T); }
+      return Math.min(.05, real);
+    }
+    narr.muted = false;
     return Math.max(0, real + d * Math.min(1, real * 4));   // follow the voice smoothly; if it slows down, the pictures wait for it
   }
   function syncSound() {   // called every frame: play and pause with the story
@@ -1117,7 +1127,7 @@
   document.addEventListener('visibilitychange', () => { if (document.hidden) narr.pause(); });
   window.wallClock = () => ({ story: T, voice: soundOn ? narr.currentTime : null });   // for tests: the story time and the voice time
   soundHint.onclick = (e) => { e.stopPropagation(); setSound(true); };
-  bSound.onclick = () => setSound(!soundOn);
+  bSound.onclick = () => { soundAuto = false; setSound(!soundOn); };
   const setWin = (f) => { cfg.win = clamp(cfg.win * f, 300, 2400); saveCfg(); };
   const setGround = (d) => { cfg.ground = clamp(cfg.ground + d / H, .1, 1.2); saveCfg(); };
   const setTall = (f) => { cfg.vstretch = clamp(cfg.vstretch * f, .5, 4); saveCfg(); };
