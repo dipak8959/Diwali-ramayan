@@ -21,6 +21,8 @@ Open a link in Safari or Chrome and press **Fullscreen**. Add `?play` to the wal
 
 **Full-screen version** (for a TV, a tablet, or a projector on a plain wall): https://dipak8959.github.io/Diwali-ramayan/wall/?cinema&play — the camera follows the story so the characters fill the screen, and the story text runs along the bottom. The default `.../wall/` view is the wall-mapping version for the strip above the doors.
 
+**Narration on the web page:** tap the screen, or the **🔊 Tap for the story narration** button, to hear the narrator (browsers only play sound after a tap). **S** or the **Sound** button turns it on and off. The voice follows the story when you pause, skip scenes or loop. The soundtrack is `wall/audio/narration.m4a`; after changing the story, remake it with `node tools/caption-schedule.js schedule.json` and `python3 tools/narrate.py schedule.json - wall/audio/narration.m4a --models <model folder>` (the page refuses a soundtrack whose length no longer matches the story).
+
 If a link shows a 404, Pages is not switched on yet: open the repository, then **Settings, Pages**, choose **Deploy from a branch**, branch `main`, folder `/ (root)`, and save. It goes live in a minute or two.
 
 ## Cast to a TV or projector

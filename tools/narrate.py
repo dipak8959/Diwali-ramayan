@@ -2,6 +2,7 @@
 """Make the voice narration for the wall video and add it to the MP4.
 
 Usage: python3 tools/narrate.py <schedule.json> <video.mp4> <out.mp4> [--voice NAME] [--models DIR] [--wav out.wav]
+       python3 tools/narrate.py <schedule.json> - wall/audio/narration.m4a   (no video: the soundtrack alone, for the web page)
   schedule.json  from: node tools/caption-schedule.js schedule.json
   voices: narrator (default: a deep blend of Kokoro's Hindi male 'hm_omega' and 'am_onyx'), or any Kokoro voice name.
 Needs: pip install kokoro-onnx soundfile; ffmpeg; the Kokoro v1.0 model files (Apache-2.0) in --models:
@@ -78,7 +79,8 @@ def main():
     else: intro_end = 0.0
     busy = intro_end; report = []; said = set()
     for i, e in enumerate(ev):
-        if e['type'] != 'kanda' and e['en'] in said: continue
+        e.setdefault('en', '')
+        if e['type'] not in ('kanda', 'final') and e['en'] in said: continue
         said.add(e['en'])
         if e['type'] == 'kanda': text, speed, want = heading(e['en']), .82, e['t'] + .15
         elif e['type'] == 'cap': text, speed, want = speakable(e['en']), .86, e['t'] + .45
@@ -102,7 +104,11 @@ def main():
     sf.write(wav, track[: int(loop * SR)], SR)
     for r in report: print(*r)
     fx = 'highpass=f=70,bass=g=3:f=140,acompressor=threshold=-20dB:ratio=3:attack=5:release=150,aecho=0.8:0.6:45|90:0.12|0.07,loudnorm=I=-16:TP=-1.5:LRA=9'
-    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', a.video, '-i', wav, '-filter:a', fx, '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-shortest', '-movflags', '+faststart', a.out], check=True)
+    if a.video == '-':   # the soundtrack alone, small enough for the web page: mono AAC, which every browser (and Safari on iPad) can play
+        subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', wav, '-filter:a', fx, '-ac', '1', '-c:a', 'aac', '-b:a', '56k', '-ar', '44100', '-movflags', '+faststart', a.out], check=True)
+        json.dump({'loop': loop}, open(os.path.splitext(a.out)[0] + '.json', 'w'))
+    else:
+        subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', a.video, '-i', wav, '-filter:a', fx, '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-shortest', '-movflags', '+faststart', a.out], check=True)
     print('wrote', a.out)
 
 if __name__ == '__main__': main()
