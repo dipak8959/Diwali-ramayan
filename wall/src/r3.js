@@ -103,6 +103,11 @@ window.R3 = (function () {
     parashurama: { skin: 0xb88060, hair: 0x1a100a, dress: [0xc07030, 0x603010], sash: 0x8a3a14, beard: true },
     mandodari: { skin: 0xf0b58c, hair: 0x2c170e, dress: [0xe8e0f8, 0xa080d0], sash: 0xffd23a, female: true, tiara: true },
     matali:   { skin: 0xe0a878, hair: 0x3a2a1a, dress: [0x6a8aff, 0x2a3aa0], sash: 0xffd23a },
+    shatrughna: { skin: 0xe9a26b, hair: 0x3a2214, dress: [0xff9d1c, 0xb05a10], sash: 0xffd23a, crown: true },
+    urmila:   { skin: 0xf0b58c, hair: 0x2c170e, dress: [0xe83a6a, 0x8a1036], sash: 0xffd23a, female: true, tiara: true },
+    mandavi:  { skin: 0xf0b58c, hair: 0x2c170e, dress: [0x3a8ae8, 0x103a8a], sash: 0xffd23a, female: true, tiara: true },
+    shrutakirti: { skin: 0xf0b58c, hair: 0x2c170e, dress: [0xe8a03a, 0x8a4a10], sash: 0xffd23a, female: true, tiara: true },
+    kushadhvaja: { skin: 0xd9a077, hair: 0x5a5a5a, dress: [0x2a6ab0, 0x10304a], sash: 0xffd23a, crown: true, beard: true },
     janaka:   { skin: 0xd9a077, hair: 0x5a5a5a, dress: [0x2a9a74, 0x104a3a], sash: 0xffd23a, crown: true, beard: true },
     ahalya:   { skin: 0xe8b08a, hair: 0x2a1a10, dress: [0xd06ac0, 0x701a70], sash: 0xffd23a, female: true },
     angada:   { skin: 0xe8b04a, hair: 0x7a4a1a, dress: [0xffe060, 0xc08a00], sash: 0x35e0ff, crown: true, monkey: true },
@@ -523,7 +528,13 @@ window.R3 = (function () {
   for (const [mo, col] of [[moon, 0xffe8c0], [redMoon, 0xff5a2a]]) { const h = mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: haloTex, color: col, transparent: true, opacity: .35, blending: THREE.AdditiveBlending, depthWrite: false }), mo.position.x, mo.position.y, mo.position.z - 2, scene); h.scale.setScalar(170); }
 
   // Shiva's bow on a pedestal
-  const pedestal = mesh(new THREE.BoxGeometry(70, 26, 26), std(0x3a2a4a, { roughness: .4, metalness: .4 }), 1700, 13, 0, scene);
+  const pedestal = mesh(new THREE.BoxGeometry(70, 26, 26), std(0x3a2a4a, { roughness: .4, metalness: .4 }), 1700, 21, 0, scene);   // an iron chest on a cart with eight wheels
+  pedestal.userData.wheels = [];
+  for (const wz of [14, -14]) for (const wx of [-27, -9, 9, 27]) { const w = new THREE.Group(); w.position.set(wx, -13, wz); pedestal.add(w); pedestal.userData.wheels.push(w);
+    mesh(new THREE.TorusGeometry(7, 1.6, 6, 16), GOLD, 0, 0, 0, w); mesh(new THREE.BoxGeometry(13, 1.4, 1.4), GOLD, 0, 0, 0, w); mesh(new THREE.BoxGeometry(1.4, 13, 1.4), GOLD, 0, 0, 0, w); }
+  const plough = new THREE.Group(); { const wd = std(0x8a5a2a, { roughness: .8, emissive: 0x2a1404 }); const beam = mesh(new THREE.CylinderGeometry(2.2, 2.2, 76, 8), wd, 0, 0, 0, plough); beam.rotation.z = .6;   // a wooden plough with a golden blade
+    const blade = mesh(new THREE.ConeGeometry(5, 18, 8), GOLD, 23, -33, 0, plough); blade.rotation.z = 2.4; mesh(new THREE.BoxGeometry(16, 3, 3), wd, -20, 30, 0, plough); } plough.visible = false; scene.add(plough);
+  const furrow = mesh(new THREE.BoxGeometry(1, 1.2, 5), std(0x3a2410, { roughness: 1 }), 0, .6, 16, scene); furrow.visible = false;
   function bowCurve(h, belly) { return new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, h, 0), new THREE.Vector3(belly * 2, 0, 0), new THREE.Vector3(0, -h, 0)); }
   const bowMat = std(0xc58a3a, { metalness: .5, roughness: .35, emissive: 0x5a3200, emissiveIntensity: .8 });
   const bigBow = new THREE.Group(), bigBowMesh = new THREE.Mesh(new THREE.TubeGeometry(bowCurve(78, 24), 24, 2.6, 8), bowMat); bigBow.add(bigBowMesh);
@@ -684,6 +695,7 @@ window.R3 = (function () {
   { const c = new THREE.Color(); mists.forEach((m, i) => { c.setHex([0x1a5a70, 0x3a2a6a, 0x167a60][i % 3]).multiplyScalar(.5); mistInst.setColorAt(i, c); }); }
 
   // ---------- the fourth wave ----------
+  const shatru = addNew('shatrughna', 1), urmila = addNew('urmila', 1), mandavi = addNew('mandavi', 1), shruta = addNew('shrutakirti', 1), kusha = addNew('kushadhvaja', 1, { headScale: 1.25 });
   const janaka = addNew('janaka', 1, { headScale: 1.25 }), ahalya = addNew('ahalya', 1), angada = addNew('angada', 1, { headScale: 1.2 });
   const tower = new THREE.Group(); mesh(new THREE.CylinderGeometry(22, 28, 60, 10), std(0x6b4224, { roughness: .8, emissive: 0x1a0c04 }), 0, 30, 0, tower); mesh(new THREE.SphereGeometry(24, 14, 8, 0, 6.283, 0, 1.6), std(0xd6992e, { metalness: .6, roughness: .35, emissive: 0x5a3400 }), 0, 60, 0, tower); tower.visible = false; scene.add(tower);
   const stone = new THREE.Group(); { const ash = mesh(G.sph, std(0x9a9aa4, { roughness: 1, emissive: 0x181820 }), 0, 4, 0, stone); ash.scale.set(46, 8, 30); const sh = mesh(G.sph, glowMat(0xc8d8ff), 0, 40, 0, stone); sh.scale.set(18, 44, 10); sh.material.opacity = .16; }   // a mound of ashes and a faint shimmer: she lives unseen, in penance
@@ -876,6 +888,9 @@ window.R3 = (function () {
     { id: 'tataka', s0: 14.5, n: 12, fx: 1020, cap: "On the way, the demon Tataka attacked. The sage said a prince must protect people, so Ram stopped her with his arrow. Then the sage taught him special weapons.", moral: 'Be brave to protect others' },
     { id: 'siddha', s0: 14.5, n: 14, fx: 1050, cap: "At the sage's forest home, Ram guarded the fire prayer for six nights. When the demons Subahu and Maricha attacked, Ram defeated Subahu and blew Maricha far away over the sea.", moral: '' },
     { id: 'ahalya', s0: 22, n: 11, fx: 1480, cap: "Near Mithila lived Ahalya, under a curse, hidden in prayer. When Ram arrived, the curse ended, and Ram and Lakshman bowed to her with respect.", moral: '' },
+    { id: 'sitaearth', s0: 22, n: 13, fx: 1600, cut: true, cap: "King Janaka of Mithila had a very special daughter. One day, while ploughing a field for a holy prayer, he found a baby girl in the earth! He named her Sita and loved her as his own. So Sita is called the daughter of Mother Earth.", moral: '' },
+    { id: 'bowstory', s0: 22, n: 13, fx: 1560, cut: true, cap: "King Janaka showed them a very special bow: the bow of the god Shiva himself! It was so heavy that five thousand strong men pulled it on a cart with eight wheels. No god, demon or king had ever been able even to lift it. Whoever could string it would marry Princess Sita.", moral: '' },
+    { id: 'vivah', s0: 41, n: 14, fx: 1730, cap: "Then all four brothers were married. Ram married Sita, and Lakshman married her sister Urmila; both were daughters of King Janaka. Bharata married Mandavi, and Shatrughna married Shrutakirti, the daughters of Janaka's brother, King Kushadhvaja.", moral: '' },
     { id: 'parashu', s0: 41, n: 12, fx: 1720, cap: "On the way home, the fiery sage Parashurama came, angry that Shiva's bow had broken. He asked Ram to string Vishnu's bow. Ram did it easily, and Parashurama calmed down.", moral: 'Stay calm when others are angry' },
     // ---- exile ----
     { id: 'boons', s0: 53, n: 12, fx: 2400, cap: "The maid Manthara made Queen Kaikeyi jealous. Kaikeyi used her two wishes: make Bharata king, and send Ram to the forest for fourteen years. Ram calmly agreed, to keep his father's promise.", moral: 'Always keep your promises' },
@@ -918,8 +933,8 @@ window.R3 = (function () {
     [0, 9, 'Months later, four baby boys were born: Ram, Bharata, and the twins Lakshman and Shatrughna. Ram was Vishnu himself, born on Earth.'],
     [9, 14.5, 'Ram and Lakshman said goodbye to their parents and left with the sage.'],
     [14.5, 22, 'The sage led the brothers toward Mithila, where King Janaka had a special contest.'],
-    [22, 31, "In Mithila, whoever could string Shiva's giant bow would marry Princess Sita. Ram lifted it easily!"],
-    [31, 41, 'Crack! The bow broke in two! King Janaka happily gave Sita to Ram, and all four brothers were married.'],
+    [22, 31, 'With a smile, Ram lifted the mighty bow as easily as a toy, and began to string it.'],
+    [31, 41, 'Crack! The bow broke in two, with a sound like thunder! King Janaka happily gave Sita to Ram.'],
     [41, 53, 'Back in Ayodhya, Ram and Sita lived happily for twelve years. Then the old king decided to make Ram the next king.'],
     [53, 55, 'Ram left for the forest with Sita and Lakshman.'],
     [55, 57, 'The charioteer went back to Ayodhya alone.'],
@@ -979,7 +994,7 @@ window.R3 = (function () {
   const PRO = { ravanborn: 1, ravan_boon: 1, gods: 1, curse: 1, kboon: 1 };
   function kandaOf(m) {
     const id = m.i >= 0 ? INS[m.i].id : '', S = m.i >= 0 ? INS[m.i].s0 : m.S;
-    if (PRO[id]) return 0; if (id === 'parashu') return 1; if (id === 'sabari') return 3; if (id === 'darbar') return 6;
+    if (PRO[id]) return 0; if (id === 'parashu' || id === 'vivah') return 1; if (id === 'sabari') return 3; if (id === 'darbar') return 6;
     return S < 41 ? 1 : S < 62 ? 2 : S < 98 ? 3 : S < 108 ? 4 : S < 126.5 ? 5 : S < 213 ? 6 : 7;
   }
   const KSEG = [];   // [kanda, real start, real end]
@@ -1024,7 +1039,7 @@ window.R3 = (function () {
   const showAt = (h, x, y, z, ry, sc) => { h.root.visible = sc > .02; h.root.position.set(x, y, z); h.root.rotation.set(0, ry, 0); h.root.scale.setScalar(sc); };
   const pop = (a, b, u, sc) => u < a ? 0 : u >= b ? 0 : sc * (.2 + .8 * ease(sstep(a, a + 1.1, u))) * (1 - sstep(b - 1.1, b, u) * .97);   // scale in at a, out at b
   function insertActors(ins, Tr, rx, base) {
-    hide(tataka, dash, kaik, bharat, sugr, vali, indra, sabari, vibh, surp, hermit, marich, agni, ahalya, angada, brahma, vishnu, youngd, shravan, blindA, blindB, rishya, kausalya, sumitra, vasishtha, parashu, mandodari); pot.visible = false; mhut.visible = false; marich.root.rotation.z = 0; bowL.g.visible = false; feast.visible = false; astra.visible = false; astra.scale.setScalar(9); river.visible = false; hide(agastya, guha, samudra, sushena); spear.visible = herb.visible = himalaya.visible = false; spear.scale.setScalar(1); boat.visible = bed.visible = grass.visible = ring.visible = jewel.visible = memGlow.visible = divGlow.visible = sun.visible = surasa.visible = false; rays.forEach(r => { r.visible = false; }); redMoon.visible = true; palace2.visible = true; palaceL.visible = true; court.visible = true; river.material.color.setHex(0x4a90ff); seaAmp = 1; tower.visible = false; stone.visible = false; heart.visible = false;
+    hide(shatru, urmila, mandavi, shruta, kusha, tataka, dash, kaik, bharat, sugr, vali, indra, sabari, vibh, surp, hermit, marich, agni, ahalya, angada, brahma, vishnu, youngd, shravan, blindA, blindB, rishya, kausalya, sumitra, vasishtha, parashu, mandodari); pot.visible = false; mhut.visible = false; furrow.visible = false; marich.root.rotation.z = 0; bowL.g.visible = false; feast.visible = false; astra.visible = false; astra.scale.setScalar(9); river.visible = false; hide(agastya, guha, samudra, sushena); spear.visible = herb.visible = himalaya.visible = false; spear.scale.setScalar(1); boat.visible = bed.visible = grass.visible = ring.visible = jewel.visible = memGlow.visible = divGlow.visible = sun.visible = surasa.visible = false; rays.forEach(r => { r.visible = false; }); redMoon.visible = true; palace2.visible = true; palaceL.visible = true; court.visible = true; river.material.color.setHex(0x4a90ff); seaAmp = 1; tower.visible = false; stone.visible = false; heart.visible = false;
     garuda.visible = false; sandals.visible = false; berry.visible = false; throne.visible = false; fireGlow.visible = false; orbs.forEach(o => { o.visible = false; }); serpents.forEach(g => { g.visible = false; }); coils.forEach(g => { g.visible = false; });
     if (ins.i < 0) { if (ins.S >= 77.1 && ins.S < 81) { showAt(marich, 3640, 0, 6, -YAW, 1.1 * ease(sstep(77.1, 78, ins.S)) + .001); pose(marich, { ph: 0, s: 0, t: Tr, kneel: 1, sad: 1 }); } return; }   // the deer turns back into Maricha, who falls where it stood
     const id = INS[ins.i].id, u = ins.u, face = -YAW;
@@ -1343,6 +1358,49 @@ window.R3 = (function () {
       once('ns_b', u >= 7.9, () => { flashV = .8; burst(1150, 160, 0, .55, 100, 110); });
       once('ns_c', u >= 11.4, () => { flashV = .6; burst(1070, 130, 0, .13, 90, 90); petalRain(900, 1300, 25, 250); });
       base.ram.look = .2;
+    }
+    if (id === 'sitaearth') {   // long before: Janaka finds baby Sita in a furrow while ploughing (Bala Kanda 66)
+      ram.root.visible = lak.root.visible = sage.root.visible = false;   // a memory of long ago
+      const jx = u < 4 ? lerp(1480, 1620, sstep(.3, 4, u)) : 1620, kn = sstep(5.6, 6.4, u) * (1 - sstep(7.4, 8, u));
+      act(janaka, jx, 0, 8, R, pop(.1, 99, u, 1), { s: spd(.3, 4, .6), kneel: kn, join: kn, cheer: sstep(9, 9.6, u) * (1 - sstep(11.4, 12, u)), talk: u > 9.6 && u < 11.4 });
+      court.visible = false;   // an open field
+      plough.visible = u < 5.4; plough.position.set(jx + 30, 36, 14); furrow.visible = true; furrow.position.x = (1470 + jx + 50) / 2; furrow.scale.x = Math.max(1, jx + 50 - 1470);
+      if (u > .3 && u < 4 && Math.random() < .6) parts.push({ x: jx + 6 + rnd(-6, 6), y: 2, z: 14, vx: rnd(-20, 0), vy: rnd(8, 22), vz: 0, life: .9, age: 0, hue: .08, r: rnd(1, 1.8), drag: .3, g: 20 });   // the furrow
+      const gl = sstep(3.6, 4.4, u) * (1 - sstep(8, 9, u)); divGlow.visible = gl > .02; divGlow.position.set(1668, 20, 10); divGlow.scale.set(40 * gl + .01, 60 * gl + .01, 20); divGlow.material.opacity = .3 * gl;
+      once('se0', u >= 4, () => { flashV = .5; burst(1668, 10, 10, .11, 90, 80); });
+      const up = ease(sstep(4.2, 5.6, u)), lift = ease(sstep(7.6, 9, u));   // the baby rises from the earth, and Janaka lifts her up
+      if (u > 4.2) { sita.root.visible = true; sita.root.scale.setScalar(.34); base.sitaOverride = { x: lerp(1668, jx + 14, lift), y: lerp(-40, 0, up) + 52 * lift, face: 0, ph: 0, s: 0, join: 0, look: 0 }; }
+      if (u > 4 && u < 9 && Math.random() < .6) ember(1668 + rnd(-14, 14), rnd(4, 50), 10, false);
+      once('se1', u >= 9.2, () => petalRain(1450, 1800, 30, 240));
+    }
+    if (id === 'bowstory') {   // Shiva's bow, on its cart with eight wheels (Bala Kanda 66–67)
+      const cx = lerp(1900, 1700, ease(sstep(.5, 4.5, u)));
+      pedestal.visible = bigBow.visible = true; pedestal.position.x = cx; bigBow.position.set(cx, 40, 4); bigBow.rotation.set(0, 0, Math.PI / 2);
+      pedestal.userData.wheels.forEach(w => { w.rotation.z = -(cx - 1700) / 7; });
+      if (u > .5 && u < 4.5 && Math.random() < .8) parts.push({ x: cx + rnd(-36, 36), y: 2, z: rnd(0, 20), vx: rnd(10, 40), vy: rnd(6, 20), vz: 0, life: rnd(.6, 1.1), age: 0, hue: .08, r: rnd(1.2, 2.2), drag: .3, g: 20 });   // heavy: dust under the wheels
+      const sh = sstep(5, 6, u) * (1 - sstep(11.4, 12.4, u)); memGlow.visible = sh > .02; memGlow.position.set(cx, 52, 0); memGlow.scale.set(100 * sh + .01, 40 * sh + .01, 10); memGlow.material.opacity = .2 * sh;   // the glow of Shiva's bow
+      if (sh > .2 && Math.random() < .5) ember(cx + rnd(-70, 70), rnd(40, 70), 6, false);
+      const turn = sstep(5, 5.4, u) * (1 - sstep(8.4, 8.8, u));
+      act(janaka, 1590, 0, 8, turn > .5 ? R : L, pop(.1, 99, u, 1), { talk: (u > .6 && u < 4.8) || (u > 8.8 && u < 11.6), point: sstep(5.4, 5.9, u) * (1 - sstep(8, 8.4, u)) });
+      base.ram.look = .25 * sh; base.lak.look = .25 * sh;
+      once('bs0', u >= 5, () => { flashV = .3; burst(cx, 60, 6, .58, 70, 70); });
+    }
+    if (id === 'vivah') {   // the four weddings in Mithila (Bala Kanda 72–73)
+      const at = (t) => ease(sstep(t, t + .8, u)), named = (t) => sstep(t, t + .6, u) * (1 - sstep(t + 2.6, t + 3.4, u)), turnIn = .35;
+      ram.root.position.x = 1515; ram.root.rotation.y = turnIn; Object.assign(base.ram, { ph: 1515 * Math.PI / STEP, join: named(2.1) });
+      base.sitaOverride = { x: 1560, y: 0, face: -turnIn, ph: 1560 * Math.PI / STEP + 1.4, s: 0, join: named(2.1), look: 0 };
+      lak.root.position.x = 1625; lak.root.rotation.y = turnIn; Object.assign(base.lak, { ph: 1625 * Math.PI / STEP + 2.6, join: named(3.6) });
+      act(urmila, 1670, 0, 22, -turnIn, 1 * at(.2) + .001, { join: named(3.6) });
+      act(bharat, 1735, 0, 2, turnIn, at(.2) + .001, { join: named(6) });
+      act(mandavi, 1780, 0, 22, -turnIn, at(.2) + .001, { join: named(6) });
+      act(shatru, 1845, 0, 2, turnIn, at(.2) + .001, { join: named(7.2) });
+      act(shruta, 1890, 0, 22, -turnIn, at(.2) + .001, { join: named(7.2) });
+      act(dash, 1440, 0, 4, R, at(.2) + .001, { cheer: .6 * sstep(10.4, 11, u) });   // the grooms' father
+      act(janaka, 1960, 0, 4, L, at(.2) + .001, { point: named(5.4) * .8, cheer: .6 * sstep(10.4, 11, u) });   // the fathers of the brides
+      act(kusha, 2020, 0, 4, L, at(.2) + .001, { point: named(9.4) * .8, cheer: .6 * sstep(10.4, 11, u) });
+      if (u < 13.4) for (let q = 0; q < 2; q++) flame(1702 + rnd(-6, 6), 2, 46, .9);   // the sacred wedding fire
+      for (const [t, x] of [[2.1, 1538], [3.6, 1648], [6, 1758], [7.2, 1868]]) once('vv' + t, u >= t, () => { flashV = .2; burst(x, 130, 14, .11, 50, 60); });
+      once('vv_end', u >= 10.4, () => { flashV = .4; petalRain(1400, 2060, 60, 280); });
     }
     if (id === 'parashu') {   // Parashurama challenges Ram with Vishnu's bow (Bala Kanda 74–76)
       const px = wk(2250, 1860, .3, 3.2), humble = sstep(9.8, 10.8, u);
@@ -1677,7 +1735,7 @@ window.R3 = (function () {
     const handAt = new THREE.Vector3(), rt = ram.arms[0].userData.hand; ram.root.updateMatrixWorld(true);
     if (T < 26.2) { bigBow.position.set(1700, 40 + Math.sin(T * 2) * 2, 4); bigBow.rotation.set(0, 0, Math.PI / 2); bigBow.scale.setScalar(.95); }
     else if (T < 31.0) { rt.getWorldPosition(handAt); bigBow.position.copy(handAt).add(new THREE.Vector3(7, 0, 0)); bigBow.rotation.set(0, 0, 0); bigBow.scale.setScalar(1); }
-    bigBow.visible = T < 31.0;
+    bigBow.visible = T < 31.0 && (frozen ? T > 22.01 : T >= 22); pedestal.visible = frozen ? T > 22.01 : T >= 22; pedestal.position.x = 1700;
     if (bigBow.visible) {
       const d = T >= 28.4 ? sstep(28.4, 31, T) : 0, curve = bowCurve(78 - d * 8, 24 + d * 8);
       bigBowMesh.geometry.dispose(); bigBowMesh.geometry = new THREE.TubeGeometry(curve, 24, 2.6, 8);
