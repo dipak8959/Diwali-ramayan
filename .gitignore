@@ -1,2 +1,5 @@
 out/
 __pycache__/
+wall/photos/
+wall/vendor/photos.local.js
+wall/index.local.html

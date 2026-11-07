@@ -9,6 +9,9 @@ def inline(m):
     code = open(path, encoding='utf-8').read()
     assert '</script' not in code.lower(), path
     return '<script>\n' + code + '\n</script>'
+local = '--local' in sys.argv   # with the private photos (wall/vendor/photos.local.js), for making your own video; not committed
+if local: html = html.replace('../vendor/photos.js', '../vendor/photos.local.js')
 out = re.sub(r'<script src="([^"]+)"></script>', inline, html)
-open(os.path.join(root, 'index.html'), 'w', encoding='utf-8').write(out)
-print('wrote wall/index.html', len(out) // 1024, 'KB')
+name = 'index.local.html' if local else 'index.html'
+open(os.path.join(root, name), 'w', encoding='utf-8').write(out)
+print('wrote wall/' + name, len(out) // 1024, 'KB')

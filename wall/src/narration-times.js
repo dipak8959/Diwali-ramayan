@@ -117,6 +117,7 @@ window.NARR_TIMES = {
 "Be the light": 1.17,
 "Why do we light lamps on Diwali? When Ram, Sita and Lakshman came home, Ayodhya glowed with lamps to welcome them.": 7.81,
 "Every Diwali, we light diyas to remember: light wins over darkness, and good wins over evil.": 6.66,
+"In Ayodhya today, so many diyas are lit along the river Saryu that the whole riverbank glows.": 6.63,
 "Keep your promises, like Ram. Be a true friend, like Hanuman. Love your family, like Lakshman and Bharata.": 7.1,
 "Be brave and truthful, like Sita. Be kind, even to people who are unkind. And always choose what is right.": 7.7,
 "Ram is one of the ten avatars of Vishnu. An avatar is a form Vishnu takes to come and help the world. Here they are.": 8.87,
