@@ -87,6 +87,7 @@ window.R3 = (function () {
     sabari:   { skin: 0xc99a70, hair: 0xf0f0f0, dress: [0xe6cf98, 0x8a7040], sash: 0xff9d1c, female: true },
     vibhishana: { skin: 0xd9b090, hair: 0x2a2a3a, dress: [0xf2f6ff, 0x8ab0ff], sash: 0x8ab0ff, crown: true },
     surpanakha: { skin: 0x9a6ad0, hair: 0x120508, dress: [0xd02a7a, 0x701040], sash: 0xffc94a, female: true, evil: true },
+    maricha:  { skin: 0x4a8a9a, hair: 0x120508, dress: [0xd8752a, 0x7a3410], sash: 0x8a4a1a, evil: true, beard: true },   // a demon who lives as a forest hermit
     hermit:   { skin: 0xb88a60, hair: 0xcccccc, dress: [0x8a4a1a, 0x3a1c08], sash: 0x6a3a14, beard: true },
     agni:     { skin: 0xff8a2a, hair: 0xff4a10, dress: [0xff7a10, 0xc01800], sash: 0xffe060, crown: true },
     brahma:   { skin: 0xf0c890, hair: 0xffffff, dress: [0xfff0b0, 0xffc050], sash: 0xffd23a, crown: true, beard: true },
@@ -661,7 +662,8 @@ window.R3 = (function () {
     for (let i = 0; i < 110; i++) { d.position.set(rnd(-200, 6200), rnd(9, 15), rnd(32, 43)); d.rotation.set(0, 0, 0); d.scale.setScalar(rnd(1.4, 2.4)); d.updateMatrix(); fl.setMatrixAt(i, d.matrix); c.setHex([0xff8ac0, 0xffd060, 0xffffff, 0xb08aff][i % 4]); fl.setColorAt(i, c); } scene.add(fl); }
 
   // ---------- the third wave: more people and props ----------
-  const sabari = addNew('sabari', .96), vibh = addNew('vibhishana', 1, { headScale: 1.2 }), surp = addNew('surpanakha', 1.1), hermit = addNew('hermit', 1, { headScale: 1.22 }), agni = addNew('agni', 1.5);
+  const sabari = addNew('sabari', .96), vibh = addNew('vibhishana', 1, { headScale: 1.2 }), surp = addNew('surpanakha', 1.1), hermit = addNew('hermit', 1, { headScale: 1.22 }), agni = addNew('agni', 1.5), marich = addNew('maricha', 1.1, { headScale: 1.15 });
+  const mhut = makeHut(); mhut.visible = false; scene.add(mhut);   // Maricha's hermitage by the sea
   agni.root.traverse(o => { if (o.material && o.material.emissive) { o.material = o.material.clone(); o.material.emissive.setHex(0xff5a10); o.material.emissiveIntensity = 1.5; } });
   { const bk = new THREE.Group(); mesh(new THREE.CylinderGeometry(9, 6, 8, 12, 1, true), std(0x8a5a2a, { roughness: .9, side: THREE.DoubleSide }), 0, 0, 0, bk);
     for (let k = 0; k < 9; k++) mesh(G.sphLow, std(0xd02a5a, { emissive: 0x801030, emissiveIntensity: .8 }), Math.cos(k * 2.4) * 4, 4.5 + (k % 3) * 1.3, Math.sin(k * 2.4) * 4, bk).scale.setScalar(2.2);
@@ -669,8 +671,15 @@ window.R3 = (function () {
   const sitaGlow = mesh(G.sph, glowMat(0xffe0a0), 0, 0, 0, scene); sitaGlow.visible = false;
   const berry = mesh(G.sphLow, std(0xd02a5a, { emissive: 0xc01040, emissiveIntensity: 1 }), 0, 0, 0, scene); berry.scale.setScalar(3); berry.visible = false;
   // Lakshman's protective line, drawn around the hut
-  const rekha = mesh(new THREE.TorusGeometry(74, 1.5, 6, 70), new THREE.MeshBasicMaterial({ color: 0xffa030 }), 3250, 1.6, 0, scene); rekha.rotation.x = Math.PI / 2; rekha.visible = false;
-  const rekhaGlow = mesh(new THREE.TorusGeometry(74, 6, 6, 70), glowMat(0xff8020), 3250, 1.6, 0, scene); rekhaGlow.rotation.x = Math.PI / 2; rekhaGlow.visible = false;
+  const REK = { x: 3250, rx: 80, rz: 40 }, rekPt = (a) => [REK.x + REK.rx * Math.cos(Math.PI + a), REK.rz * Math.sin(Math.PI + a)];   // an oval on the ground around Sita and the hut, starting at its left end
+  const rekCurve = new THREE.CatmullRomCurve3(Array.from({ length: 48 }, (_, i) => { const [x, z] = rekPt(i / 48 * 6.2832); return new THREE.Vector3(x, 1.6, z); }), true);
+  const rekha = new THREE.Mesh(new THREE.TubeGeometry(rekCurve, 120, 2.4, 6, true), new THREE.MeshBasicMaterial({ color: 0xffb040 })); rekha.visible = false; scene.add(rekha);
+  const rekhaGlow = new THREE.Mesh(new THREE.TubeGeometry(rekCurve, 120, 8, 6, true), glowMat(0xff8020)); rekhaGlow.visible = false; scene.add(rekhaGlow);
+  function setRekha(k, glow) {   // k: how much of the line is drawn (0 to 1); glow: how brightly it shines
+    rekha.visible = rekhaGlow.visible = k > .002;
+    for (const m of [rekha, rekhaGlow]) { const n = m.geometry.index.count, seg = 6 * 6; m.geometry.setDrawRange(0, Math.min(n, Math.ceil(k * n / seg) * seg)); }
+    rekhaGlow.material.opacity = .36 * glow; rekha.material.color.setRGB(1, .55 + .25 * Math.min(1, glow), .2);
+  }
   // the fire of Sita's trial
   const fireGlow = mesh(G.sph, glowMat(0xff7020), 5400, 60, 0, scene); fireGlow.scale.set(80, 70, 40); fireGlow.material.opacity = .0; fireGlow.visible = false;
   // the golden throne for Ram's coronation
@@ -835,11 +844,11 @@ window.R3 = (function () {
     return keys[keys.length - 1][1];
   };
   const RAM_K = [[6, 430], [9, 470], [22, 1380], [26, 1560], [41, 1560], [43, 1640], [53, 2250], [60, 2250], [61, 2300], [70, 3050], [77, 3560], [80.5, 3560], [88, 3330], [90, 3330], [98, 3900], [119, 3900], [121, 4000], [126.5, 4100], [136, 4950], [150, 4950], [152, 5050], [183, 5050], [185.5, 5160]];
-  const chX = (T) => T < 91 ? K(T, [[82.5, 3330], [91, 5560]]) : K(T, [[182, 5130], [186, 5130], [205, 560]]);
+  const chX = (T) => T < 91 ? K(T, [[82.5, 3200], [91, 5560]]) : K(T, [[182, 5130], [186, 5130], [205, 560]]);
   const chY = (T) => T < 91 ? (T < 82.5 ? 0 : 36 + 150 * Math.sin(Math.PI * clamp((T - 82.5) / 8.5))) : (T < 186 ? 0 : (T < 205 ? 30 + 130 * Math.sin(Math.PI * clamp((T - 186) / 19)) : 0));
   const ramX = (T) => T < 185.5 ? K(T, RAM_K) : T < 205 ? chX(T) + 30 : K(T, [[205, 590], [212, 720]]);
-  const sitaX = (T) => T < 32 ? 2000 : T < 38 ? K(T, [[32, 2000], [38, 1660]]) : T < 70 ? Math.max(1660, ramX(T) - 100) : T < 75 ? K(T, [[70, 2950], [75, 3250]]) : T < 82.5 ? 3250 : T < 91 ? chX(T) : T < 94 ? K(T, [[91, 5560], [94, 5700]]) : T < 176 ? 5700 : T < 185 ? K(T, [[176, 5400], [185, 5130]]) : T < 205 ? chX(T) : ramX(T) - 30;
-  const LAK_K = [[69, ramX(69) - 95], [74, 3180], [77, 3180], [81, 3480], [88, 3235], [90, 3235], [98, 3805]];
+  const sitaX = (T) => T < 32 ? 2000 : T < 38 ? K(T, [[32, 2000], [38, 1660]]) : T < 70 ? Math.max(1660, ramX(T) - 100) : T < 75 ? K(T, [[70, 2950], [75, 3250]]) : T < 82.5 ? (T > 81 ? 3165 : 3250) : T < 91 ? chX(T) : T < 94 ? K(T, [[91, 5560], [94, 5700]]) : T < 176 ? 5700 : T < 185 ? K(T, [[176, 5400], [185, 5130]]) : T < 205 ? chX(T) : ramX(T) - 30;
+  const LAK_K = [[69, ramX(69) - 95], [74, 3180], [81, 3180], [81.0001, 3480], [88, 3235], [90, 3235], [98, 3805]];
   const lakX = (T) => T < 69 ? ramX(T) - 95 : T < 98 ? K(T, LAK_K) : T < 152 ? ramX(T) - 95 : T < 168 ? K(T, [[152, 4955], [155.5, 5110], [164, 5110], [168, 4955]]) : T < 185 ? K(T, [[168, 4955], [185, 5100]]) : T < 205 ? chX(T) - 30 : ramX(T) - 60;
   const deerX = (T) => K(T, [[66, 3150], [77, 3640]]);
   // Hanuman: meets Ram, leaps the sea, finds Sita, burns Lanka, leaps back, brings the healing mountain
@@ -889,7 +898,10 @@ window.R3 = (function () {
     { id: 'sandals', s0: 60, n: 12, fx: 2200, cap: "Prince Bharata did not want the throne. He went to the forest and begged Ram to come home. Ram kept his promise to stay, and gave Bharata his sandals to place on the throne.", moral: 'Love is greater than power' },
     { id: 'agastya', s0: 64, n: 11, fx: 2640, cap: "Deep in the forest, the great sage Agastya gave Ram special gifts: the bow of Vishnu, arrows that never run out, and an arrow made by the god Brahma. Ram would need it at the very end.", moral: 'Wise friends prepare us for hard days' },
     { id: 'surp', s0: 70, n: 12, fx: 3120, cap: "Ravan's sister Surpanakha wanted to marry Ram, then Lakshman. When she rushed at Sita, Lakshman stopped her. Her demon brothers attacked with a huge army, but Ram won alone. Angry, she ran to Ravan.", moral: 'Anger only makes things worse' },
-    { id: 'rekha', s0: 81, n: 12, fx: 3230, cap: "Maricha called out in Ram's voice: 'Oh Sita! Oh Lakshmana!' Worried, Sita sent Lakshman to find Ram. Then Ravan came, dressed as a holy man, asking for food.", moral: 'Stay calm when you are afraid' },
+    { id: 'lanka1', s0: 70, n: 12, fx: 5500, cut: true, cap: "In golden Lanka, Surpanakha told her brother Ravan about Ram, and about Princess Sita. 'She should be your queen!' she said. Ravan wanted Sita for himself. But he knew he could not beat Ram in a fair fight, so he made a trick plan.", moral: 'Never want what belongs to others' },
+    { id: 'maricha', s0: 70, n: 14, fx: 4250, cut: true, cap: "Ravan flew to Maricha, the demon Ram once blew far over the sea. 'Become a golden deer,' said Ravan, 'and lead Ram far away from Sita.' Maricha was afraid: 'Ram is too strong!' But Ravan made him do it, so Maricha became a golden deer.", moral: 'Never trick others' },
+    { id: 'rekha', s0: 81, n: 13, fx: 3260, cap: "Maricha called out in Ram's voice: 'Oh Sita! Oh Lakshmana!' Sita was frightened and sent Lakshman to help. Before he left, Lakshman drew a glowing line around the hut. 'Please stay inside this line,' he said. 'It will keep you safe.'", moral: 'Listen to those who keep you safe' },
+    { id: 'bhiksha', s0: 81, n: 13, fx: 3220, cap: "Then Ravan came, dressed as a holy man, asking for food. When he stepped on the line, it burst into flames and stopped him! So he asked Sita to come out. Kind Sita stepped over the line to give him food.", moral: 'Be careful: not everyone is who they seem' },
     { id: 'sabari', s0: 98, n: 10, fx: 3780, cap: "Ram met Sabari, a kind old lady who had waited for him for many years. With love, she offered him fruits from the forest, and Ram happily accepted them.", moral: 'Love matters more than riches' },
     { id: 'vali', s0: 104.6, n: 14, fx: 4050, cap: "Ram and the monkey prince Sugriva became friends. Sugriva's brother Vali had taken his kingdom. Ram defeated Vali with his arrow, and Sugriva became king.", moral: 'Stand by your friends' },
     { id: 'surasa', s0: 110, n: 13, fx: 4900, cap: "Flying over the sea, Hanuman met Surasa, a giant sea serpent. 'Come into my mouth!' she said. Hanuman grew bigger, then became tiny, zipped in and out, and bowed. She smiled and blessed him.", moral: 'Being clever is better than fighting' },
@@ -927,9 +939,9 @@ window.R3 = (function () {
     [57, 60, 'Prince Bharata was called home to Ayodhya.'],
     [60, 64, 'Ram, Sita and Lakshman walked deeper into the forest, helping the sages there.'],
     [64, 70, 'They built a little hut at Panchavati, by the river Godavari, and lived there happily.'],
-    [70, 77.5, 'A golden deer appeared! It was really the demon Maricha in disguise. Sita wanted it, so Ram went after it and asked Lakshman to guard Sita.'],
+    [70, 77.5, 'Soon a golden deer with silver spots played near the hut. It was really Maricha! Sita loved it, so Ram went to catch it, and asked Lakshman to guard Sita.'],
     [77.5, 81, "Ram's arrow found the deer, and it turned back into Maricha."],
-    [81, 92, 'Ravan took Sita away in his flying chariot. The brave old bird Jatayu fought him, but Ravan cut his wings.'],
+    [81, 92, 'Ravan showed his true form and took Sita away in his flying chariot. The brave old bird Jatayu fought him, but Ravan cut his wings.'],
     [92, 98, 'Ram and Lakshman searched everywhere. Jatayu told them Ravan went south, and Ram gave the brave bird a loving farewell.', 'Always do what is right', 95],
     [98, 104.6, 'In the hills, Hanuman met Ram and Lakshman and took them to his king, Sugriva.'],
     [104.6, 110, "The monkeys searched everywhere for Sita. They learned she was in Lanka, across the sea. Hanuman took Ram's ring and leaped across!"],
@@ -1025,7 +1037,7 @@ window.R3 = (function () {
   const showAt = (h, x, y, z, ry, sc) => { h.root.visible = sc > .02; h.root.position.set(x, y, z); h.root.rotation.set(0, ry, 0); h.root.scale.setScalar(sc); };
   const pop = (a, b, u, sc) => u < a ? 0 : u >= b ? 0 : sc * (.2 + .8 * ease(sstep(a, a + 1.1, u))) * (1 - sstep(b - 1.1, b, u) * .97);   // scale in at a, out at b
   function insertActors(ins, Tr, rx, base) {
-    hide(tataka, dash, kaik, bharat, sugr, vali, indra, sabari, vibh, surp, hermit, agni, ahalya, angada, brahma, vishnu, youngd, shravan, blindA, blindB, rishya, kausalya, sumitra, vasishtha, parashu, mandodari); pot.visible = false; bowL.g.visible = false; feast.visible = false; astra.visible = false; astra.scale.setScalar(9); river.visible = false; hide(agastya, guha, samudra, sushena); spear.visible = herb.visible = himalaya.visible = false; spear.scale.setScalar(1); boat.visible = bed.visible = grass.visible = ring.visible = jewel.visible = memGlow.visible = divGlow.visible = sun.visible = surasa.visible = false; rays.forEach(r => { r.visible = false; }); redMoon.visible = true; palace2.visible = true; palaceL.visible = true; court.visible = true; river.material.color.setHex(0x4a90ff); seaAmp = 1; tower.visible = false; stone.visible = false; heart.visible = false;
+    hide(tataka, dash, kaik, bharat, sugr, vali, indra, sabari, vibh, surp, hermit, marich, agni, ahalya, angada, brahma, vishnu, youngd, shravan, blindA, blindB, rishya, kausalya, sumitra, vasishtha, parashu, mandodari); pot.visible = false; mhut.visible = false; marich.root.rotation.z = 0; bowL.g.visible = false; feast.visible = false; astra.visible = false; astra.scale.setScalar(9); river.visible = false; hide(agastya, guha, samudra, sushena); spear.visible = herb.visible = himalaya.visible = false; spear.scale.setScalar(1); boat.visible = bed.visible = grass.visible = ring.visible = jewel.visible = memGlow.visible = divGlow.visible = sun.visible = surasa.visible = false; rays.forEach(r => { r.visible = false; }); redMoon.visible = true; palace2.visible = true; palaceL.visible = true; court.visible = true; river.material.color.setHex(0x4a90ff); seaAmp = 1; tower.visible = false; stone.visible = false; heart.visible = false;
     garuda.visible = false; sandals.visible = false; berry.visible = false; throne.visible = false; fireGlow.visible = false; orbs.forEach(o => { o.visible = false; }); serpents.forEach(g => { g.visible = false; }); coils.forEach(g => { g.visible = false; });
     if (ins.i < 0) return;
     const id = INS[ins.i].id, u = ins.u, face = -YAW;
@@ -1330,7 +1342,7 @@ window.R3 = (function () {
       act(sage, 1010, 0, 4, R, 1, { cheer: .3 * sstep(.6, 1.4, u) * (1 - sstep(10.6, 11.4, u)), talk: u < 10.6 });
       if (u > .6 && u < 8.2 && Math.random() < .5) parts.push({ x: rnd(1100, 1300), y: 280, z: rnd(0, 20), vx: rnd(-6, 6), vy: -rnd(60, 110), vz: 0, life: 1.8, age: 0, hue: .78, r: 2.2, drag: .9, g: 20 });   // the demons' dark magic falls from the sky as purple sparks
       { const sub = u < 5.2; if (u > 1.4 && u < 6) { const f = sstep(1.4, 2.6, u), fl = sstep(4.6, 5.8, u); act(kum, lerp(1320, 1190, ease(sstep(1.4, 3, u))) + 60 * fl, lerp(200, 105, f) * (1 - fl) + 8 * fl, -4, L, 1.35 * (1 - .6 * sstep(5.2, 6, u)), { fly: 1 - fl, angry: 1, cheer: 0 }); kum.root.rotation.z = -1.5 * fl; if (u > 5.2) ember(1250, rnd(10, 60), 0, true); } }
-      if (u > 2.2 && u < 9.6) { const f = sstep(2.2, 3.4, u), th = sstep(7.8, 8.4, u); const mx = u < 7.7 ? lerp(1360, 1150, ease(sstep(2.2, 4, u))) : 1150 + 600 * ease(sstep(7.7, 9.4, u)), my = u < 7.7 ? lerp(210, 120, f) : 120 + 120 * ease(sstep(7.7, 9.4, u)); act(indra, mx, my, -2, L, 1.1, { fly: 1, angry: 1 }); indra.root.rotation.z = th * u * 3; if (u > 7.7 && Math.random() < .8) ember(mx, my, 0, true); }
+      if (u > 2.2 && u < 9.6) { const f = sstep(2.2, 3.4, u), th = sstep(7.8, 8.4, u); const mx = u < 7.7 ? lerp(1360, 1150, ease(sstep(2.2, 4, u))) : 1150 + 600 * ease(sstep(7.7, 9.4, u)), my = u < 7.7 ? lerp(210, 120, f) : 120 + 120 * ease(sstep(7.7, 9.4, u)); act(marich, mx, my, -2, L, 1.1, { fly: 1, angry: 1 }); marich.root.rotation.z = th * u * 3; if (u > 7.7 && Math.random() < .8) ember(mx, my, 0, true); }
       once('ns_a', u >= 5.2, () => { flashV = .8; burst(1230, 110, 0, .12, 110, 130); });
       once('ns_b', u >= 7.9, () => { flashV = .8; burst(1150, 160, 0, .55, 100, 110); });
       once('ns_c', u >= 11.4, () => { flashV = .6; burst(1070, 130, 0, .13, 90, 90); petalRain(900, 1300, 25, 250); });
@@ -1432,14 +1444,62 @@ window.R3 = (function () {
       base.ram.look = -.35; base.ram.talk = u > 3.4 && u < 4.4; base.lak.point = sstep(5, 5.8, u) * (1 - sstep(8, 9, u)); base.lak.angry = sstep(5, 5.8, u);
       once('v3a', u >= 6, () => { flashV = .5; burst(3250, 100, 0, .85, 80, 90); });
     }
-    if (id === 'rekha') {   // the hermit at the hut: Ravan in disguise
-      const hx = u < 3.5 ? lerp(3020, 3150, ease(u / 3.5)) : 3150, rv = sstep(7.6, 8.2, u);
-      rekha.visible = rekhaGlow.visible = false;
-      if (u < 7.9) { rav.root.visible = false; showAt(hermit, hx, 0, 6, YAW, pop(.1, 99, u, 1)); pose(hermit, { ph: hx * Math.PI / STEP, s: u < 3.5 ? .7 : 0, t: Tr, talk: u > 3.6 && u < 7, sad: .7 }); }
-      else { rav.root.visible = true; rav.root.position.set(3150, 0, 0); rav.root.scale.set(1.1 * (.5 + .5 * ease(rv)), 1.1 * (.5 + .5 * ease(rv)), 1.1); rav.root.rotation.y = YAW - .4; pose(rav, { ph: 0, s: 0, t: Tr }); }
-      base.sita.look = -.2; base.sita.sad = .5; base.sita.talk = u > 4 && u < 7;
-      once('i4a', u >= 6.2, () => { flashV = .6; burst(3178, 40, 0, .12, 80, 90); });
-      once('i4b', u >= 7.8, () => { flashV = 1; burst(3150, 140, 0, .78, 140, 150); });
+    if (id === 'lanka1') {   // in golden Lanka, Surpanakha tells Ravan about Ram and Sita (Aranya Kanda 32–35)
+      const sx = wk(5280, 5465, .2, 3), back = sstep(4.6, 5, u) * (1 - sstep(6.8, 7.2, u));   // she runs in, then turns to point back, toward the forest
+      act(surp, sx, 0, 8, back > .5 ? L : R, pop(.2, 99, u, 1.1), { s: spd(.2, 3), talk: u > 3.2 && u < 7.8, angry: 1 - .7 * sstep(8.6, 9.4, u), point: sstep(5, 5.5, u) * (1 - sstep(6.6, 7, u)), cheer: .7 * sstep(10.2, 10.8, u) });
+      if (u < 3 && Math.random() < .6) ember(sx - 20, 90, 8, true);
+      const decide = sstep(9.4, 10, u);
+      rav.root.visible = true; rav.root.position.set(5610, 0, -10); rav.root.scale.setScalar(1.15 * (1 + .1 * decide)); rav.root.rotation.y = L + .1;
+      pose(rav, { ph: 0, s: 0, t: Tr, talk: u > 8 && u < 9.6, angry: decide, point: sstep(9.8, 10.3, u) * (1 - sstep(11.3, 11.8, u)) });
+      rav.heads.forEach((h, i) => { h.rotation.y = lerp(Math.sin(Tr * 1.1 + i) * .18, -.5, sstep(5, 6, u)); });   // all ten heads turn to listen
+      once('lk1', u >= 9.9, () => { flashV = .35; burst(5610, 230, 0, .78, 90, 100); });
+    }
+    if (id === 'maricha') {   // Ravan flies to Maricha's hermitage by the sea, and makes him become a golden deer (Aranya Kanda 35–42)
+      mhut.visible = true; mhut.position.set(4110, 0, -60); mhut.scale.setScalar(.75);
+      rav.heads.forEach((h, i) => { h.rotation.y = Math.sin(Tr * 1.1 + i) * .18; });
+      const fly = ease(sstep(.2, 3.2, u)), go = ease(sstep(12, 14, u)), cx = u < 12 ? lerp(4730, 4360, fly) : lerp(4360, 3780, go), cy = u < 12 ? lerp(190, 10, fly) : lerp(10, 160, go);
+      chariot.visible = true; chariot.position.set(cx, cy, -20); chariot.scale.setScalar(1); chariot.userData.mat.color.setHex(0x8a1a2a); chariot.userData.mat.emissive.setHex(0x400610); chariot.userData.wheels.forEach(w => { w.rotation.z = Tr * 4; });
+      const onCh = u < 3.6 || u > 11.6, wx = u < 8 ? wk(4346, 4290, 3.6, 4.6) : wk(4290, 4346, 10.8, 11.6), big = sstep(7.8, 8.6, u) * (1 - sstep(10, 10.8, u));
+      rav.root.visible = true; rav.root.position.set(onCh ? cx - 14 : wx, onCh ? cy + 18 : 0, -10); rav.root.scale.setScalar(1.1 * (1 + .2 * big)); rav.root.rotation.y = L + .1;
+      pose(rav, { ph: wx * Math.PI / STEP, s: spd(3.6, 4.6, .7) || spd(10.8, 11.6, .7), t: Tr, talk: (u > 4.8 && u < 6.4) || (u > 8.2 && u < 9.4), point: sstep(5, 5.6, u) * (1 - sstep(6.2, 6.8, u)), angry: sstep(7.6, 8.2, u), cheer: sstep(10.4, 11, u) * (1 - sstep(11.6, 12.2, u)) });
+      if (big > .1 && Math.random() < .7) ember(wx + rnd(-40, 40), rnd(60, 220), 0, true);
+      const tf = sstep(9.6, 10.4, u);   // Maricha: praying, then afraid, then he changes into the deer
+      if (u < 10.4) act(marich, 4190, 0, 6, R, 1.1 * (1 - .97 * tf) + .001, { kneel: 1 - sstep(4.6, 5.4, u), join: Math.max(1 - sstep(4.6, 5.4, u), sstep(6.4, 7, u) * (1 - sstep(9, 9.6, u))), talk: u > 6.4 && u < 7.8, sad: sstep(6, 6.6, u) });
+      if (u > 9.4 && u < 10.8) for (let k = 0; k < 3; k++) ember(4190 + rnd(-24, 24), rnd(10, 110), 6, false);
+      once('mr1', u >= 9.8, () => { flashV = .7; burst(4190, 70, 6, .12, 120, 110); });
+      if (u > 9.8) {   // the golden deer, with silver spots, bounds off toward Ram's hut
+        const run = sstep(11, 13.8, u), dx = lerp(4190, 3700, ease(run)), hop = u > 11 ? Math.abs(Math.sin(Tr * 4.2)) * 26 : 0;
+        deer.visible = true; deer.position.set(dx, hop, -6); deer.rotation.y = -Math.PI / 2 + .25; deer.scale.setScalar(.95 * ease(sstep(9.8, 10.8, u)) + .01);
+        deer.legs.forEach((l, i) => { l.rotation.x = u > 11 ? Math.sin(Tr * 8.4 + (i % 2) * 2.4 + (i > 1 ? 1.4 : 0)) * .9 : 0; }); if (Math.random() < .6) ember(dx, 60 + hop, -6, false);
+      }
+    }
+    if (id === 'rekha') {   // Maricha's false cry; Lakshman draws a line of protection around the hut, then goes to help Ram (the Lakshman Rekha of later tellings)
+      rav.root.visible = false;   // Ravan has not come yet
+      once('rk0', u >= .3, () => { flashV = .3; burst(3620, 70, 0, .78, 70, 70); });
+      if (u > .3 && u < 2.8 && Math.random() < .7) parts.push({ x: 3600, y: rnd(70, 120), z: 10, vx: -rnd(130, 190), vy: rnd(-8, 8), vz: 0, life: 2.4, age: 0, hue: .78, r: rnd(1.4, 2.4), drag: .1, g: 0 });   // the cry carries to the hut
+      base.sita.sad = sstep(.6, 1.2, u); base.sita.talk = u > 2.8 && u < 4.6; base.sita.point = sstep(3.2, 3.8, u) * (1 - sstep(4.6, 5.2, u)); base.sita.join = sstep(9.6, 10, u) * (1 - sstep(11.4, 12, u));
+      const lxx = u < 9.6 ? wk(3180, 3152, 4.6, 5.4) : wk(3152, 3480, 9.8, 12.6);
+      lak.root.position.x = lxx; lak.root.rotation.y = R;
+      Object.assign(base.lak, { ph: lxx * Math.PI / STEP + 2.6, s: spd(4.6, 5.4, .5) || spd(9.8, 12.6), talk: (u > 4 && u < 4.8) || (u > 8.2 && u < 9.4), point: sstep(5.5, 6, u) * (1 - sstep(8, 8.4, u)), join: sstep(9, 9.3, u) * (1 - sstep(9.6, 9.9, u)) });
+      const k = ease(sstep(5.8, 8, u)); setRekha(k, 1);
+      if (k > 0 && k < 1) { const [px, pz] = rekPt(k * 6.2832); for (let q = 0; q < 3; q++) ember(px, 3, pz, false); }   // the line draws itself from Lakshman's hand
+      once('rk1', u >= 8, () => { flashV = .25; burst(3250, 10, 0, .1, 60, 50); });
+    }
+    if (id === 'bhiksha') {   // Ravan comes as a holy man; the line flames up and stops him; Sita steps out to give him food
+      lak.root.position.x = 3480; lak.root.rotation.y = R; base.lak.ph = 3480 * Math.PI / STEP + 2.6;   // Lakshman has gone to Ram
+      const flare = sstep(6.1, 6.4, u) * (1 - sstep(7.4, 8.4, u)), out = sstep(9.6, 10.4, u);
+      setRekha(1, (1 + 2 * flare) * (1 - .6 * out));
+      const hx = u < 5.4 ? wk(2980, 3130, 0, 3.4) : u < 6.25 ? wk(3130, 3166, 5.4, 6.2) : wk(3166, 3126, 6.3, 6.9);
+      if (u < 11.2) { act(hermit, hx, 0, 6, R, pop(.1, 99, u, 1), { s: spd(0, 3.4, .7) || spd(5.4, 6.2, .5), talk: (u > 3.6 && u < 5.2) || (u > 7.4 && u < 9), join: Math.max(sstep(3.8, 4.4, u) * (1 - sstep(5.2, 5.6, u)), sstep(7.6, 8, u) * (1 - sstep(9, 9.4, u))), sad: .6 }); }
+      if (flare > .05) for (let q = 0; q < 3; q++) { const [fx2, fz2] = rekPt(rnd(-.9, .9)); flame(fx2, 2, fz2, 1.5 * flare); }
+      once('bk1', u >= 6.2, () => { flashV = .5; burst(3172, 30, 0, .08, 90, 110); });
+      const sxx = wk(3250, 3160, 8.8, 10.6);   // Sita, with a bowl of food, steps over the line
+      base.sitaOverride = { x: sxx, y: 0, face: L, ph: sxx * Math.PI / STEP + 1.4, s: spd(8.8, 10.6, .6), join: 0, look: 0 };
+      pot.visible = u > 8 && u < 11.6; pot.position.set(sxx - 18, 66, 30); pot.scale.setScalar(1.3);
+      if (u >= 11.2) { const rv = sstep(11.2, 11.8, u); rav.root.visible = true; rav.root.position.set(3150, 0, -10); rav.root.scale.set(1.1 * (.5 + .5 * ease(rv)), 1.1 * (.5 + .5 * ease(rv)), 1.1); rav.root.rotation.y = R - .4; pose(rav, { ph: 0, s: 0, t: Tr }); }
+      else rav.root.visible = false;
+      once('bk2', u >= 11.2, () => { flashV = 1; burst(3140, 140, 0, .78, 140, 150); });
+      base.sita.sad = 0;
     }
     if (id === 'sabari') {   // Sabari's berries
       const bx = u < 4 ? lerp(3460, 3640, ease(u / 4)) : 3640, d = sstep(8, 9, u);
@@ -1532,7 +1592,7 @@ window.R3 = (function () {
     const target = H.dir * ((mag || YAW) + (extra || 0));
     let d = target - H.root.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); H.root.rotation.y += d * (1 - Math.exp(-dt * 7));
   }
-  let seaAmp = 1; const fired = {}; let lastTr = -1, flashV = 0, camC = 380;
+  let seaAmp = 1; const fired = {}; let lastTr = -1, flashV = 0, camC = 380, lastIns = -1;
   const once = (k, c, fn) => { if (c && !fired[k]) { fired[k] = 1; fn(); } };
   function resetAll() { for (const k in fired) delete fired[k]; parts = []; pets = []; flashV = 0; }
   const wp = new THREE.Vector3();
@@ -1541,7 +1601,9 @@ window.R3 = (function () {
     const ins = mapT(Tr), T = ins.S, frozen = ins.i >= 0, fz = frozen ? 0 : 1;   // T is story time; during an inserted scene it stands still
     if (Tr < lastTr - .0001) resetAll();
     lastTr = Tr; flashV = Math.max(0, flashV - dt * 1.7);
-    camC += ((frozen && INS[ins.i].fx !== null ? INS[ins.i].fx : follow(T)) - camC) * (1 - Math.exp(-dt * 2.2));
+    const camT = frozen && INS[ins.i].fx !== null ? INS[ins.i].fx : follow(T);
+    if (ins.i !== lastIns && ((ins.i >= 0 && INS[ins.i].cut) || (lastIns >= 0 && INS[lastIns].cut))) camC = camT;   // a cut: jump, while the picture is dark
+    lastIns = ins.i; camC += (camT - camC) * (1 - Math.exp(-dt * 2.2));
     const wide = Math.max(sstep(104, 110, T) * (1 - sstep(124, 128, T)), sstep(134, 140, T) * (1 - sstep(184, 187, T)), sstep(185, 188, T) * (1 - sstep(204, 206, T)));
     spotC = camC + 80; spotH = lerp(950, 1300, wide);
     const rx = ramX(T), vR = fz * vel(ramX, T);
@@ -1651,6 +1713,7 @@ window.R3 = (function () {
     // 6. the golden deer, and the arrow that ends the illusion
     const dv = T >= 66 && T < 77 && !frozen;
     deer.visible = dv;
+    deer.rotation.y = Math.PI / 2 - .25;
     if (dv) { const dx = deerX(T), hop = Math.abs(Math.sin(Tr * 4.2)) * 26; deer.position.set(dx, hop, -26); deer.legs.forEach((l, i) => { l.rotation.x = Math.sin(Tr * 8.4 + (i % 2) * 2.4 + (i > 1 ? 1.4 : 0)) * .9; }); deer.scale.setScalar(.85 + sstep(66, 68, T) * .15); if (Math.random() < .6) ember(dx, 60 + hop, -26, false); }
     once('deerhit', T >= 76.9, () => { flashV = .6; burst(3640, 70, 0, .12, 110, 120); });
 
@@ -1724,7 +1787,7 @@ window.R3 = (function () {
     // the sage who guides the princes, and the inserted scenes
     const sv = T >= 10 && T < 26; sage.root.visible = sv;
     if (sv) { const sxx = ramX(T) + 130, vs = fz * vel(ramX, T); sage.root.position.set(sxx, 0, 4); if (!frozen) turn(sage, vs, dt); sage.root.scale.setScalar(.2 + .8 * ease(sstep(10, 11.2, T)) * (1 - sstep(24.4, 26, T) * .97)); pose(sage, { ph: sxx * Math.PI / STEP, s: clamp(Math.abs(vs) / SPDN), t: Tr }); }
-    if (!(frozen && INS[ins.i].id === 'rekha')) { const rv = false; rekha.visible = rekhaGlow.visible = rv; if (rv) { const rs = ease(sstep(77.2, 78.8, T)) * (1 - sstep(84.5, 86, T)) + .001; rekha.scale.setScalar(rs); rekhaGlow.scale.setScalar(rs); rekha.material.color.setRGB(1, .63, .19); rekhaGlow.material.opacity = .25; } }
+    { const fade = T > 81 && T < 83 && !frozen ? 1 - sstep(81.2, 82.8, T) : 0; setRekha(fade > 0 ? 1 : 0, .4 * fade); }   // Lakshman's line (the inserted scenes draw it), fading after Sita steps out
     insertActors(ins, Tr, rx, base);
     if (!ram.root.visible) bow.visible = false; else if (bow.visible && !bowOn) { bow.position.x = ram.root.position.x - 22; bow.position.y = ram.root.position.y + 112; }
     if (frozen) {   // re-pose the main cast for the inserted scene (kneeling, pointing, fallen, seated)

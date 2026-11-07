@@ -84,7 +84,7 @@ New looks: real flames that change colour as they rise, soft ground mist, a ligh
 ### Following Valmiki's Ramayana
 The story was checked against Valmiki's Ramayana (from memory of the text, not line by line, so please check it against a translation):
 the birth comes from Dasharatha's fire ritual (not a lotus); Ahalya lives unseen in penance (not turned to stone); Janaka gives Sita to Ram (no garland contest);
-Ram, Lakshman and Sita wear bark robes in exile; there is no protective line round the hut; Lakshman wounds Surpanakha; Ravan comes as a hermit;
+Ram, Lakshman and Sita wear bark robes in exile; the protective line round the hut (the Lakshman Rekha) is not in Valmiki's text but comes from later tellings, and is included because children know it; Lakshman wounds Surpanakha; Ravan comes as a hermit;
 the bridge is built by Nala (no squirrel, no Ram-name stones); Angada leaps to the palace roof with four demons (no planted foot);
 Ram is crowned by Vasishtha. The Diwali lamps are marked in the captions as a later tradition.
 
@@ -122,9 +122,15 @@ To use a real narrator instead, record one audio file per caption and replace th
 
 ### Made for children (ages 2 to 8)
 - **Words:** every caption was rewritten in short sentences and simple words, keeping the same Valmiki story. Fighting is told gently ("defeated", "stopped"); there are no words like "kill", "blood" or "devour" on screen.
-- **Picture, words and voice together:** each caption appears as the narrator starts reading it, its words light up as they are spoken, the lesson appears as it is said, and the story moves on shortly after the voice finishes (times measured from the narration by `tools/narration-texts.js` and `tools/narration-times.py` into `wall/src/narration-times.js`). When a caption needs more time than its scene, the scene plays more slowly or the story pauses. The book headings are shown, not read. When a caption needs longer than its scene, the scene plays more slowly; between scenes, the story pauses with everyone standing still until the text has been read. The loop, with the opening and the ending, is about 28 minutes.
+- **Picture, words and voice together:** each caption appears as the narrator starts reading it, its words light up as they are spoken, the lesson appears as it is said, and the story moves on shortly after the voice finishes (times measured from the narration by `tools/narration-texts.js` and `tools/narration-times.py` into `wall/src/narration-times.js`). When a caption needs more time than its scene, the scene plays more slowly or the story pauses. The book headings are shown, not read. When a caption needs longer than its scene, the scene plays more slowly; between scenes, the story pauses with everyone standing still until the text has been read. The loop, with the opening and the ending, is about 30 minutes.
 - **Pictures:** no blood-red bursts (hits make golden sparkles); Ravan's heads melt into golden light and grow back, instead of flying off; the demons' magic in the hermitage is purple sparks.
 - **Light and sound:** no strobing. The opening flip-book turns at most about three pages a second with no white flashes, the red flash is softer, lightning is rare, and the boom in the opening is quieter.
+
+### Round eight: how Ravan heard of Sita, the golden deer plan, and the Lakshman Rekha
+- **Surpanakha in Lanka (Aranya Kanda 32–35):** she runs to Ravan's golden court and tells him about Ram and Sita; all ten heads turn to listen. Ravan wants Sita, but knows he cannot beat Ram in a fair fight, so he makes a trick plan.
+- **Maricha and the golden deer (Aranya Kanda 35–42):** Ravan flies in his chariot to Maricha's hermitage by the sea. Maricha, the demon Ram once blew far over the sea (the same Maricha as in the Siddhashrama scene), is afraid of Ram and says no, but Ravan forces him. Maricha turns into a golden deer with silver spots and bounds off toward Ram's hut, with Ravan's chariot following.
+- **The Lakshman Rekha (from later tellings):** after Maricha's false cry, Lakshman draws a glowing line around the hut and asks Sita to stay inside it. Ravan comes as a holy man; when he steps on the line it bursts into flames and stops him, so he asks Sita to come out, and kind Sita steps over the line to give him food. Then he shows his true form.
+- **Full-screen layout:** the picture and the text right below it sit together in the middle of the screen, so nothing is cut off at the bottom.
 
 ### The ending
 After the story: why we light lamps on Diwali, what the Ramayana teaches us, the ten avatars of Vishnu (each with its picture and one line), the Ram Mandir in Ayodhya and Ram Lalla, and "Jai Shri Ram". The text stays up long enough for young readers, and the narrator reads it.
