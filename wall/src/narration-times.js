@@ -1,6 +1,8 @@
 // How long the narrator takes to say each line, in seconds (made by tools/narration-times.py).
 window.NARR_TIMES = {
-"Long ago, Ravan, king of Lanka, prayed to the god Brahma for a very long time. Brahma gave him a gift: no god or demon could ever defeat him. But proud Ravan forgot about humans.": 16.63,
+"Long, long ago, the wise sage Vishrava had a son who was born with ten heads! So he was named Dashagriva, which means 'the one with ten heads'. He grew up very clever and very strong. We know him as Ravan, king of golden Lanka.": 20.36,
+"Being kind matters more than being strong": 3.43,
+"Ravan wanted to be the strongest of all. He prayed to the god Brahma for thousands of years, and gave his heads to the holy fire, one by one. Before the last one, Brahma appeared, gave all his heads back, and gave him a gift: no god or demon could ever defeat him. But proud Ravan forgot about humans.": 25.65,
 "Being proud can make us careless": 2.9,
 "Ravan became a bully to the gods, the sages and the whole world. They asked the god Vishnu for help. Vishnu promised to be born on Earth as Ram, son of King Dasharatha.": 14.58,
 "Long before, young Prince Dasharatha went hunting at night. By mistake, his arrow hit Shravana, a boy fetching water for his blind parents. In sorrow they said: 'One day you too will miss your son.'": 16.72,

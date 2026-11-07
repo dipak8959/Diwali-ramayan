@@ -20,7 +20,7 @@ VERSION = 'v2'          # change this to make the cache say every line again
 HI = {
     'Aditya Hridayam': 'आदित्य हृदयम्', 'Agastya': 'अगस्त्य', 'Agni': 'अग्नि', 'Ahalya': '/ʌhˈʌljaː', 'Angada': 'अंगद', 'Arjuna': 'अर्जुन',
     'Ayodhya': 'अयोध्या', 'Balarama': 'बलराम', 'Bharata': 'भरत', 'Brahma': 'ब्रह्मा', 'Chitrakoot': 'चित्रकूट', 'Dandaka': 'दंडक',
-    'Dasharatha': 'दशरथ', 'Dashavatara': 'दशावतार', 'Deepotsav': 'दीपोत्सव', 'Diwali': 'दीवाली', 'Dushana': 'दूषण',
+    'Dasharatha': 'दशरथ', 'Dashagriva': 'दशग्रीव', 'Vishrava': 'विश्रवा', 'Dashavatara': 'दशावतार', 'Deepotsav': 'दीपोत्सव', 'Diwali': 'दीवाली', 'Dushana': 'दूषण',
     'Ganga': 'गंगा', 'Garuda': 'गरुड', 'Godavari': 'गोदावरी', 'Guha': 'गुह', 'Hanuman': 'हनुमान', 'Himalaya': 'हिमालय',
     'Himalayas': 'हिमालय+z', 'Indra': 'इंद्र', 'Indrajit': 'इंद्रजीत', 'Jai': 'जय', 'Janaka': 'जनक', 'Jatayu': 'जटायु',
     'Kabandha': 'कबंध', 'Kaikeyi': 'कैकेयी', 'Kalki': 'कल्कि', 'Kanda': 'कांड', 'Kausalya': 'कौसल्या', 'Khara': 'खर',

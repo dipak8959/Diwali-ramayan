@@ -308,7 +308,7 @@ window.R3 = (function () {
     if (o.victory) { const v = o.victory; for (const i of [0, 1]) { H.arms[i].rotation.x = lerp(H.arms[i].rotation.x, -2.8, v); H.arms[i].userData.el.rotation.x = lerp(H.arms[i].userData.el.rotation.x, -.25, v); } }
   }
 
-  // Ravan: the same figure, larger, with ten heads and six arms
+  // Ravan: the same figure, larger, with ten heads and two arms
   function makeRavan() {
     const H = makeHuman('ravan', { headScale: 1.0 }); const sp = SPEC.ravan, root = H.root, torso = H.torso;
     root.scale.setScalar(1.1);
@@ -321,22 +321,7 @@ window.R3 = (function () {
       torso.add(h); heads.push(h);
     }
     H.heads = heads;
-    // twenty arms in all: the two ordinary ones plus nine more on each side, fanned behind the shoulders like wings, each with a weapon
-    H.xarms = [];
-    const steel = std(0xe8eef5, { metalness: .9, roughness: .2, emissive: 0x334455 }), wood = std(0x5a3a1a, { roughness: .8 });
-    const WEAP = [
-      (el) => { mesh(new THREE.BoxGeometry(2.4, 38, .8), steel, 0, -46, 4, el); mesh(new THREE.BoxGeometry(9, 1.8, 2.4), GOLD, 0, -27, 4, el); },                                        // sword
-      (el) => { mesh(new THREE.CylinderGeometry(1.2, 1.2, 34, 6), wood, 0, -34, 4, el); mesh(G.sph, GOLD, 0, -52, 4, el).scale.setScalar(6.5); },                                       // mace
-      (el) => { mesh(new THREE.CylinderGeometry(.9, .9, 52, 6), wood, 0, -28, 4, el); for (const dx of [-4, 0, 4]) { const t = mesh(new THREE.ConeGeometry(1.2, 10, 5), steel, dx, -58, 4, el); t.rotation.z = Math.PI; } mesh(new THREE.BoxGeometry(10, 1.4, 1.4), steel, 0, -53, 4, el); },   // trident
-      (el) => { const d = mesh(new THREE.TorusGeometry(7, 1.6, 6, 18), steel, 0, -32, 4, el); d.rotation.y = Math.PI / 2; },                                                            // discus
-      (el) => { const sh = mesh(new THREE.CylinderGeometry(9, 9, 1.6, 18), std(0x8a1a1a, { metalness: .4, roughness: .4 }), 0, -26, 6, el); sh.rotation.x = Math.PI / 2; mesh(G.sphLow, GOLD, 0, -26, 7.4, el).scale.setScalar(2.4); },   // shield
-      (el) => { mesh(new THREE.CylinderGeometry(.8, .8, 50, 6), wood, 0, -26, 4, el); const t = mesh(new THREE.ConeGeometry(2, 10, 6), steel, 0, -55, 4, el); t.rotation.z = Math.PI; },  // spear
-      (el) => { mesh(new THREE.CylinderGeometry(1, 1, 34, 6), wood, 0, -30, 4, el); mesh(new THREE.BoxGeometry(2, 12, 14), steel, 0, -44, 10, el); },                                 // axe
-    ];
-    for (const s of [1, -1]) for (let i = 0; i < 9; i++) {
-      const a = makeArm(sp, s, true), f = i / 8; a.position.set(s * (13 + f * 3), 30 + Math.sin(f * Math.PI) * 6, -3 - i * 1.7); a.rotation.z = s * (.45 + f * 1.75); a.rotation.x = -.25 - f * .15;
-      a.userData.el.rotation.x = -.35 - .25 * Math.sin(f * 5); a.userData.rx = a.rotation.x; torso.add(a); H.xarms.push(a); WEAP[(i + (s > 0 ? 0 : 3)) % WEAP.length](a.userData.el);
-    }
+    H.xarms = [];   // two arms, like everyone else: Valmiki mostly calls him the ten-headed one, and two arms are gentler for small children
     heads.forEach(h => { h.userData.base = h.position.clone(); h.userData.bs = h.scale.x; h.userData.bz = h.rotation.z; });
     H.root.userData.eyeLights = []; return H;
   }
@@ -880,7 +865,8 @@ window.R3 = (function () {
   // Each insert freezes the main story at story time s0 and plays for n seconds, so the long walk is never rushed.
   const INS = [
     // ---- before Ram's birth: the dots that explain everything that follows ----
-    { id: 'ravan_boon', s0: 0, n: 14, fx: 430, cap: "Long ago, Ravan, king of Lanka, prayed to the god Brahma for a very long time. Brahma gave him a gift: no god or demon could ever defeat him. But proud Ravan forgot about humans.", moral: 'Being proud can make us careless' },
+    { id: 'ravanborn', s0: 0, n: 12, fx: 5500, cut: true, cap: "Long, long ago, the wise sage Vishrava had a son who was born with ten heads! So he was named Dashagriva, which means 'the one with ten heads'. He grew up very clever and very strong. We know him as Ravan, king of golden Lanka.", moral: 'Being kind matters more than being strong' },
+    { id: 'ravan_boon', s0: 0, n: 14, fx: 430, cap: "Ravan wanted to be the strongest of all. He prayed to the god Brahma for thousands of years, and gave his heads to the holy fire, one by one. Before the last one, Brahma appeared, gave all his heads back, and gave him a gift: no god or demon could ever defeat him. But proud Ravan forgot about humans.", moral: 'Being proud can make us careless' },
     { id: 'gods', s0: 0, n: 12, fx: 520, cap: "Ravan became a bully to the gods, the sages and the whole world. They asked the god Vishnu for help. Vishnu promised to be born on Earth as Ram, son of King Dasharatha.", moral: '' },
     { id: 'curse', s0: 0, n: 14, fx: 560, cap: "Long before, young Prince Dasharatha went hunting at night. By mistake, his arrow hit Shravana, a boy fetching water for his blind parents. In sorrow they said: 'One day you too will miss your son.'", moral: 'Think before you act' },
     { id: 'kboon', s0: 0, n: 12, fx: 480, cap: "In a great battle, Dasharatha was hurt. His brave queen Kaikeyi drove him to safety and saved his life. To thank her, he promised her two wishes, whenever she asked.", moral: 'Kindness is never forgotten' },
@@ -990,7 +976,7 @@ window.R3 = (function () {
   // the seven books (kandas) of Valmiki's Ramayana, shown as a running heading over the story text
   const KANDA = [['PROLOGUE', 'THE BOON AND THE PROMISE', ''], ['BOOK ONE', 'BALA KANDA', 'CHILDHOOD'], ['BOOK TWO', 'AYODHYA KANDA', 'THE EXILE'], ['BOOK THREE', 'ARANYA KANDA', 'THE FOREST'],
     ['BOOK FOUR', 'KISHKINDHA KANDA', 'THE MONKEY KINGDOM'], ['BOOK FIVE', 'SUNDARA KANDA', "HANUMAN'S JOURNEY"], ['BOOK SIX', 'YUDDHA KANDA', 'THE WAR'], ['EPILOGUE', 'THE FESTIVAL OF LIGHTS', '']];
-  const PRO = { ravan_boon: 1, gods: 1, curse: 1, kboon: 1 };
+  const PRO = { ravanborn: 1, ravan_boon: 1, gods: 1, curse: 1, kboon: 1 };
   function kandaOf(m) {
     const id = m.i >= 0 ? INS[m.i].id : '', S = m.i >= 0 ? INS[m.i].s0 : m.S;
     if (PRO[id]) return 0; if (id === 'parashu') return 1; if (id === 'sabari') return 3; if (id === 'darbar') return 6;
@@ -1268,6 +1254,15 @@ window.R3 = (function () {
       once('nbm_a', u >= 5.6, () => { flashV = .6; burst(rx + 10, 20, 14, .12, 70, 70); });
       once('nbm_b', u >= 7.4, () => { petalRain(rx - 200, rx + 300, 40, 260); });
     }
+    if (id === 'ravanborn') {   // Ravan is born with ten heads, and grows up to be king of golden Lanka (Valmiki, Uttara Kanda 9)
+      const born = ease(sstep(.3, 1.3, u)), grow = ease(sstep(3.6, 8, u)), sc = 1.15 * (.32 + .68 * grow) * (.2 + .8 * born);
+      rav.root.visible = true; rav.root.position.set(5560, 0, -10); rav.root.scale.setScalar(sc); rav.root.rotation.set(0, -.35, 0);
+      pose(rav, { ph: 0, s: 0, t: Tr, cheer: sstep(8.6, 9.2, u) * (1 - sstep(10.4, 11, u)), talk: u > 9.4 && u < 11 });
+      const baby = 1 - grow; rav.heads.forEach((h, i) => { h.rotation.y = Math.sin(Tr * (1.1 + 1.6 * baby) + i) * (.18 + .2 * baby); });   // the baby's ten heads look around
+      once('rb0', u >= .3, () => { flashV = .6; burst(5560, 60, 0, .1, 110, 90); });
+      if (u > 3.6 && u < 8) for (let k = 0; k < 2; k++) ember(5560 + rnd(-40, 40), rnd(10, 40 + 200 * grow), 0, false);
+      once('rb1', u >= 8.6, () => { flashV = .4; burst(5560, 220, 0, .12, 90, 110); });
+    }
     if (id === 'ravan_boon') {   // Ravan offers his heads to the fire; Brahma restores them (Valmiki, Uttara Kanda)
       fire(400, .2, 12.8, 1.5);
       const rs = 1.1 * (.2 + .8 * ease(sstep(.2, 1.4, u)));
@@ -1396,7 +1391,7 @@ window.R3 = (function () {
       ram.root.position.y = 26 + 190 * ds; matali.root.position.y = 26 + 190 * ds;
       matali.root.visible = true; pose(matali, { ph: 0, s: 0, t: Tr, point: .6, talk: u > 12.8 && u < 15.4 });
       rav.root.visible = true; rav.root.position.set(5560, 0, -10); rav.root.scale.set(1.1, 1.1, 1.1); rav.root.rotation.y = -(YAW - .1);
-      const cuts = [[3.6, 5.8, [1, 2, 3], []], [6.0, 8.2, [], [0, 1, 2, 3, 4, 5, 6, 7, 8]], [8.6, 10.8, [4, 5, 6, 7, 8, 9], [9, 10, 11, 12, 13, 14, 15, 16, 17]], [11.2, 13.6, [0], []]];
+      const cuts = [[3.6, 5.8, [1, 2, 3], []], [6.0, 8.2, [4, 5], []], [8.6, 10.8, [6, 7, 8, 9], []], [11.2, 13.6, [0], []]];
       const lastCut = u > 3.6;
       pose(rav, { ph: 0, s: 0, t: Tr, angry: 1, talk: (u > 3.6 && u < 4.4) || (u > 6 && u < 6.8) || (u > 8.6 && u < 9.4) || (u > 11.2 && u < 12) });
       rav.heads.forEach((h, i) => { h.rotation.y = Math.sin(Tr * 1.1 + i) * .18; });
@@ -1738,7 +1733,7 @@ window.R3 = (function () {
     rav.root.rotation.z = -1.45 * rfall;
     rav.heads.forEach(h => { const d = h.userData; h.visible = true; h.position.copy(d.base); h.scale.setScalar(d.bs); h.rotation.z = d.bz; }); rav.xarms.forEach(a => { a.visible = true; a.scale.setScalar(1); if (!(frozen && INS[ins.i].id === 'headcut')) a.rotation.x = a.userData.rx + Math.sin(Tr * 1.6 + a.id) * .05; });
     { const cp = rav.heads[0].userData.crownParts; if (cp) cp.forEach(m => { m.visible = T < 138; }); }
-    once('abduct', T >= 81, () => { flashV = 1; burst(3150, 110, 10, .78, 120, 130); });
+    once('abduct', T >= 82.4, () => { flashV = 1; burst(3150, 110, 10, .78, 120, 130); });
     const cv = (T >= 82.5 && T < 92) || (T >= 182 && T < 213);
     chariot.visible = cv;
     if (cv) {
