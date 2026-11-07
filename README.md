@@ -123,3 +123,8 @@ To use a real narrator instead, record one audio file per caption and replace th
 - **Time to read:** each caption stays up long enough for a slow young reader (about 1¼ words a second, plus 4 seconds to think about it; the same for each lesson). When a caption needs longer than its scene, the scene plays more slowly; between scenes, the story pauses with everyone standing still until the text has been read. Words appear at a gentle pace and the narrator reads more slowly. The loop is now about 37 minutes.
 - **Pictures:** no blood-red bursts (hits make golden sparkles); Ravan's heads melt into golden light and grow back, instead of flying off; the demons' magic in the hermitage is purple sparks.
 - **Light and sound:** no strobing. The opening flip-book turns at most about three pages a second with no white flashes, the red flash is softer, lightning is rare, and the boom in the opening is quieter.
+
+### The ending
+After the story: why we light lamps on Diwali, what the Ramayana teaches us, the ten avatars of Vishnu (each with its picture and one line), the Ram Mandir in Ayodhya and Ram Lalla, and "Jai Shri Ram". The text stays up long enough for young readers, and the narrator reads it.
+
+**Real photos of the Ram Mandir and Ram Lalla:** put two photos in `wall/photos/` named `ram-mandir.jpg` and `ram-lalla.jpg`, with their credit lines in `wall/photos/credits.json` (for example `{"ram-mandir.jpg": "Your Name", "ram-lalla.jpg": "Name, CC BY-SA 4.0, Wikimedia Commons"}`), then run `python3 tools/make-photos.py` and `python3 tools/bundle-wall.py`. Use photos you took yourself or freely licensed ones, and keep the credit; it is shown under the photo. Until then the ending shows a drawn temple and a glowing lotus.

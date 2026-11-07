@@ -1849,15 +1849,22 @@ window.R3 = (function () {
     const shear = new THREE.Matrix4().set(1, 0, kx, kx * 3000, 0, 1, ky, ky * 3000, 0, 0, 1, 0, 0, 0, 0, 1);
     camera.projectionMatrix.multiply(shear); camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
   }
-  function render() { if (inIntro) return renderIntro(); drawParts(); composer.render(); return canvas; }
+  function render() { if (inIntro) return renderIntro(); if (inOutro) return renderOutro(); drawParts(); composer.render(); return canvas; }
+  function renderOutro() {
+    if (outroCanvas.width !== vw || outroCanvas.height !== vh) { outroCanvas.width = vw; outroCanvas.height = vh; }
+    let st = null; try { st = avatarStills(); } catch (e) { st = null; }
+    octx.setTransform(1, 0, 0, 1, 0, 0); VishnuOutro.drawBand(octx, vw, vh, outroT, viewStretch, st); return outroCanvas;
+  }
   // ---------- the opening titles (intro.js), before the story ----------
   const INTRO = window.VishnuIntro ? VishnuIntro.DUR : 0, introCanvas = document.createElement('canvas'), ictx = introCanvas.getContext('2d');
-  let inIntro = false, introT = 0, viewStretch = 1;
+  let inIntro = false, introT = 0, viewStretch = 1, inOutro = false, outroT = 0;
+  const OUTRO = window.VishnuOutro ? VishnuOutro.DUR : 0, outroCanvas = document.createElement('canvas'), octx = outroCanvas.getContext('2d');
   function renderIntro() {
     if (introCanvas.width !== vw || introCanvas.height !== vh) { introCanvas.width = vw; introCanvas.height = vh; }
     ictx.setTransform(1, 0, 0, 1, 0, 0); VishnuIntro.drawBand(ictx, vw, vh, introT, viewStretch); return introCanvas;
   }
-  function update(Tr, dt) { inIntro = Tr < INTRO; if (inIntro) { introT = Tr; return; } updateStory(Tr - INTRO, dt); }
-  function caption(Tr) { return Tr < INTRO ? { en: '', moral: '', a: 0, am: 0, age: 0, intro: Tr, kanda: null } : captionAt(Tr - INTRO); }
-  return { canvas, setView, update, render, LOOP: TOTAL * SLOW + INTRO, INTRO, WORLD, ramX, sitaX, lakX, hanPos, follow: () => camC, caption, avatarStills, chapters: [0].concat(chapters.map(x => x + INTRO)), bloom };
+  const STORY_END = () => INTRO + TOTAL * SLOW;
+  function update(Tr, dt) { inIntro = Tr < INTRO; inOutro = !inIntro && OUTRO > 0 && Tr >= STORY_END(); if (inIntro) { introT = Tr; return; } if (inOutro) { outroT = Tr - STORY_END(); return; } updateStory(Tr - INTRO, dt); }
+  function caption(Tr) { if (Tr < INTRO) return { en: '', moral: '', a: 0, am: 0, age: 0, intro: Tr, kanda: null }; if (OUTRO > 0 && Tr >= STORY_END()) return VishnuOutro.caption(Tr - STORY_END()); return captionAt(Tr - INTRO); }
+  return { canvas, setView, update, render, LOOP: TOTAL * SLOW + INTRO + OUTRO, INTRO, OUTRO, STORY_END: INTRO + TOTAL * SLOW, WORLD, ramX, sitaX, lakX, hanPos, follow: () => camC, caption, avatarStills, chapters: [0].concat(chapters.map(x => x + INTRO)), bloom };
 })();

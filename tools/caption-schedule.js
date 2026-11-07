@@ -11,6 +11,7 @@ const { chromium } = require('playwright'); const fs = require('fs');
       if (on && (!cur || cur.en !== c.en)) { if (cur) cur.end = t; cur = { type: 'cap', t, en: c.en, moral: c.moral }; ev.push(cur); curM = false; }
       if (!on && cur) { cur.end = t; cur = null; }
       if (c.moral && c.am > .05 && !curM && cur) { ev.push({ type: 'moral', t, en: c.moral }); curM = true; }
+      if (c.final !== undefined && !ev.some(e => e.type === 'final')) ev.push({ type: 'final', t });
       if (!c.kanda) continue; const kk = c.kanda.book + c.kanda.name; if (kk !== curK) { ev.push({ type: 'kanda', t, en: c.kanda.book + '. ' + c.kanda.name + (c.kanda.sub ? '. ' + c.kanda.sub : '') }); curK = kk; }
     }
     if (cur) cur.end = R3.LOOP; return { loop: R3.LOOP, intro: R3.INTRO || 0, ev };

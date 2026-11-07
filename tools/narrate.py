@@ -25,7 +25,7 @@ SAY = {
     'Mandodari': 'Mundodari', 'Agastya': 'Ugustya', 'Indrajit': 'Indrajeet', 'Kishkindha': 'Kishkindha', 'Ayodhya': 'Ayodhya', 'Sumantra': 'Sumuntra',
     'Chitrakoot': 'Chitrakoot', 'Ganga': 'Gunga', 'Guha': 'Guh', 'Ahalya': 'Uhulya', 'Mithila': 'Mithila', 'Lanka': 'Lunka', 'Shiva': 'Shiv',
     'Brahma': 'Brumha', 'Vishnu': 'Vishnu', 'Agni': 'Ugni', 'Kanda': 'Kaand', 'Bala': 'Baal', 'Aranya': 'Arunya', 'Sundara': 'Sundar', 'Yuddha': 'Yuddh',
-    'yakshini': 'yukshini', 'Panchavati': 'Panchavati', 'Godavari': 'Godaavari', 'Khara': 'Khur', 'Dushana': 'Dooshun', 'Samudra': 'Samudra',
+    'yakshini': 'yukshini', 'Prahlada': 'Prahlaad', 'Arjuna': 'Arjun', 'Mahabharata': 'Mahaabhaarat', 'Matsya': 'Matsya', 'Kurma': 'Koorma', 'Varaha': 'Varaaha', 'Narasimha': 'Nurasimha', 'Vamana': 'Vaamana', 'Kalki': 'Kulki', 'Balarama': 'Bulraam', 'Rama': 'Raama', 'Lalla': 'Lulla', 'Mandir': 'Mundir', 'Shri': 'Shree', 'diyas': 'deeyas', 'Panchavati': 'Panchavati', 'Godavari': 'Godaavari', 'Khara': 'Khur', 'Dushana': 'Dooshun', 'Samudra': 'Samudra',
 }
 def speakable(t):
     t = t.replace('’', "'").replace('—', ', ')
@@ -82,6 +82,7 @@ def main():
         said.add(e['en'])
         if e['type'] == 'kanda': text, speed, want = heading(e['en']), .82, e['t'] + .15
         elif e['type'] == 'cap': text, speed, want = speakable(e['en']), .86, e['t'] + .45
+        elif e['type'] == 'final': text, speed, want = speakable('Jai Shri Ram! Happy Diwali!'), .8, e['t'] + .8
         else: text, speed, want = speakable(e['en']), .84, e['t'] + .3
         nxt = next((c['t'] for c in caps if c['t'] > e['t'] + .01), loop)
         start = max(want, busy + (.35 if e['type'] == 'moral' else .5))
@@ -92,6 +93,7 @@ def main():
             for sp in (.95, 1.0, 1.06, 1.12):
                 if start + dur + md <= nxt + (1.6 if m else .8): break
                 s, sr = say(text, sp); dur = len(s) / sr
+        if e['type'] == 'moral' and e['en'].startswith('Photo: '): continue   # photo credits are shown, not read
         if e['type'] == 'moral' and start + dur > nxt + 1.6: report.append(('skipped lesson', round(e['t'], 1), e['en'])); continue
         if e['type'] == 'kanda' and start + dur > nxt + 2.5: continue
         i0 = int(start * SR); seg = s[: max(0, min(len(s), len(track) - i0))]; track[i0:i0 + len(seg)] += seg; busy = start + dur
