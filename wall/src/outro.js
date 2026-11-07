@@ -2,7 +2,7 @@
 // the Ram Mandir in Ayodhya and Ram Lalla (real photos, if they are in wall/photos/), and Jai Shri Ram.
 // Each card stays up as long as a slow young reader needs (the same rule as the story's captions).
 window.VishnuOutro = (function () {
-  const RATE = 1.25, readT = (t) => (t ? t.split(/\s+/).length / RATE + 4 : 0);
+  const NT = window.NARR_TIMES || {}, wc = (t) => (t ? t.split(/\s+/).length : 0), speak = (t) => (t ? NT[t] || wc(t) / 2.3 : 0), readT = (t) => (t ? .6 + speak(t) + 1.2 : 0);   // timed by the narrator's voice
   const AV = [
     ['Matsya, the fish', 'saved the good king Manu and all living things from a great flood.'],
     ['Kurma, the tortoise', 'held up the mountain on his back when the gods and demons churned the ocean.'],
@@ -37,7 +37,7 @@ window.VishnuOutro = (function () {
     const c = at(t), u = t - c.t0, a = ss(0, .9, u) * (1 - ss(c.dur - .9, c.dur, u)), ph = P();
     const credit = c.credit && ph[c.credit] ? 'Photo: ' + ph[c.credit].credit : '';
     const kSeg = CARDS.filter(x => x.h === c.h), k0 = kSeg.length ? kSeg[0].t0 : 0, k1 = kSeg.length ? kSeg[kSeg.length - 1].t0 + kSeg[kSeg.length - 1].dur : 0;
-    return { en: c.en, moral: credit, a, am: credit ? a : 0, age: u, kanda: c.h ? Object.assign({ age: t - k0, a: ss(k0, k0 + 1.2, t) * (1 - ss(k1 - 1, k1, t)) }, c.h) : null, final: c.k === 'final' ? u : undefined };
+    return { en: c.en, moral: credit, a, am: credit ? a : 0, age: u, rate: c.en ? wc(c.en) / speak(c.en) : 3, kanda: c.h ? Object.assign({ age: t - k0, a: ss(k0, k0 + 1.2, t) * (1 - ss(k1 - 1, k1, t)) }, c.h) : null, final: c.k === 'final' ? u : undefined };
   }
   // ---- drawing ----
   function diyas(c, w, H, t, n, y, scale, alpha) {   // a row of clay lamps with flickering flames

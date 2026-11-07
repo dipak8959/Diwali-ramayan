@@ -951,16 +951,19 @@ window.R3 = (function () {
     [213, 225, "Happy Diwali! Be a light in someone's life.", 'Be the light', 218],
   ];
   // ---------- time to read: every caption stays up long enough for a young child to read it, and to think about it ----------
-  const RATE = 1.25, wc = (t) => (t ? t.split(/\s+/).length : 0), readT = (t) => wc(t) / RATE + 4, moralT = (t) => (t ? wc(t) / RATE + 4 : 0);   // seconds: a slow young reader, then a few seconds to think about it
+  const NT = window.NARR_TIMES || {}, wc = (t) => (t ? t.split(/\s+/).length : 0), speak = (t) => (t ? NT[t] || wc(t) / 2.3 : 0);   // how long the narrator takes to say a line
+  const VOICE_IN = .6, AFTER = 1.2;   // the voice starts this long after its text appears; a short pause after it finishes
+  const readT = (t) => VOICE_IN + speak(t) + AFTER, moralT = (t) => (t ? .35 + speak(t) + AFTER : 0), moralAt = (t) => (VOICE_IN + speak(t) + .35) / SLOW;   // seconds (moralAt: story time)
   INS.forEach(a => {   // a scene plays slower (its own animation stretched) when its text needs more time than the scene
-    a.n0 = a.n; a.mAt = Math.max(a.n0 * .55, readT(a.cap) / SLOW + .9);
-    a.n = Math.max(a.n0, readT(a.cap) / SLOW + 1.8, a.moral ? a.mAt + moralT(a.moral) / SLOW + .9 : 0);
+    a.n0 = a.n; a.mAt = moralAt(a.cap);   // the lesson appears as the narrator finishes the caption
+    a.n = Math.max(a.n0, readT(a.cap) / SLOW + .9, a.moral ? a.mAt + moralT(a.moral) / SLOW + .9 : 0);
   });
   for (const [A, B, en, moral, ms] of CAP) {   // the story pauses (everyone stands still) while a long caption is read
     const cuts = [A, ...INS.map(q => q.s0).filter(x => x > A + .01 && x < B - .01), B].sort((x, y) => x - y); let best = 0, bi = 0;
     for (let q = 0; q < cuts.length - 1; q++) if (cuts[q + 1] - cuts[q] > best) { best = cuts[q + 1] - cuts[q]; bi = q; }
-    const need = readT(en) / SLOW + 1.8 + (moral ? moralT(moral) / SLOW : 0);
-    if (need > best + .2) INS.push({ id: 'hold', s0: Math.max(cuts[bi] + .95, cuts[bi + 1] - .95), n: need - best, n0: need - best, fx: null, cap: '', moral: '' });
+    const need = readT(en) / SLOW + 1.8 + (moral ? moralT(moral) / SLOW : 0);   // the voice, and the text, must fit in this piece of the window
+    if (best < 2.2 && need > best + .2) INS.push({ id: 'hold', own: true, s0: (cuts[bi] + cuts[bi + 1]) / 2, n: need, n0: need, fx: null, cap: '', moral: '' });   // a short gap between scenes: the caption is shown only in its own pause
+    else if (need > best + .2) INS.push({ id: 'hold', s0: Math.max(cuts[bi] + .95, cuts[bi + 1] - .95), n: need - best, n0: need - best, fx: null, cap: '', moral: '' });
   }
   INS.sort((x, y) => x.s0 - y.s0);
   let accIns = 0; INS.forEach(a => { a.t0 = a.s0 + accIns; accIns += a.n; });
@@ -988,14 +991,14 @@ window.R3 = (function () {
     const kanda = { book: K0[0], name: K0[1], sub: K0[2], age: Tr - seg[1], a: sstep(seg[1], seg[1] + 1.4, Tr) * (1 - sstep(seg[2] - 1.2, seg[2], Tr)) };
     if (m.i >= 0 && INS[m.i].id === 'hold') {   // a reading pause: the caption of this moment stays, fully shown
       const h = INS[m.i], c = CAP.find(([a, b]) => h.s0 >= a && h.s0 < b);
-      if (c) { const [a, , en, moral, ms] = c, read = readT(en) / SLOW + .9, sofar = h.s0 - a + m.ur, mm = ms === undefined ? read : Math.min(ms - a, read);
-        out = { en, moral: moral || '', a: 1, age: sofar * SLOW, am: moral ? sstep(mm, mm + .8, sofar) : 0 }; }
+      if (c) { const [a, , en, moral] = c, sofar = h.own ? m.ur : h.s0 - a + m.ur, mm = moralAt(en), fa = h.own ? sstep(0, .5, m.ur) * (1 - sstep(h.n - .6, h.n, m.ur)) : 1;
+        out = { en, moral: moral || '', a: fa, age: sofar * SLOW, rate: wc(en) / speak(en), am: moral ? sstep(mm, mm + .8, sofar) * fa : 0 }; }
     }
-    else if (m.i >= 0) { const a = INS[m.i], f = sstep(0, .9, m.ur) * (1 - sstep(a.n - .9, a.n, m.ur)); out = { en: a.cap, moral: a.moral || '', a: f, age: m.ur * SLOW, am: a.moral ? sstep(a.mAt, a.mAt + .8, m.ur) * (1 - sstep(a.n - .9, a.n, m.ur)) : 0 }; }
+    else if (m.i >= 0) { const a = INS[m.i], f = sstep(0, .9, m.ur) * (1 - sstep(a.n - .9, a.n, m.ur)); out = { en: a.cap, moral: a.moral || '', a: f, age: m.ur * SLOW, rate: wc(a.cap) / speak(a.cap), am: a.moral ? sstep(a.mAt, a.mAt + .8, m.ur) * (1 - sstep(a.n - .9, a.n, m.ur)) : 0 }; }
     else for (const [a, b, en, moral, ms] of CAP) if (m.S >= a && m.S < b) {
       let k = sstep(a, a + .9, m.S) * (1 - sstep(b - .9, b, m.S)); for (const q of INS) if (q.id !== 'hold') k *= sstep(0, .8, Math.abs(m.S - q.s0));
-      { let lo = a, hi = b; for (const q of INS) { if (q.id === 'hold') continue; if (q.s0 <= m.S && q.s0 > lo) lo = q.s0; if (q.s0 > m.S && q.s0 < hi) hi = q.s0; } if (hi - lo < 1.5 && !INS.some(q => q.id === 'hold' && q.s0 > lo && q.s0 < hi)) k = 0; }   // no flicker of text in the short gaps between scenes
-      const mm = ms === undefined ? b - 3.6 : ms; out = { en, moral: moral || '', a: k, age: (m.S - a) * SLOW, am: moral ? sstep(mm, mm + .8, m.S) * (1 - sstep(b - .9, b, m.S)) * sstep(0, .8, Math.abs(m.S - 0)) : 0 }; break;
+      { let lo = a, hi = b; for (const q of INS) { if (q.id === 'hold') continue; if (q.s0 <= m.S && q.s0 > lo) lo = q.s0; if (q.s0 > m.S && q.s0 < hi) hi = q.s0; } if (hi - lo < 1.5 || INS.some(q => q.own && q.s0 > lo && q.s0 < hi)) k = 0; }   // short gaps: the caption appears only in its own pause   // no flicker of text in the short gaps between scenes
+      const mm = a + moralAt(en); out = { en, moral: moral || '', a: k, age: (m.S - a) * SLOW, rate: wc(en) / speak(en), am: moral ? sstep(mm, mm + .8, m.S) * (1 - sstep(b - .9, b, m.S)) * sstep(0, .8, Math.abs(m.S - 0)) : 0 }; break;
     }
     if (!out) out = { en: '', moral: '', a: 0, am: 0, age: 0 };
     out.kanda = kanda; return out;

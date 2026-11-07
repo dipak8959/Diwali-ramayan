@@ -88,6 +88,7 @@
 <script src="../vendor/MaskPass.js"></script>
 <script src="../vendor/UnrealBloomPass.js"></script>
 <script src="../vendor/fonts.js"></script>
+<script src="narration-times.js"></script>
 <script src="../vendor/photos.js"></script>
 <script src="intro.js"></script>
 <script src="outro.js"></script>
@@ -937,7 +938,7 @@
       ctx.translate(0, hh * 1.15); let y = (bh - total) / 2;
       const g = ctx.createLinearGradient(0, y, 0, y + L.lines.length * L.fs * 1.17); g.addColorStop(0, '#fff6d8'); g.addColorStop(.55, '#ffd27a'); g.addColorStop(1, '#ff9e3a');
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.font = L.EN; ctx.fillStyle = g; ctx.shadowColor = 'rgba(255,150,40,.8)'; ctx.shadowBlur = L.fs * .32;
-      const shown = (c.age === undefined ? 99 : c.age) * WPS; let n = 0;
+      const shown = c.age === undefined ? 999 : c.rate ? Math.max(0, c.age - .6) * c.rate + 1 : c.age * WPS; let n = 0;   // words light up as the narrator says them
       L.lines.forEach((line, li) => {
         const words = line.split(' '), lw = L.lw[li], tot = lw.reduce((a, b) => a + b, 0) + L.sp * (words.length - 1); let x = (w - tot) / 2; y += L.fs * .585;
         words.forEach((wd, wi) => { const k = clamp((shown - n) / 2.2); n++; if (k > .003) { ctx.globalAlpha = c.a * k; ctx.fillText(wd, x, y + (1 - k) * L.fs * .18); } x += lw[wi] + L.sp; });

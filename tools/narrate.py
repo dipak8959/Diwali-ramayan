@@ -28,6 +28,8 @@ SAY = {
     'Brahma': 'Brumha', 'Vishnu': 'Vishnu', 'Agni': 'Ugni', 'Kanda': 'Kaand', 'Bala': 'Baal', 'Aranya': 'Arunya', 'Sundara': 'Sundar', 'Yuddha': 'Yuddh',
     'yakshini': 'yukshini', 'Prahlada': 'Prahlaad', 'Arjuna': 'Arjun', 'Mahabharata': 'Mahaabhaarat', 'Matsya': 'Matsya', 'Kurma': 'Koorma', 'Varaha': 'Varaaha', 'Narasimha': 'Nurasimha', 'Vamana': 'Vaamana', 'Kalki': 'Kulki', 'Balarama': 'Bulraam', 'Rama': 'Raama', 'Lalla': 'Lulla', 'Mandir': 'Mundir', 'Shri': 'Shree', 'diyas': 'deeyas', 'Panchavati': 'Panchavati', 'Godavari': 'Godaavari', 'Khara': 'Khur', 'Dushana': 'Dooshun', 'Samudra': 'Samudra',
 }
+SPEED = .86   # one speaking speed for every line, so the page can time scenes by it
+
 def speakable(t):
     t = t.replace('’', "'").replace('—', ', ')
     for k in sorted(SAY, key=len, reverse=True): t = re.sub(r'(?<![A-Za-z])' + re.escape(k) + r'(?![A-Za-z])', SAY[k], t)
@@ -59,7 +61,7 @@ def intro_sfx(sr, dur):
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument('sched'); ap.add_argument('video'); ap.add_argument('out')
-    ap.add_argument('--voice', default='narrator'); ap.add_argument('--models', default='.'); ap.add_argument('--wav'); ap.add_argument('--cache', default='.narration-cache')
+    ap.add_argument('--voice', default='narrator'); ap.add_argument('--models', default='.'); ap.add_argument('--wav'); ap.add_argument('--cache', default='.narration-cache'); ap.add_argument('--report')
     a = ap.parse_args()
     from kokoro_onnx import Kokoro
     k = Kokoro(os.path.join(a.models, 'kokoro-v1.0.onnx'), os.path.join(a.models, 'voices-v1.0.bin'))
@@ -75,17 +77,17 @@ def main():
     caps = [e for e in ev if e['type'] == 'cap']
     if d.get('intro'):   # the opening titles: sound, and the narrator's first line
         sfx = intro_sfx(SR, d['intro']); track[: len(sfx)] += sfx
-        s, sr = say(speakable('Vishnu presents. The Ramayana, as told by the sage Valmiki.'), .82); i0 = int(12.7 * SR); track[i0:i0 + len(s)] += s[: len(track) - i0]; intro_end = 12.7 + len(s) / sr
+        s, sr = say(speakable('Vishnu presents. The Ramayana, as told by the sage Valmiki.'), SPEED); t_in = min(12.7, d['intro'] - .4 - len(s) / sr); i0 = int(t_in * SR); track[i0:i0 + len(s)] += s[: len(track) - i0]; intro_end = t_in + len(s) / sr   # said before the story begins
     else: intro_end = 0.0
-    busy = intro_end; report = []; said = set()
+    busy = intro_end; report = []; said = set(); placed = []
     for i, e in enumerate(ev):
         e.setdefault('en', '')
         if e['type'] not in ('kanda', 'final') and e['en'] in said: continue
         said.add(e['en'])
-        if e['type'] == 'kanda': text, speed, want = heading(e['en']), .82, e['t'] + .15
-        elif e['type'] == 'cap': text, speed, want = speakable(e['en']), .86, e['t'] + .45
+        if e['type'] == 'kanda': continue   # book headings are shown, not read, so every caption's voice starts with its text
+        elif e['type'] == 'cap': text, speed, want = speakable(e['en']), SPEED, e['t'] + .45
         elif e['type'] == 'final': text, speed, want = speakable('Jai Shri Ram! Happy Diwali!'), .8, e['t'] + .8
-        else: text, speed, want = speakable(e['en']), .84, e['t'] + .3
+        else: text, speed, want = speakable(e['en']), SPEED, e['t'] + .1
         nxt = next((c['t'] for c in caps if c['t'] > e['t'] + .01), loop)
         start = max(want, busy + (.35 if e['type'] == 'moral' else .5))
         s, sr = say(text, speed); dur = len(s) / sr
@@ -99,7 +101,9 @@ def main():
         if e['type'] == 'moral' and start + dur > nxt + 1.6: report.append(('skipped lesson', round(e['t'], 1), e['en'])); continue
         if e['type'] == 'kanda' and start + dur > nxt + 2.5: continue
         i0 = int(start * SR); seg = s[: max(0, min(len(s), len(track) - i0))]; track[i0:i0 + len(seg)] += seg; busy = start + dur
+        placed.append({'type': e['type'], 'shown': round(e['t'], 2), 'until': round(e.get('end', nxt), 2), 'start': round(start, 2), 'end': round(start + dur, 2), 'en': e['en'][:50]})
         if start - want > 2: report.append(('late', round(want, 1), round(start - want, 1), text[:50]))
+    if a.report: json.dump(placed, open(a.report, 'w'), indent=1)
     wav = a.wav or os.path.splitext(a.out)[0] + '-narration.wav'
     sf.write(wav, track[: int(loop * SR)], SR)
     for r in report: print(*r)
