@@ -49,7 +49,7 @@ def main():
     caps = [e for e in ev if e['type'] == 'cap']
     if d.get('intro'):   # the opening titles: sound, and the narrator's first line
         sfx = intro_sfx(SR, d['intro']); track[: len(sfx)] += sfx
-        s = nar.say('Vishnu presents. The Ramayana, as told by the sage Valmiki.'); t_in = min(12.6, d['intro'] - 1.0 - len(s) / SR); i0 = int(t_in * SR); track[i0:i0 + len(s)] += s[: len(track) - i0]; intro_end = t_in + len(s) / SR   # said before the story begins
+        s = nar.say('The Ramayana, as told by the sage Valmiki.'); t_in = min(12.6, d['intro'] - 1.0 - len(s) / SR); i0 = int(t_in * SR); track[i0:i0 + len(s)] += s[: len(track) - i0]; intro_end = t_in + len(s) / SR   # said before the story begins
     else: intro_end = 0.0
     busy = intro_end; report = []; said = set(); placed = []
     for i, e in enumerate(ev):

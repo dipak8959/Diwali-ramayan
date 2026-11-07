@@ -1,5 +1,5 @@
 // The opening titles: a fast flip-book of Vishnu's ten avatars (the Dashavatara), in the style of a superhero studio intro,
-// ending on a red title box with VISHNU, then "presents The Ramayana". Drawn in 2D, in comic-book style.
+// ending on a red title box with VISHNU, then "The Ramayana, as told by the sage Valmiki". Drawn in 2D, in comic-book style.
 window.VishnuIntro = (function () {
   const DUR = 20;   // long enough for the narrator to say the title calmly
   const AV = [
@@ -156,13 +156,12 @@ window.VishnuIntro = (function () {
       c.fillText('DASHAVATARA', left + bw * 1.08, -bh * .04, total - bw * 1.1); c.font = `italic 600 ${bh * .2}px "Cormorant Garamond", Georgia, serif`; if ('letterSpacing' in c) c.letterSpacing = '0px'; c.fillStyle = '#d8b880'; c.fillText('the ten avatars of Vishnu', left + bw * 1.1, bh * .3);
       c.restore();
     }
-    if (t >= 12.4) {   // Vishnu presents ... THE RAMAYANA
+    if (t >= 12.4) {   // THE RAMAYANA, as told by the sage Valmiki
       const a1 = ss(12.6, 13.2, t) * (1 - ss(DUR - .8, DUR - .1, t)), k = 1 + .05 * ss(13, DUR, t); c.save(); c.translate(cx, h * .5); c.scale(k, k); c.translate(-cx, -h * .5); c.globalAlpha = a1; c.textAlign = 'center'; c.textBaseline = 'middle';   // a slow push-in while the title is read
-      c.fillStyle = '#e8c890'; c.font = `italic 600 ${h * .11}px "Cormorant Garamond", Georgia, serif`; c.fillText('Vishnu presents', cx, h * .2);
-      const g = c.createLinearGradient(0, h * .32, 0, h * .66); g.addColorStop(0, '#fff6d8'); g.addColorStop(.5, '#ffd27a'); g.addColorStop(1, '#ff9e3a');
+      const g = c.createLinearGradient(0, h * .26, 0, h * .6); g.addColorStop(0, '#fff6d8'); g.addColorStop(.5, '#ffd27a'); g.addColorStop(1, '#ff9e3a');
       c.fillStyle = g; c.shadowColor = 'rgba(255,170,60,.9)'; c.shadowBlur = h * .06; c.font = `700 ${Math.min(h * .26, w * .085)}px Cinzel, Georgia, serif`;
-      c.fillText('THE RAMAYANA', cx, h * .5 + (1 - ss(12.6, 13.6, t)) * h * .05); c.shadowBlur = 0;
-      c.globalAlpha = a1 * ss(13.4, 14, t); c.fillStyle = '#9adfff'; c.font = `italic 600 ${h * .1}px "Cormorant Garamond", Georgia, serif`; c.fillText('as told by the sage Valmiki', cx, h * .78);
+      c.fillText('THE RAMAYANA', cx, h * .42 + (1 - ss(12.6, 13.6, t)) * h * .05); c.shadowBlur = 0;
+      c.globalAlpha = a1 * ss(13.4, 14, t); c.fillStyle = '#9adfff'; c.font = `italic 600 ${h * .1}px "Cormorant Garamond", Georgia, serif`; c.fillText('as told by the sage Valmiki', cx, h * .72);
       c.restore();
     }
   }
