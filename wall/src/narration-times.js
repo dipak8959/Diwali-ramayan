@@ -29,7 +29,6 @@ window.NARR_TIMES = {
 "Ravan's sister Surpanakha wanted to marry Ram, then Lakshman. When she rushed at Sita, Lakshman stopped her. Her demon brothers attacked with a huge army, but Ram won alone. Angry, she ran to Ravan.": 18.52,
 "Anger only makes things worse": 2.88,
 "In golden Lanka, Surpanakha told her brother Ravan about Ram, and about Princess Sita. 'She should be your queen!' she said. Ravan wanted Sita for himself. But he knew he could not beat Ram in a fair fight, so he made a trick plan.": 21.19,
-"Never take what belongs to others": 3.11,
 "Ravan flew to Maricha, the demon Ram once blew far over the sea. 'Become a golden deer,' said Ravan, 'and lead Ram far away from Sita.' Maricha was afraid: 'Ram is too strong!' But Ravan made him do it, so Maricha became a golden deer.": 21.43,
 "As he fell, Maricha played Ravan's last trick. He shouted in Ram's own voice: 'Oh Sita! Oh Lakshmana! Help me!' He wanted Sita to think Ram was hurt, so that Lakshman would leave her alone. Far away, Ram knew it was a trick.": 22.31,
 "Sita heard the voice and thought Ram was in danger! 'It is a trick,' said Lakshman. 'No one can hurt Ram.' But Sita was so worried that she begged him to go. Before he left, Lakshman drew a glowing line around the hut. 'Please stay inside this line,' he said. 'It will keep you safe.'": 26.6,
