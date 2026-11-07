@@ -900,7 +900,8 @@ window.R3 = (function () {
     { id: 'surp', s0: 70, n: 12, fx: 3120, cap: "Ravan's sister Surpanakha wanted to marry Ram, then Lakshman. When she rushed at Sita, Lakshman stopped her. Her demon brothers attacked with a huge army, but Ram won alone. Angry, she ran to Ravan.", moral: 'Anger only makes things worse' },
     { id: 'lanka1', s0: 70, n: 12, fx: 5500, cut: true, cap: "In golden Lanka, Surpanakha told her brother Ravan about Ram, and about Princess Sita. 'She should be your queen!' she said. Ravan wanted Sita for himself. But he knew he could not beat Ram in a fair fight, so he made a trick plan.", moral: 'Never want what belongs to others' },
     { id: 'maricha', s0: 70, n: 14, fx: 4250, cut: true, cap: "Ravan flew to Maricha, the demon Ram once blew far over the sea. 'Become a golden deer,' said Ravan, 'and lead Ram far away from Sita.' Maricha was afraid: 'Ram is too strong!' But Ravan made him do it, so Maricha became a golden deer.", moral: 'Never trick others' },
-    { id: 'rekha', s0: 81, n: 13, fx: 3260, cap: "Maricha called out in Ram's voice: 'Oh Sita! Oh Lakshmana!' Sita was frightened and sent Lakshman to help. Before he left, Lakshman drew a glowing line around the hut. 'Please stay inside this line,' he said. 'It will keep you safe.'", moral: 'Listen to those who keep you safe' },
+    { id: 'cry', s0: 81, n: 12, fx: 3430, cap: "As he fell, Maricha played Ravan's last trick. He shouted in Ram's own voice: 'Oh Sita! Oh Lakshmana! Help me!' He wanted Sita to think Ram was hurt, so that Lakshman would leave her alone. Far away, Ram knew it was a trick.", moral: 'Stop and think before you believe' },
+    { id: 'rekha', s0: 81, n: 13, fx: 3260, cap: "Sita heard the voice and thought Ram was in danger! 'It is a trick,' said Lakshman. 'No one can hurt Ram.' But Sita was so worried that she begged him to go. Before he left, Lakshman drew a glowing line around the hut. 'Please stay inside this line,' he said. 'It will keep you safe.'", moral: 'Listen to those who keep you safe' },
     { id: 'bhiksha', s0: 81, n: 13, fx: 3220, cap: "Then Ravan came, dressed as a holy man, asking for food. When he stepped on the line, it burst into flames and stopped him! So he asked Sita to come out. Kind Sita stepped over the line to give him food.", moral: 'Be careful: not everyone is who they seem' },
     { id: 'sabari', s0: 98, n: 10, fx: 3780, cap: "Ram met Sabari, a kind old lady who had waited for him for many years. With love, she offered him fruits from the forest, and Ram happily accepted them.", moral: 'Love matters more than riches' },
     { id: 'vali', s0: 104.6, n: 14, fx: 4050, cap: "Ram and the monkey prince Sugriva became friends. Sugriva's brother Vali had taken his kingdom. Ram defeated Vali with his arrow, and Sugriva became king.", moral: 'Stand by your friends' },
@@ -1039,7 +1040,7 @@ window.R3 = (function () {
   function insertActors(ins, Tr, rx, base) {
     hide(tataka, dash, kaik, bharat, sugr, vali, indra, sabari, vibh, surp, hermit, marich, agni, ahalya, angada, brahma, vishnu, youngd, shravan, blindA, blindB, rishya, kausalya, sumitra, vasishtha, parashu, mandodari); pot.visible = false; mhut.visible = false; marich.root.rotation.z = 0; bowL.g.visible = false; feast.visible = false; astra.visible = false; astra.scale.setScalar(9); river.visible = false; hide(agastya, guha, samudra, sushena); spear.visible = herb.visible = himalaya.visible = false; spear.scale.setScalar(1); boat.visible = bed.visible = grass.visible = ring.visible = jewel.visible = memGlow.visible = divGlow.visible = sun.visible = surasa.visible = false; rays.forEach(r => { r.visible = false; }); redMoon.visible = true; palace2.visible = true; palaceL.visible = true; court.visible = true; river.material.color.setHex(0x4a90ff); seaAmp = 1; tower.visible = false; stone.visible = false; heart.visible = false;
     garuda.visible = false; sandals.visible = false; berry.visible = false; throne.visible = false; fireGlow.visible = false; orbs.forEach(o => { o.visible = false; }); serpents.forEach(g => { g.visible = false; }); coils.forEach(g => { g.visible = false; });
-    if (ins.i < 0) return;
+    if (ins.i < 0) { if (ins.S >= 77.1 && ins.S < 81) { showAt(marich, 3640, 0, 6, -YAW, 1.1 * ease(sstep(77.1, 78, ins.S)) + .001); pose(marich, { ph: 0, s: 0, t: Tr, kneel: 1, sad: 1 }); } return; }   // the deer turns back into Maricha, who falls where it stood
     const id = INS[ins.i].id, u = ins.u, face = -YAW;
     if (id === 'tataka') {   // Vishwamitra's ritual: Tataka charges and falls
       const tx = u < 4 ? lerp(1290, 1130, sstep(.4, 4, u)) : 1130, tf = sstep(6.3, 7.6, u), td = sstep(8.2, 9.6, u);
@@ -1473,14 +1474,22 @@ window.R3 = (function () {
         deer.legs.forEach((l, i) => { l.rotation.x = u > 11 ? Math.sin(Tr * 8.4 + (i % 2) * 2.4 + (i > 1 ? 1.4 : 0)) * .9 : 0; }); if (Math.random() < .6) ember(dx, 60 + hop, -6, false);
       }
     }
+    if (id === 'cry') {   // Maricha's last trick: he cries for help in Ram's voice, so that Lakshman will leave Sita (Aranya Kanda 44)
+      rav.root.visible = false;   // Ravan is still hiding
+      const fade = sstep(9.4, 10.8, u), shout = u > 1.4 && u < 6.6;
+      if (u < 10.8) { act(marich, 3640, 0, 6, -YAW, 1.1 * (1 - .97 * fade) + .001, { kneel: 1 - .5 * sstep(1, 1.6, u), cheer: shout ? .8 : 0, talk: shout, sad: 1 - sstep(1, 1.6, u) }); }
+      if (shout && Math.random() < .8) parts.push({ x: 3615, y: rnd(110, 130), z: 10, vx: -rnd(140, 190), vy: rnd(-10, 10), vz: 0, life: 2.6, age: 0, hue: .58, r: rnd(1.6, 2.8), drag: .05, g: 0 });   // Ram's voice (blue) carries to the hut
+      if (shout) for (const t0 of [1.6, 3, 4.4]) once('cr' + t0, u >= t0, () => burst(3620, 120, 10, .58, 40, 60));
+      if (fade > 0 && fade < 1) for (let k = 0; k < 2; k++) ember(3640 + rnd(-20, 20), rnd(10, 90), 6, false);
+      base.sita.sad = sstep(3.2, 4, u); base.sita.look = .3 * sstep(3.2, 4, u); base.lak.look = .3 * sstep(3.4, 4.2, u);   // at the hut, they hear it
+      base.ram.look = -.35 * sstep(6.4, 7.2, u); base.ram.talk = u > 7 && u < 8.8; base.ram.sad = sstep(7.4, 8.2, u);   // Ram knows it is a trick, and worries for Sita
+    }
     if (id === 'rekha') {   // Maricha's false cry; Lakshman draws a line of protection around the hut, then goes to help Ram (the Lakshman Rekha of later tellings)
       rav.root.visible = false;   // Ravan has not come yet
-      once('rk0', u >= .3, () => { flashV = .3; burst(3620, 70, 0, .78, 70, 70); });
-      if (u > .3 && u < 2.8 && Math.random() < .7) parts.push({ x: 3600, y: rnd(70, 120), z: 10, vx: -rnd(130, 190), vy: rnd(-8, 8), vz: 0, life: 2.4, age: 0, hue: .78, r: rnd(1.4, 2.4), drag: .1, g: 0 });   // the cry carries to the hut
-      base.sita.sad = sstep(.6, 1.2, u); base.sita.talk = u > 2.8 && u < 4.6; base.sita.point = sstep(3.2, 3.8, u) * (1 - sstep(4.6, 5.2, u)); base.sita.join = sstep(9.6, 10, u) * (1 - sstep(11.4, 12, u));
+      base.sita.sad = 1 - .5 * sstep(9.6, 10.4, u); base.sita.talk = u > 2.2 && u < 4.4; base.sita.join = Math.max(sstep(2.4, 2.9, u) * (1 - sstep(3.8, 4.2, u)), sstep(9.6, 10, u) * (1 - sstep(11.4, 12, u))); base.sita.point = sstep(4, 4.4, u) * (1 - sstep(4.8, 5.2, u));   // she begs him to go
       const lxx = u < 9.6 ? wk(3180, 3152, 4.6, 5.4) : wk(3152, 3480, 9.8, 12.6);
       lak.root.position.x = lxx; lak.root.rotation.y = R;
-      Object.assign(base.lak, { ph: lxx * Math.PI / STEP + 2.6, s: spd(4.6, 5.4, .5) || spd(9.8, 12.6), talk: (u > 4 && u < 4.8) || (u > 8.2 && u < 9.4), point: sstep(5.5, 6, u) * (1 - sstep(8, 8.4, u)), join: sstep(9, 9.3, u) * (1 - sstep(9.6, 9.9, u)) });
+      Object.assign(base.lak, { ph: lxx * Math.PI / STEP + 2.6, s: spd(4.6, 5.4, .5) || spd(9.8, 12.6), talk: (u > .3 && u < 2.2) || (u > 8.2 && u < 9.4), point: sstep(5.5, 6, u) * (1 - sstep(8, 8.4, u)), join: sstep(9, 9.3, u) * (1 - sstep(9.6, 9.9, u)) });
       const k = ease(sstep(5.8, 8, u)); setRekha(k, 1);
       if (k > 0 && k < 1) { const [px, pz] = rekPt(k * 6.2832); for (let q = 0; q < 3; q++) ember(px, 3, pz, false); }   // the line draws itself from Lakshman's hand
       once('rk1', u >= 8, () => { flashV = .25; burst(3250, 10, 0, .1, 60, 50); });
