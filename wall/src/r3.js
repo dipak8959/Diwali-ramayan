@@ -951,7 +951,7 @@ window.R3 = (function () {
     [213, 225, "Happy Diwali! Be a light in someone's life.", 'Be the light', 218],
   ];
   // ---------- time to read: every caption stays up long enough for a young child to read it, and to think about it ----------
-  const RATE = 1.7, wc = (t) => (t ? t.split(/\s+/).length : 0), readT = (t) => wc(t) / RATE + 2.2, moralT = (t) => (t ? wc(t) / RATE + 2.6 : 0);   // seconds
+  const RATE = 1.25, wc = (t) => (t ? t.split(/\s+/).length : 0), readT = (t) => wc(t) / RATE + 4, moralT = (t) => (t ? wc(t) / RATE + 4 : 0);   // seconds: a slow young reader, then a few seconds to think about it
   INS.forEach(a => {   // a scene plays slower (its own animation stretched) when its text needs more time than the scene
     a.n0 = a.n; a.mAt = Math.max(a.n0 * .55, readT(a.cap) / SLOW + .9);
     a.n = Math.max(a.n0, readT(a.cap) / SLOW + 1.8, a.moral ? a.mAt + moralT(a.moral) / SLOW + .9 : 0);

@@ -120,6 +120,6 @@ To use a real narrator instead, record one audio file per caption and replace th
 
 ### Made for children (ages 2 to 8)
 - **Words:** every caption was rewritten in short sentences and simple words, keeping the same Valmiki story. Fighting is told gently ("defeated", "stopped"); there are no words like "kill", "blood" or "devour" on screen.
-- **Time to read:** each caption stays up long enough for a young reader (about 1.7 words a second, plus a moment to think). When a caption needs longer than its scene, the scene plays more slowly; between scenes, the story pauses with everyone standing still until the text has been read. Words appear at a gentle pace and the narrator reads more slowly. The loop is now about 27 minutes.
+- **Time to read:** each caption stays up long enough for a slow young reader (about 1¼ words a second, plus 4 seconds to think about it; the same for each lesson). When a caption needs longer than its scene, the scene plays more slowly; between scenes, the story pauses with everyone standing still until the text has been read. Words appear at a gentle pace and the narrator reads more slowly. The loop is now about 37 minutes.
 - **Pictures:** no blood-red bursts (hits make golden sparkles); Ravan's heads melt into golden light and grow back, instead of flying off; the demons' magic in the hermitage is purple sparks.
 - **Light and sound:** no strobing. The opening flip-book turns at most about three pages a second with no white flashes, the red flash is softer, lightning is rare, and the boom in the opening is quieter.
