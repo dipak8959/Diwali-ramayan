@@ -93,7 +93,7 @@ Ram is crowned by Vasishtha. The Diwali lamps are marked in the captions as a la
 - **Before Ram was born (five new scenes):** Ravan's boon from Brahma (he cuts his ten heads one by one into the fire and Brahma restores them), the gods and Vishnu's promise to be born as a man, young Dasharatha and the boy Shravana with the blind parents' curse, Kaikeyi saving the wounded king (the two boons), and the fire ritual led by Rishyasringa that brings the four sons.
 - **Connected:** captions now link each scene to the next: the curse comes back at Dasharatha's death, the boons return at Ram's exile, Maricha survives to become the golden deer, and so on.
 - **New scenes:** Vishwamitra asks for Ram, the hermitage guard against Subahu and Maricha, Parashurama and Vishnu's bow, Ram breaking Ravan's crown and sending him home to rest, Kumbhakarna being woken, Lakshman killing Indrajit at his fire ritual, the long duel where Ram cuts Ravan's heads and arms and they grow back (Matali reminds Ram of the Brahma weapon), and Mandodari and the funeral.
-- **Ravan:** ten heads and twenty arms (two legs), as Valmiki calls him dashagriva. If you have a source for another count, it is one number to change in `makeRavan`.
+- **Ravan:** ten heads and two arms, as Valmiki mostly describes him: dashagriva, "the ten-headed one" (see round nine).
 
 ### Round six: cinematic quality
 - **Story text:** new typefaces (Cinzel for headings, Cormorant Garamond for the story, both SIL Open Font License, embedded so it works offline). A running heading names the book of Valmiki's Ramayana: Prologue, then Bala, Ayodhya, Aranya, Kishkindha, Sundara and Yuddha Kanda, then the Epilogue. Words appear one by one at a reading pace, and the lesson appears between two stars.
