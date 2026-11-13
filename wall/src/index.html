@@ -112,7 +112,7 @@
 <script>
 (() => {
   const canvas = document.getElementById('c');
-  const ctx = canvas.getContext('2d');
+  let ctx = canvas.getContext('2d');
 
   // ---------- constants ----------
   const PW = 1200, PH = 400, GY = 345;        // one scene is 1200 x 400 (3:1); ground line at y = 345
@@ -138,6 +138,8 @@
   let T = 0, paused = false, flash = 0;
   let fired = {}, parts = [];
   const query = new URLSearchParams(location.search);
+  // the chalkboard look: on the TV view by default (add &classic for the earlier look), elsewhere with &chalk
+  const CHALK = query.has('cinema') ? !query.has('classic') : query.has('chalk'); window.CHALK = CHALK;
 
   // Surfaces are four-corner shapes in the projector picture, as fractions of its width and height.
   // The default layout is a first guess from the room video: left door, the wall between, right door.
@@ -918,13 +920,13 @@
     return { en: SCENE_CAP[i][0], moral: '', a: sstep(.8, 1.8, lt) * (1 - sstep(11, 12.4, lt)), am: 0, age: 99 };
   }
   const fitCache = {};
-  const SERIF = '"Cormorant Garamond", Georgia, "Times New Roman", serif', TITLE = 'Cinzel, "Trajan Pro", Georgia, serif';
+  const SERIF = CHALK ? '"Patrick Hand", "Comic Sans MS", cursive' : '"Cormorant Garamond", Georgia, "Times New Roman", serif', TITLE = CHALK ? '"Cabin Sketch", "Patrick Hand", cursive' : 'Cinzel, "Trajan Pro", Georgia, serif';
   function wrapLines(text, maxW) { const words = text.split(' '), lines = []; let cur = ''; for (const wd of words) { const t = cur ? cur + ' ' + wd : wd; if (ctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = wd; } else cur = t; } lines.push(cur); return lines; }
   // The largest type that fits under the chapter heading: what is happening, and underneath it (in another colour) the lesson of the story.
   function fitText(en, moral, w, h) {
     const key = en + '|' + moral + '|' + Math.round(w) + '|' + Math.round(h) + '|' + !!window.FONTS_READY;
     if (fitCache[key]) return fitCache[key];
-    const EN = (px) => `700 ${px}px ${SERIF}`, MO = (px) => `italic 700 ${px}px ${SERIF}`;
+    const EN = (px) => CHALK ? `400 ${px}px ${SERIF}` : `700 ${px}px ${SERIF}`, MO = (px) => CHALK ? `400 ${px}px ${SERIF}` : `italic 700 ${px}px ${SERIF}`;
     const mtext = moral ? moral : '';
     for (let fs = Math.min(h * .3, w * .12); fs >= 7; fs -= .5) {
       ctx.font = EN(fs); const lines = wrapLines(en, w * .9), ms = fs * .9; ctx.font = MO(ms); const mlines = mtext ? wrapLines(mtext.startsWith('Photo: ') ? mtext : '✦  ' + mtext + '  ✦', w * .9) : [];
@@ -959,7 +961,15 @@
     const xs = q.map(p => p[0]), ys = q.map(p => p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
     const vs = cfg.vstretch, w = x1 - x0, h = (y1 - y0) / vs; if (w < 20 || h < 8) return;
     ctx.save(); clipTo([q]); ctx.translate(x0, y0); ctx.scale(1, vs);
-    if (c.intro !== undefined && window.VishnuIntro) { VishnuIntro.drawTitle(ctx, w, h, c.intro); ctx.restore(); return; }
+    if (c.intro !== undefined && window.VishnuIntro) {
+      if (CHALK && c.intro < 12.6 && window.R3 && R3.chalkCanvas) {   // the title cards of the opening, in chalk like the rest (the words after it stay plain chalk writing)
+        const sc = DPR * Math.min(1, 900 / (w * DPR)), cw = Math.max(16, Math.round(w * sc)), ch = Math.max(8, Math.round(h * sc));
+        if (!introBand) introBand = document.createElement('canvas'); if (introBand.width !== cw || introBand.height !== ch) { introBand.width = cw; introBand.height = ch; }
+        const ic = introBand.getContext('2d'); ic.setTransform(sc, 0, 0, sc, 0, 0); ic.fillStyle = '#000'; ic.fillRect(0, 0, w, h); VishnuIntro.drawTitle(ic, w, h, c.intro);
+        ctx.drawImage(R3.chalkCanvas(introBand), 0, 0, w, h);
+      } else VishnuIntro.drawTitle(ctx, w, h, c.intro);
+      ctx.restore(); return;
+    }
     if (c.final !== undefined && window.VishnuOutro) { VishnuOutro.drawFinalText(ctx, w, h, c.final); ctx.restore(); return; }
     const hh = c.kanda ? Math.min(h * .17, w * .05) : 0; drawHeading(w, hh, c.kanda);
     if (c.en && c.a > .004) {
@@ -983,7 +993,39 @@
   }
   function drawStoryText(PT) {
     const c = captionNow(); if (!c) return;
-    for (const q of PT) drawCaptionIn(q, c);
+    if (!CHALK) { for (const q of PT) drawCaptionIn(q, c); return; }
+    // chalk: write the words on a clear sheet, rub a little of each stroke away (the board shows through), then lay the sheet on the board
+    if (!chalkText || chalkText.width !== canvas.width || chalkText.height !== canvas.height) { chalkText = document.createElement('canvas'); chalkText.width = canvas.width; chalkText.height = canvas.height; }
+    const main = ctx, tc = chalkText.getContext('2d'); tc.setTransform(1, 0, 0, 1, 0, 0); tc.clearRect(0, 0, chalkText.width, chalkText.height);
+    ctx = tc; ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    try { for (const q of PT) drawCaptionIn(q, c); } finally { ctx = main; }
+    tc.setTransform(1, 0, 0, 1, 0, 0); tc.globalCompositeOperation = 'destination-out'; tc.fillStyle = tc.createPattern(chalkGrain(), 'repeat'); tc.fillRect(0, 0, chalkText.width, chalkText.height); tc.globalCompositeOperation = 'source-over';
+    main.save(); main.setTransform(1, 0, 0, 1, 0, 0); main.drawImage(chalkText, 0, 0); main.restore();
+  }
+  // ---------- the chalkboard: the green board, the chalk grain, and a wooden frame ----------
+  let chalkText = null, grainCv = null, boardCv = null, introBand = null;
+  function chalkGrain() {   // specks and drag-marks where the chalk skips over the board
+    if (grainCv) return grainCv;
+    grainCv = document.createElement('canvas'); grainCv.width = grainCv.height = 256; const g = grainCv.getContext('2d');
+    for (let i = 0; i < 5200; i++) { g.fillStyle = `rgba(0,0,0,${(.25 + Math.random() * .6).toFixed(2)})`; const r = Math.random() < .85 ? 1 : 2; g.fillRect(Math.random() * 256, Math.random() * 256, r, r); }
+    g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 1; for (let i = 0; i < 70; i++) { const x = Math.random() * 256, y = Math.random() * 256, l = 4 + Math.random() * 14; g.beginPath(); g.moveTo(x, y); g.lineTo(x + l, y - l * .35); g.stroke(); }
+    return grainCv;
+  }
+  function board() {   // the same green as the chalk pictures, with smudges of old chalk
+    const w = canvas.width, h = canvas.height;
+    if (boardCv && boardCv.width === w && boardCv.height === h) return boardCv;
+    boardCv = document.createElement('canvas'); boardCv.width = w; boardCv.height = h; const b = boardCv.getContext('2d');
+    b.fillStyle = 'rgb(30,56,43)'; b.fillRect(0, 0, w, h);
+    for (let i = 0; i < 26; i++) { const x = Math.random() * w, y = Math.random() * h, r = (.08 + Math.random() * .22) * Math.max(w, h), gr = b.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(190,220,200,.05)'); gr.addColorStop(1, 'rgba(190,220,200,0)'); b.fillStyle = gr; b.fillRect(x - r, y - r, 2 * r, 2 * r); }
+    const img = b.getImageData(0, 0, w, h), d = img.data; for (let i = 0; i < d.length; i += 4) { const k = .93 + Math.random() * .14; d[i] *= k; d[i + 1] *= k; d[i + 2] *= k; } b.putImageData(img, 0, 0);
+    return boardCv;
+  }
+  function woodFrame() {   // a wooden frame around the board, like a classroom chalkboard
+    const t = Math.max(8, Math.min(W, H) * .022), g = ctx.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#6b3f1d'); g.addColorStop(.5, '#8a5428'); g.addColorStop(1, '#5c3417');
+    ctx.save(); ctx.fillStyle = g; ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.rect(t, t, W - 2 * t, H - 2 * t); ctx.fill('evenodd');
+    ctx.strokeStyle = 'rgba(40,20,6,.55)'; ctx.lineWidth = 1; for (let k = 1; k < 4; k++) { const o = t * k / 4; ctx.strokeRect(o, o, W - 2 * o, H - 2 * o); }   // the grain of the wood
+    ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 2; ctx.strokeRect(t, t, W - 2 * t, H - 2 * t); ctx.strokeStyle = 'rgba(255,214,150,.25)'; ctx.lineWidth = 1; ctx.strokeRect(1, 1, W - 2, H - 2);
+    ctx.restore();
   }
 
   function drawTest(P) {
@@ -1033,11 +1075,12 @@
     if (query.has('sheet')) { setLook(cfg.look !== 'day'); drawSheet(); return; }
     setLook(cfg.look !== 'day');
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+    if (CHALK) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(board(), 0, 0); ctx.restore(); } else { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); }
     const P = polys();
     const isText = cfg.surfaces.map(s => s.role === 'text');
     const PP = P.filter((_, i) => !isText[i]), PT = P.filter((_, i) => isText[i]);
     if (mode === 'test') drawTest(P); else { drawWorld(PP); drawStoryText(PT); }
+    if (CHALK && mode !== 'test') woodFrame();
     if (mode !== 'play') drawEditor(P);
   }
 
@@ -1252,6 +1295,7 @@
 
   setMode(query.has('play') ? 'play' : (query.get('mode') || 'edit'));
   resize();
+  if (window.R3 && R3.setStyle) R3.setStyle(CHALK ? 'chalk' : 'classic');
   if (window.R3 && R3.avatarStills) try { R3.avatarStills(); } catch (e) { console.warn(e); }   // render the avatar pictures for the opening titles once, up front
   if (query.has('t')) seek(parseFloat(query.get('t')) || 0);
   if (query.has('hold')) paused = true;

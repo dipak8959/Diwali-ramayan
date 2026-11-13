@@ -137,6 +137,10 @@ To use a real narrator instead, record one audio file per caption and replace th
 - **Why Ravan has ten heads (Valmiki, Uttara Kanda 9–10):** a new opening scene: the sage Vishrava's son is born with ten heads, so he is named Dashagriva, "the one with ten heads"; he grows up clever and strong, king of golden Lanka. Then the boon: he prays to Brahma for thousands of years and gives his heads to the holy fire one by one (shown as golden light); before the last one, Brahma appears, gives all his heads back and grants the gift that no god or demon can defeat him.
 - **Two arms:** Ravan now has ten heads and two arms. Valmiki mostly calls him the ten-headed one (in a few places twenty-armed, but when Hanuman sees him asleep, with two arms); two arms are also gentler for small children.
 
+### Chalkboard look (the TV view)
+The TV link (`?cinema&play`) now looks like a classroom chalkboard: a green board in a wooden frame, every scene redrawn as coloured chalk (outlines that move a little like a hand-drawn film, diagonal hatching, chalk grain), the opening and the ten avatars drawn on the bare board, and the words written in chalk (Patrick Hand for the story, Cabin Sketch for titles; both SIL Open Font License). The real photos of Ayodhya stay as photos, pinned on the board.
+How: a final shader pass (`chalkFrag` in `wall/src/r3.js`) turns the finished picture into chalk; the opening and ending (drawn in 2D) go through the same shader. Add `&classic` for the earlier look (`?cinema&play&classic`), or `&chalk` to use the chalk look on the other views.
+
 ### Round ten: Sita, Shiva's bow and the four weddings (Bala Kanda 66–73)
 - **Sita, daughter of the Earth:** long before, King Janaka was ploughing a field for a holy prayer and found a baby girl in the furrow; he named her Sita and loved her as his own.
 - **Shiva's bow:** the bow of the god Shiva himself, kept by Janaka's family, so heavy that five thousand strong men pulled it on a cart with eight wheels; no god, demon or king had ever lifted it. It rolls in on its eight-wheeled cart, glowing; then Ram lifts it as easily as a toy, strings it, and it breaks with a sound like thunder.

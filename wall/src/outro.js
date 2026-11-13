@@ -68,6 +68,7 @@ window.VishnuOutro = (function () {
     c.fillStyle = '#ffd24a'; c.beginPath(); c.arc(cx, cy + r * .45, r * .14, 0, 6.283); c.fill(); c.restore();
   }
   function drawBand(c, w, h, t, s, stills) {
+    out.photoRect = null;   // where a real photo is, so the chalk look can leave it as a photo
     c.save(); c.fillStyle = '#000'; c.fillRect(0, 0, w, h); c.scale(1, s); const H = h / s, card = at(t), u = t - card.t0, fade = ss(0, .8, u) * (1 - ss(card.dur - .8, card.dur, u));
     if (card.k === 'diwali' || card.k === 'final' || card.k === 'lessons' || (card.k === 'photo' && !have(card.photos).length)) { diyas(c, w, H, t, Math.max(6, Math.round(w / H * 2.2)), H * .9, H * .14, 1); sparks(c, w, H * .8, t, 60, card.k === 'lessons' ? .5 : 1); }
     if (card.k === 'lessons' && stills) { const im = stills[6], ph = H * .78, pw = ph * .75; c.globalAlpha = fade; c.drawImage(im, w / 2 - pw / 2, H * .02, pw, ph); c.globalAlpha = 1; }
@@ -88,6 +89,7 @@ window.VishnuOutro = (function () {
           c.save(); c.globalAlpha = a; c.shadowColor = 'rgba(255,190,90,.7)'; c.shadowBlur = 28; c.fillStyle = '#000'; c.fillRect(x, y, pw, ph); c.restore();
           c.save(); c.globalAlpha = a; c.beginPath(); c.rect(x, y, pw, ph); c.clip(); cover(c, im, x, y, pw, ph, false); c.restore();
           c.save(); c.globalAlpha = a; c.strokeStyle = '#f0c870'; c.lineWidth = 3; c.strokeRect(x, y, pw, ph); c.restore();
+          if (!out.photoRect || a > out.photoRect[4]) out.photoRect = [x, y * s, pw, ph * s, a];
         });
       } else if (card.k === 'mandir') { c.globalAlpha = fade; temple(c, w / 2, H * .92, H * .62); c.globalAlpha = 1; }
       else if (card.k === 'lalla') { c.globalAlpha = fade; lotus(c, w / 2, H * .62, H * .3, t); c.globalAlpha = 1; }
@@ -95,14 +97,15 @@ window.VishnuOutro = (function () {
     }
     if (card.k === 'final') { const a = ss(0, 1.2, u) * (1 - ss(card.dur - 1.2, card.dur, u)); c.globalAlpha = a; c.textAlign = 'center'; c.textBaseline = 'middle'; const fs = Math.min(H * .5, w * .12);
       const g = c.createLinearGradient(0, H * .3, 0, H * .7); g.addColorStop(0, '#fff6d8'); g.addColorStop(.5, '#ffcf6a'); g.addColorStop(1, '#ff8a20'); c.fillStyle = g; c.shadowColor = 'rgba(255,160,40,.9)'; c.shadowBlur = fs * .35;
-      c.font = `700 ${fs}px Cinzel, Georgia, serif`; c.fillText('JAI SHRI RAM', w / 2, H * .45, w * .9); c.globalAlpha = 1; }
+      c.font = `700 ${fs}px ${window.CHALK ? '"Cabin Sketch", cursive' : 'Cinzel, Georgia, serif'}`; c.fillText('JAI SHRI RAM', w / 2, H * .45, w * .9); c.globalAlpha = 1; }
     c.restore();
   }
   function drawFinalText(c, w, h, u) {   // in the story-text area: Jai Shri Ram, and Happy Diwali
     const a = ss(0, 1.2, u) * (1 - ss(8.8, 10, u)); c.save(); c.globalAlpha = a; c.textAlign = 'center'; c.textBaseline = 'middle';
     const g = c.createLinearGradient(0, h * .2, 0, h * .7); g.addColorStop(0, '#fff6d8'); g.addColorStop(.5, '#ffcf6a'); g.addColorStop(1, '#ff8a20'); c.fillStyle = g; c.shadowColor = 'rgba(255,160,40,.9)'; c.shadowBlur = h * .08;
-    c.font = `700 ${Math.min(h * .34, w * .1)}px Cinzel, Georgia, serif`; c.fillText('Jai Shri Ram', w / 2, h * .42); c.shadowBlur = 0;
-    c.globalAlpha = a * ss(1.5, 2.5, u); c.fillStyle = '#9adfff'; c.font = `italic 600 ${h * .14}px "Cormorant Garamond", Georgia, serif`; c.fillText('Happy Diwali', w / 2, h * .78); c.restore();
+    c.font = `700 ${Math.min(h * .34, w * .1)}px ${window.CHALK ? '"Cabin Sketch", cursive' : 'Cinzel, Georgia, serif'}`; c.fillText('Jai Shri Ram', w / 2, h * .42); c.shadowBlur = 0;
+    c.globalAlpha = a * ss(1.5, 2.5, u); c.fillStyle = '#9adfff'; c.font = `${window.CHALK ? '400 ' + h * .15 + 'px "Patrick Hand", cursive' : 'italic 600 ' + h * .14 + 'px "Cormorant Garamond", Georgia, serif'}`; c.fillText('Happy Diwali', w / 2, h * .78); c.restore();
   }
-  return { DUR, CARDS, caption, drawBand, drawFinalText };
+  const out = { DUR, CARDS, caption, drawBand, drawFinalText, photoRect: null };
+  return out;
 })();

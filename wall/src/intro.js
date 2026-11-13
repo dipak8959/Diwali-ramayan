@@ -159,9 +159,9 @@ window.VishnuIntro = (function () {
     if (t >= 12.4) {   // THE RAMAYANA, as told by the sage Valmiki
       const a1 = ss(12.6, 13.2, t) * (1 - ss(DUR - .8, DUR - .1, t)), k = 1 + .05 * ss(13, DUR, t); c.save(); c.translate(cx, h * .5); c.scale(k, k); c.translate(-cx, -h * .5); c.globalAlpha = a1; c.textAlign = 'center'; c.textBaseline = 'middle';   // a slow push-in while the title is read
       const g = c.createLinearGradient(0, h * .26, 0, h * .6); g.addColorStop(0, '#fff6d8'); g.addColorStop(.5, '#ffd27a'); g.addColorStop(1, '#ff9e3a');
-      c.fillStyle = g; c.shadowColor = 'rgba(255,170,60,.9)'; c.shadowBlur = h * .06; c.font = `700 ${Math.min(h * .26, w * .085)}px Cinzel, Georgia, serif`;
+      c.fillStyle = g; c.shadowColor = 'rgba(255,170,60,.9)'; c.shadowBlur = h * .06; c.font = `700 ${Math.min(h * .26, w * .085)}px ${window.CHALK ? '"Cabin Sketch", cursive' : 'Cinzel, Georgia, serif'}`;
       c.fillText('THE RAMAYANA', cx, h * .42 + (1 - ss(12.6, 13.6, t)) * h * .05); c.shadowBlur = 0;
-      c.globalAlpha = a1 * ss(13.4, 14, t); c.fillStyle = '#9adfff'; c.font = `italic 600 ${h * .1}px "Cormorant Garamond", Georgia, serif`; c.fillText('as told by the sage Valmiki', cx, h * .72);
+      c.globalAlpha = a1 * ss(13.4, 14, t); c.fillStyle = '#9adfff'; c.font = `${window.CHALK ? '400 ' + h * .11 + 'px "Patrick Hand", cursive' : 'italic 600 ' + h * .1 + 'px "Cormorant Garamond", Georgia, serif'}`; c.fillText('as told by the sage Valmiki', cx, h * .72);
       c.restore();
     }
   }

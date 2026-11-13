@@ -50,6 +50,65 @@ window.R3 = (function () {
       '}'].join('\n'),
   };
   const gradePass = new THREE.ShaderPass(gradeShader); composer.addPass(gradePass);
+  // ---------- the chalkboard look: the finished picture is redrawn as coloured chalk on a green board ----------
+  const chalkFrag = [
+    'uniform sampler2D tDiffuse; uniform vec2 uRes; uniform float uTime; uniform vec4 uPhoto; uniform float uPhotoA; varying vec2 vUv;',
+    'float h21(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }',
+    'float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f); return mix(mix(h21(i), h21(i + vec2(1., 0.)), f.x), mix(h21(i + vec2(0., 1.)), h21(i + vec2(1., 1.)), f.x), f.y); }',
+    'float fbm(vec2 p){ float s = 0., a = .5; for (int i = 0; i < 4; i++) { s += a * vn(p); p *= 2.03; a *= .5; } return s; }',
+    'float lum(vec3 c){ return dot(c, vec3(.299, .587, .114)); }',
+    'float L(vec2 uv){ return lum(texture2D(tDiffuse, uv).rgb); }',
+    'void main(){',
+    '  vec2 px = vUv * uRes; float u = uRes.y / 360.;',                         // u: 1 at 360 pixels tall, so the chalk looks the same at any size
+    '  float tq = floor(uTime * 8.);',                                           // the lines move a little 8 times a second, like a hand-drawn film
+    '  vec2 wob = (vec2(vn(px / (16. * u) + tq * 3.1), vn(px / (16. * u) + 17. + tq * 3.1)) - .5) * 2.4 * u / uRes;',
+    '  vec2 uv = vUv + wob; vec3 c = texture2D(tDiffuse, uv).rgb; float l = lum(c);',
+    '  vec2 o = 1.4 * u / uRes;',                                                // outlines: where the picture changes brightness sharply
+    '  float a = L(uv + vec2(-o.x, o.y)), b = L(uv + vec2(0., o.y)), d = L(uv + vec2(o.x, o.y)), e = L(uv + vec2(-o.x, 0.)), f = L(uv + vec2(o.x, 0.)), g = L(uv + vec2(-o.x, -o.y)), h = L(uv + vec2(0., -o.y)), k = L(uv + vec2(o.x, -o.y));',
+    '  float edge = length(vec2(d + 2. * f + k - a - 2. * e - g, a + 2. * b + d - g - 2. * h - k));',
+    '  vec3 board = vec3(.115, .215, .165);',                                    // the green board, with smudges of old chalk and a fine grain
+    '  board += vec3(.045, .06, .05) * smoothstep(.42, .85, fbm(px / (170. * u)));',
+    '  board *= .93 + .14 * h21(floor(px / (1.4 * u)));',
+    '  float mx = max(c.r, max(c.g, c.b)); vec3 hue = mx > .002 ? c / mx : vec3(1.);',
+    '  vec3 chalk = mix(hue, vec3(1.), .17) * .97;',                              // coloured chalk: the colour of the scene, soft and bright
+    '  float sp = 4.4 * u, jit = .18 * vn(px / (10. * u));',                     // hatching: diagonal strokes, closer where it is brighter; cross-strokes on the brightest parts
+    '  float d1 = abs(fract((px.x + px.y) / sp + jit) - .5) * 2., d2 = abs(fract((px.x - px.y) / sp + jit * .7 + .5) - .5) * 2.;',
+    '  float cover = smoothstep(.04, .55, mx * .75 + l * .25), w1 = .2 + .62 * cover, w2 = .8 * smoothstep(.45, .9, l);',
+    '  float hatch = max(1. - smoothstep(w1 - .22, w1, d1), (1. - smoothstep(w2 - .22, w2, d2)) * step(.01, w2)) * step(.03, cover);',
+    '  float grain = smoothstep(.22, .78, h21(floor(px / (1.6 * u))) * .4 + vn(px / (3.2 * u)) * .8);',   // the chalk skips over the board here and there
+    '  float line = smoothstep(.09, .3, edge);',
+    '  vec3 col = board;',
+    '  col = mix(col, chalk, clamp(hatch * grain * (.45 + .55 * cover), 0., 1.));',
+    '  col = mix(col, mix(chalk, vec3(1.), .38), clamp(line * (.55 + .45 * grain), 0., 1.) * .95);',
+    '  col = mix(col, mix(chalk, vec3(1.), .35), smoothstep(.78, 1., l) * .65 * grain);',   // the brightest lights: thick chalk
+    '  if (vUv.x > uPhoto.x && vUv.x < uPhoto.z && vUv.y > uPhoto.y && vUv.y < uPhoto.w) col = mix(col, texture2D(tDiffuse, vUv).rgb, uPhotoA);',   // real photos stay photos
+    '  gl_FragColor = vec4(col, 1.);',
+    '}'].join('\n');
+  const chalkUniforms = () => ({ tDiffuse: { value: null }, uRes: { value: new THREE.Vector2(256, 64) }, uTime: { value: 0 }, uPhoto: { value: new THREE.Vector4(0, 0, 0, 0) }, uPhotoA: { value: 0 } });
+  const chalkPass = new THREE.ShaderPass({ uniforms: chalkUniforms(), vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }', fragmentShader: chalkFrag });
+  composer.addPass(chalkPass); chalkPass.enabled = false;
+  // the opening titles and the ending are drawn in 2D; in the chalk look they go through the same chalk
+  const chalkMat = new THREE.ShaderMaterial({ uniforms: chalkUniforms(), vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }', fragmentShader: chalkFrag, depthTest: false, depthWrite: false });
+  const chalkScene = new THREE.Scene(), chalkCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1); chalkScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), chalkMat));
+  const chalkTex = new THREE.CanvasTexture(document.createElement('canvas')); chalkTex.minFilter = THREE.LinearFilter; chalkTex.generateMipmaps = false;
+  let chalkOn = false, chalkTime = 0;
+  function chalkify(cv, photo) {   // photo: [x, y, w, h] of a real photo on the canvas, kept as it is
+    if (chalkTex.image !== cv) { chalkTex.dispose(); chalkTex.image = cv; } chalkTex.needsUpdate = true;
+    const U = chalkMat.uniforms; U.tDiffuse.value = chalkTex; U.uRes.value.set(cv.width, cv.height); U.uTime.value = chalkTime;
+    if (photo) { U.uPhoto.value.set(photo[0] / cv.width, 1 - (photo[1] + photo[3]) / cv.height, (photo[0] + photo[2]) / cv.width, 1 - photo[1] / cv.height); U.uPhotoA.value = photo[4]; } else { U.uPhoto.value.set(0, 0, 0, 0); U.uPhotoA.value = 0; }
+    renderer.setRenderTarget(null); renderer.render(chalkScene, chalkCam); return canvas;
+  }
+  function setStyle(st) { chalkOn = st === 'chalk'; chalkPass.enabled = chalkOn; }
+  let r2 = null, r2Mat = null, r2Scene = null, r2Tex = null;
+  function chalkCanvas(cv) {   // any 2D picture, redrawn in chalk on its own small board (returns a canvas of the same size)
+    if (!r2) { r2 = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true }); r2.setPixelRatio(1);
+      r2Mat = new THREE.ShaderMaterial({ uniforms: chalkUniforms(), vertexShader: chalkMat.vertexShader, fragmentShader: chalkFrag, depthTest: false, depthWrite: false });
+      r2Scene = new THREE.Scene(); r2Scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), r2Mat)); r2Tex = new THREE.CanvasTexture(cv); r2Tex.minFilter = THREE.LinearFilter; r2Tex.generateMipmaps = false; }
+    if (r2.domElement.width !== cv.width || r2.domElement.height !== cv.height) r2.setSize(cv.width, cv.height, false);
+    if (r2Tex.image !== cv) { r2Tex.dispose(); r2Tex.image = cv; } r2Tex.needsUpdate = true;
+    const U = r2Mat.uniforms; U.tDiffuse.value = r2Tex; U.uRes.value.set(cv.width, Math.max(cv.height, 360)); U.uTime.value = chalkTime;
+    r2.render(r2Scene, chalkCam); return r2.domElement;
+  }
 
   // ---------- helpers: materials ----------
   const std = (color, o) => new THREE.MeshStandardMaterial(Object.assign({ color, roughness: .55, metalness: .05 }, o || {}));
@@ -1886,7 +1945,7 @@ window.R3 = (function () {
     const W = 480, Hh = 640, R = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, alpha: false });
     R.setPixelRatio(1); R.setSize(W, Hh, false);
     const cam = new THREE.PerspectiveCamera(28, W / Hh, 1, 6000);
-    const bgTex = (c1, c2) => { const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d'), g = x.createRadialGradient(128, 110, 4, 128, 128, 180); g.addColorStop(0, c1); g.addColorStop(1, c2); x.fillStyle = g; x.fillRect(0, 0, 256, 256); return new THREE.CanvasTexture(c); };
+    const bgTex = (c1, c2) => { const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d'), g = x.createRadialGradient(128, 110, 4, 128, 128, 180); g.addColorStop(0, chalkOn ? '#06100b' : c1); g.addColorStop(1, chalkOn ? '#000' : c2); x.fillStyle = g; x.fillRect(0, 0, 256, 256); return new THREE.CanvasTexture(c); };
     const four = (H, sp, up) => { for (const s of [1, -1]) { const a = makeArm(sp, s); a.position.set(s * 13, 40, -3); a.rotation.z = s * (up ? 2.3 : .95); a.rotation.x = -.2; H.torso.add(a); } };
     const discus = () => { const g = new THREE.Group(); const r = mesh(new THREE.TorusGeometry(10, 1.6, 8, 32), std(0xffd24a, { emissive: 0xffa000, emissiveIntensity: 1.6, metalness: .7, roughness: .2 }), 0, 0, 0, g); r.rotation.y = Math.PI / 2; for (let k = 0; k < 12; k++) { const sp = mesh(new THREE.ConeGeometry(1.2, 5, 4), std(0xffe08a, { emissive: 0xffa000, emissiveIntensity: 1.2 }), 0, Math.cos(k / 12 * 6.283) * 12, Math.sin(k / 12 * 6.283) * 12, g); sp.rotation.x = k / 12 * 6.283; } const gl = mesh(G.sph, glowMat(0xffc040), 0, 0, 0, g); gl.scale.setScalar(16); gl.material.opacity = .35; return g; };
     const holdIn = (H, i, obj, dy) => { obj.position.set(0, dy === undefined ? -26 : dy, 3); H.arms[i].userData.el.add(obj); };
@@ -1967,7 +2026,7 @@ window.R3 = (function () {
   function setView(x0, x1, yTop, yBottom, pxW, pxH, sx, sy) {
     pxW = Math.max(16, Math.round(pxW)); pxH = Math.max(8, Math.round(pxH));
     viewStretch = (pxH / Math.max(1e-6, yTop - yBottom)) / (pxW / Math.max(1e-6, x1 - x0));
-    if (pxW !== vw || pxH !== vh) { vw = pxW; vh = pxH; renderer.setSize(pxW, pxH, false); composer.setSize(pxW, pxH); streakPass.uniforms.uTexel.value.set(1 / pxW, 1 / pxH); }
+    if (pxW !== vw || pxH !== vh) { vw = pxW; vh = pxH; renderer.setSize(pxW, pxH, false); composer.setSize(pxW, pxH); streakPass.uniforms.uTexel.value.set(1 / pxW, 1 / pxH); chalkPass.uniforms.uRes.value.set(pxW, pxH); }
     const cx = (x0 + x1) / 2;
     camera.left = x0 - cx; camera.right = x1 - cx; camera.top = yTop; camera.bottom = yBottom; camera.position.set(cx, 0, 3000); camera.lookAt(cx, 0, 0);
     camera.updateProjectionMatrix();
@@ -1977,7 +2036,7 @@ window.R3 = (function () {
     const shear = new THREE.Matrix4().set(1, 0, kx, kx * 3000, 0, 1, ky, ky * 3000, 0, 0, 1, 0, 0, 0, 0, 1);
     camera.projectionMatrix.multiply(shear); camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
   }
-  function render() { if (inIntro) return renderIntro(); if (inOutro) return renderOutro(); drawParts(); composer.render(); return canvas; }
+  function render() { if (inIntro) return chalkOn ? chalkify(renderIntro()) : renderIntro(); if (inOutro) { const cv = renderOutro(); return chalkOn ? chalkify(cv, window.VishnuOutro && VishnuOutro.photoRect) : cv; } drawParts(); chalkPass.uniforms.uTime.value = chalkTime; composer.render(); return canvas; }
   function renderOutro() {
     if (outroCanvas.width !== vw || outroCanvas.height !== vh) { outroCanvas.width = vw; outroCanvas.height = vh; }
     let st = null; try { st = avatarStills(); } catch (e) { st = null; }
@@ -1992,8 +2051,8 @@ window.R3 = (function () {
     ictx.setTransform(1, 0, 0, 1, 0, 0); VishnuIntro.drawBand(ictx, vw, vh, introT, viewStretch); return introCanvas;
   }
   const STORY_END = () => INTRO + TOTAL * SLOW;
-  function update(Tr, dt) { inIntro = Tr < INTRO; inOutro = !inIntro && OUTRO > 0 && Tr >= STORY_END(); if (inIntro) { introT = Tr; return; } if (inOutro) { outroT = Tr - STORY_END(); return; } updateStory(Tr - INTRO, dt); }
+  function update(Tr, dt) { chalkTime = Tr; inIntro = Tr < INTRO; inOutro = !inIntro && OUTRO > 0 && Tr >= STORY_END(); if (inIntro) { introT = Tr; return; } if (inOutro) { outroT = Tr - STORY_END(); return; } updateStory(Tr - INTRO, dt); }
   function caption(Tr) { if (Tr < INTRO) return { en: '', moral: '', a: 0, am: 0, age: 0, intro: Tr, kanda: null }; if (OUTRO > 0 && Tr >= STORY_END()) return VishnuOutro.caption(Tr - STORY_END()); return captionAt(Tr - INTRO); }
   const settle = () => { parts = []; pets = []; flashV = 0; };   // after a jump: clear the sparkles of everything skipped over
-  return { canvas, setView, update, render, settle, LOOP: TOTAL * SLOW + INTRO + OUTRO, INTRO, OUTRO, STORY_END: INTRO + TOTAL * SLOW, WORLD, ramX, sitaX, lakX, hanPos, follow: () => camC, caption, avatarStills, chapters: [0].concat(chapters.map(x => x + INTRO)), bloom };
+  return { canvas, setView, setStyle, chalkCanvas, update, render, settle, LOOP: TOTAL * SLOW + INTRO + OUTRO, INTRO, OUTRO, STORY_END: INTRO + TOTAL * SLOW, WORLD, ramX, sitaX, lakX, hanPos, follow: () => camC, caption, avatarStills, chapters: [0].concat(chapters.map(x => x + INTRO)), bloom };
 })();
